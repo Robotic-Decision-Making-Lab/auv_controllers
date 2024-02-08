@@ -1,0 +1,41 @@
+{
+  "name": "ROS 2 Dev Container",
+  "dockerFile": "Dockerfile",
+  "context": "../..",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/ws_ros/src/ros2-template,type=bind",
+  "workspaceFolder": "/home/ros/ws_ros/src/ros2-template",
+  "remoteUser": "ros",
+  "runArgs": [
+    "--network=host",
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp:unconfined",
+    "--security-opt=apparmor:unconfined",
+    "--volume=/dev:/dev",
+    "--privileged",
+    "--volume=/run/user/1000:/run/user/1000"
+  ],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+    "XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+    "PULSE_SERVER": "${localEnv:PULSE_SERVER}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "njpwerner.autodocstring",
+        "ms-vscode.cpptools",
+        "redhat.vscode-xml",
+        "redhat.vscode-yaml",
+        "smilerobotics.urdf",
+        "DavidAnson.vscode-markdownlint",
+        "esbenp.prettier-vscode",
+        "xaver.clang-format",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter"
+      ]
+    }
+  }
+}
