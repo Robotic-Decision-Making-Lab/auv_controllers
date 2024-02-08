@@ -38,7 +38,7 @@ jobs:
       - name: Extract Docker metadata
         if: env.PUSH == 'true'
         id: meta
-        uses: docker/metadata-action@v5.5.0
+        uses: docker/metadata-action@v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -85,7 +85,7 @@ jobs:
       - name: Extract Docker metadata
         if: env.PUSH == 'true'
         id: meta
-        uses: docker/metadata-action@v5.5.0
+        uses: docker/metadata-action@v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -127,7 +127,7 @@ jobs:
       - name: Extract Docker metadata
         if: env.PUSH == 'true'
         id: meta
-        uses: docker/metadata-action@v5.5.0
+        uses: docker/metadata-action@v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -168,7 +168,7 @@ jobs:
       - name: Extract Docker metadata
         if: env.PUSH == 'true'
         id: meta
-        uses: docker/metadata-action@v5.5.0
+        uses: docker/metadata-action@v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
