@@ -9,8 +9,8 @@
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>BSD 3-Clause</license>
 
-  <url type="repository">https://github.com/Robotic-Decision-Making-Lab/ros2-template.git</url>
-  <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/ros2-template/issues</url>
+  <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
+  <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
 
   <author>Evan Palmer</author>
 

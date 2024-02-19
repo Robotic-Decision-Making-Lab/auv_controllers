@@ -2,8 +2,8 @@
   "name": "ROS 2 Dev Container",
   "dockerFile": "Dockerfile",
   "context": "../..",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/ws_ros/src/ros2-template,type=bind",
-  "workspaceFolder": "/home/ros/ws_ros/src/ros2-template",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/ws_ros/src/auv_controllers,type=bind",
+  "workspaceFolder": "/home/ros/ws_ros/src/auv_controllers",
   "remoteUser": "ros",
   "runArgs": [
     "--network=host",

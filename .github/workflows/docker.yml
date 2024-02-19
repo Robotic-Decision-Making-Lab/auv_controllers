@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'robotic-decision-making-lab/ros2-template') }}
+  PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'robotic-decision-making-lab/auv_controllers') }}
 
 jobs:
   ci:
