@@ -4,10 +4,10 @@
 
   <name>example_pkg</name>
   <version>0.0.1</version>
-  <description>A sample ROS 2 package</description>
+  <description>Meta package for auv_controllers</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
-  <license>BSD 3-Clause</license>
+  <license>MIT</license>
 
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
   <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
