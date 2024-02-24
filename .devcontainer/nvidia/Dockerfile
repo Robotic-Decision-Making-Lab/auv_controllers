@@ -9,7 +9,8 @@ WORKDIR $USER_WORKSPACE
 
 COPY --chown=$USER_UID:$USER_GID . src/$PROJECT_NAME
 
-RUN ls src/$PROJECT_NAME
+# Uncomment to download and install external repos used by the project
+RUN vcs import src < src/$PROJECT_NAME/ros2.repos
 
 RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \

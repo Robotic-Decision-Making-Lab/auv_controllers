@@ -8,3 +8,4 @@
 !velocity_controllers
 !thruster_allocation_matrix_controller
 !thruster_controllers
+!ros2.repos
