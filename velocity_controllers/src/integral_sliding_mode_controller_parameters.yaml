@@ -1,0 +1,61 @@
+integral_sliding_mode_controller:
+  dof_names: {
+    type: string_array,
+    default_value: ["x", "y", "z", "rx", "ry", "rz"],
+    description: "Specifies the degrees-of-freedom used by the controller.",
+    validation: {
+      unique<>: null,
+      not_empty<>: null
+    }
+  }
+  command_interface: {
+    type: string,
+    default_value: "",
+    description: "The name of the interface used by the controller for writing commands to the hardware.",
+    validation: {
+      not_empty<>: null
+    }
+  }
+  gains: {
+    rho: {
+      type: double,
+      default_value: 0.0,
+      description: "Sliding mode gain. This quickly the controller moves to the sliding surface."
+    },
+    lambda: {
+      type: double,
+      default_value: 0.0,
+      description: "Boundary thickness used to attenuate ISMC chatter."
+    },
+    # It's helpful to have separate proportional gains for each degree-of-freedom with an ISMC.
+    P_x: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the x-axis."
+    },
+    P_y: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the y-axis."
+    },
+    P_z: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the z-axis."
+    },
+    P_rx: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the roll axis."
+    },
+    P_ry: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the pitch axis."
+    },
+    P_rz: {
+      type: double,
+      default_value: 0.0,
+      description: "Proportional gain for the yaw axis."
+    }
+  }
