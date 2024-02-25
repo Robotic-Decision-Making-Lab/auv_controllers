@@ -20,7 +20,7 @@ integral_sliding_mode_controller:
     rho: {
       type: double,
       default_value: 0.0,
-      description: "Sliding mode gain. This quickly the controller moves to the sliding surface."
+      description: "Sliding mode gain. This adjusts how quickly the controller moves to the sliding surface."
     },
     lambda: {
       type: double,
@@ -57,5 +57,142 @@ integral_sliding_mode_controller:
       type: double,
       default_value: 0.0,
       description: "Proportional gain for the yaw axis."
+    }
+  }
+  hydrodynamics: {
+    mass: {
+      type: double,
+      default_value: 0.0,
+      description: "The mass of the vehicle."
+    },
+    # Restorative forces coefficients
+    weight: {
+      type: double,
+      default_value: 0.0,
+      description: "The weight of the vehicle."
+    },
+    buoyancy: {
+      type: double,
+      default_value: 0.0,
+      description: "The buoyancy of the vehicle."
+    },
+    center_of_buoyancy: {
+      type: double_array,
+      default_value: [0.0, 0.0, 0.0],
+      description: "The center-of-buoyancy of the vehicle."
+    },
+    center_of_gravity: {
+      type: double_array,
+      default_value: [0.0, 0.0, 0.0],
+      description: "The center-of-gravity of the vehicle."
+    },
+    # Inertial parameters
+    Ixx: {
+      type: double,
+      default_value: 0.0,
+      description: "The moment of inertia about the x-axis."
+    },
+    Iyy: {
+      type: double,
+      default_value: 0.0,
+      description: "The moment of inertia about the y-axis."
+    },
+    Izz: {
+      type: double,
+      default_value: 0.0,
+      description: "The moment of inertia about the z-axis."
+    },
+    # Added mass parameters
+    Xdu: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the x-axis."
+    },
+    Ydv: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the y-axis."
+    },
+    Zdw: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the z-axis."
+    },
+    Kdp: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the roll axis."
+    },
+    Mdq: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the pitch axis."
+    },
+    Ndr: {
+      type: double,
+      default_value: 0.0,
+      description: "The added mass coefficient in the yaw axis."
+    },
+    # Linear damping coefficients
+    Xu: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the x-axis."
+    },
+    Yv: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the y-axis."
+    },
+    Zw: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the z-axis."
+    },
+    Kp: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the roll axis."
+    },
+    Mq: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the pitch axis."
+    },
+    Nr: {
+      type: double,
+      default_value: 0.0,
+      description: "The linear damping coefficient in the yaw axis."
+    },
+    # Quadratic damping coefficients
+    Xuu: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the x-axis."
+    },
+    Yvv: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the y-axis."
+    },
+    Zww: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the z-axis."
+    },
+    Kpp: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the roll axis."
+    },
+    Mqq: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the pitch axis."
+    },
+    Nrr: {
+      type: double,
+      default_value: 0.0,
+      description: "The quadratic damping coefficient in the yaw axis."
     }
   }

@@ -124,6 +124,12 @@ protected:
   Eigen::Vector6d initial_acceleration_error_;
   Eigen::Vector6d total_velocity_error_;
 
+  // Hydrodynamic model
+  hydrodynamics::Inertia inertia_;
+  hydrodynamics::Coriolis coriolis_;
+  hydrodynamics::Damping damping_;
+  hydrodynamics::RestoringForces restoring_forces_;
+
 private:
   VELOCITY_CONTROLLERS_LOCAL
   void reference_state_callback(std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg);
