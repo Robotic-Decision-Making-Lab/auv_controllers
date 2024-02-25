@@ -25,6 +25,10 @@ foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+generate_parameter_library(integral_sliding_mode_controller_parameters
+  src/integral_sliding_mode_controller_parameters.yaml
+)
+
 add_library(velocity_controllers SHARED
   src/integral_sliding_mode_controller.cpp
 )
@@ -41,6 +45,7 @@ target_compile_features(velocity_controllers PUBLIC cxx_std_17)
 target_link_libraries(velocity_controllers
   PUBLIC
     ${rclcpp_LIBRARIES}
+    integral_sliding_mode_controller_parameters
 )
 
 # Use dllexport instead of dllimport
@@ -68,6 +73,7 @@ install(
 install(
   TARGETS
     velocity_controllers
+    integral_sliding_mode_controller_parameters
   EXPORT
     export_velocity_controllers
   RUNTIME DESTINATION bin

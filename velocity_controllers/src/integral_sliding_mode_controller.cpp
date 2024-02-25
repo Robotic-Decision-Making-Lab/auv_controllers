@@ -20,10 +20,63 @@
 
 #include "velocity_controllers/integral_sliding_mode_controller.hpp"
 
+#include <Eigen/Dense>
+#include <string>
+
 namespace velocity_controllers
 {
 
-IntegralSlidingModeController::CallbackReturn IntegralSlidingModeController::on_init() {}
+IntegralSlidingModeController::CallbackReturn IntegralSlidingModeController::on_init()
+{
+  try {
+    param_listener_ = std::make_shared<integral_sliding_mode_controller::ParamListener>(get_node());
+  }
+  catch (const std::exception & e) {
+    fprintf(stderr, "An exception occurred while initializing the controller: %s\n", e.what());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+void IntegralSlidingModeController::update_parameters()
+{
+  if (!param_listener_->is_old(params_)) {
+    return;
+  }
+  param_listener_->refresh_dynamic_parameters();
+  params_ = param_listener_->get_params();
+}
+
+controller_interface::CallbackReturn IntegralSlidingModeController::configure_parameters()
+{
+  update_parameters();
+
+  // Update the controller gains used by the controller
+  sliding_gain_ = params_.gains.rho;
+  boundary_thickness_ = params_.gains.lambda;
+  proportional_gain_ = Eigen::Vector6d(params_.gains.Kp.data()).asDiagonal().toDenseMatrix();
+
+  // Update the hydrodynamic parameters used by the controller
+  Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
+  Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
+  Eigen::Vector6d linear_damping(params_.hydrodynamics.linear_damping.data());
+  Eigen::Vector6d quadratic_damping(params_.hydrodynamics.quadratic_damping.data());
+  Eigen::Vector3d center_of_buoyancy(params_.hydrodynamics.center_of_buoyancy.data());
+  Eigen::Vector3d center_of_gravity(params_.hydrodynamics.center_of_gravity.data());
+
+  // Don't move the inertial parameters because we use them twice
+  inertia_ = std::make_unique<hydrodynamics::Inertia>(params_.hydrodynamics.mass, moments_of_inertia, added_mass);
+  coriolis_ = std::make_unique<hydrodynamics::Coriolis>(params_.hydrodynamics.mass, moments_of_inertia, added_mass);
+
+  // Move the damping and restoring forces because we only use them once
+  damping_ = std::make_unique<hydrodynamics::Damping>(std::move(linear_damping), std::move(quadratic_damping));
+  restoring_forces_ = std::make_unique<hydrodynamics::RestoringForces>(
+    params_.hydrodynamics.weight, params_.hydrodynamics.buoyancy, std::move(center_of_buoyancy),
+    std::move(center_of_gravity));
+
+  return controller_interface::CallbackReturn::SUCCESS;
+}
 
 controller_interface::InterfaceConfiguration IntegralSlidingModeController::command_interface_configuration() const {}
 
@@ -60,10 +113,6 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 }
 
 bool IntegralSlidingModeController::on_set_chained_mode(bool chained_mode) {}
-
-void IntegralSlidingModeController::update_parameters() {}
-
-controller_interface::CallbackReturn IntegralSlidingModeController::configure_parameters() {}
 
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces() {}
 
