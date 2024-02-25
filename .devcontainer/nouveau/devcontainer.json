@@ -34,7 +34,8 @@
         "esbenp.prettier-vscode",
         "xaver.clang-format",
         "charliermarsh.ruff",
-        "ms-python.black-formatter"
+        "ms-python.black-formatter",
+        "josetr.cmake-language-support-vscode"
       ]
     }
   }

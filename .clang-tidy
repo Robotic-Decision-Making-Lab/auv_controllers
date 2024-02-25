@@ -25,7 +25,8 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -bugprone-implicit-widening-of-multiplication-result,
   -clang-diagnostic-error,
-  -bugprone-exception-escape
+  -bugprone-exception-escape,
+  -misc-include-cleaner
 WarningsAsErrors: "*"
 CheckOptions:
   - key: readability-braces-around-statements.ShortStatementLines

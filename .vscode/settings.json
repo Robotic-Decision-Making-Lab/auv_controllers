@@ -6,7 +6,11 @@
     "*.srdf": "xml",
     "*.rviz": "yaml",
     "*.config": "xml",
-    "*.sdf": "xml"
+    "*.sdf": "xml",
+    "dense": "cpp",
+    "vector": "cpp",
+    "memory": "cpp",
+    "cstddef": "cpp"
   },
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.profiles.linux": {
