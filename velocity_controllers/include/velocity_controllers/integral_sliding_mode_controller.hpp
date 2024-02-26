@@ -21,7 +21,6 @@
 #pragma once
 
 #include <Eigen/Dense>
-#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -79,31 +78,21 @@ public:
   controller_interface::return_type update_and_write_commands(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-protected:
-  // TODO(evan): Might not need to override this
+  VELOCITY_CONTROLLERS_PUBLIC
   bool on_set_chained_mode(bool chained_mode) override;
+
+protected:
+  std::vector<hardware_interface::CommandInterface> on_export_reference_interfaces() override;
 
   controller_interface::return_type update_reference_from_subscribers(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-  std::vector<hardware_interface::CommandInterface> on_export_reference_interfaces() override;
-
-  /**
-   * @brief Update the controller parameters, including the dynamic parameters.
-   */
   void update_parameters();
 
-  /**
-   * @brief Configure the controller parameters.
-   *
-   * @note This can be called in a control loop to update the dynamic parameters for online controller tuning.
-   *
-   * @return controller_interface::CallbackReturn
-   */
   controller_interface::CallbackReturn configure_parameters();
 
-  // Keep track of the degree-of-freedom names
-  std::vector<std::string> reference_and_state_dof_names_;
+  // DOF information
+  std::vector<std::string> dof_names_;
   size_t dof_;
 
   // Reference signal to track
@@ -142,7 +131,10 @@ protected:
 
 private:
   VELOCITY_CONTROLLERS_LOCAL
-  void reference_state_callback(std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg);
+  void reference_callback(std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg);
+
+  VELOCITY_CONTROLLERS_LOCAL
+  void state_callback(std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg);
 };
 
 }  // namespace velocity_controllers

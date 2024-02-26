@@ -5,16 +5,14 @@ integral_sliding_mode_controller:
     description: "Specifies the degrees-of-freedom used by the controller.",
     validation: {
       unique<>: null,
-      not_empty<>: null
+      not_empty<>: null,
+      subset_of<>: [["x", "y", "z", "rx", "ry", "rz"]],
     }
   }
-  command_interface: {
-    type: string,
-    default_value: "",
-    description: "The name of the interface used by the controller for writing commands to the hardware.",
-    validation: {
-      not_empty<>: null
-    }
+  use_external_measured_states: {
+    type: bool,
+    default_value: false,
+    description: "Use state measurements obtained from a topic instead of from state interfaces."
   }
   gains: {
     rho: {
