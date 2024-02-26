@@ -1,0 +1,11 @@
+<library path="thruster_allocation_matrix_controller">
+
+  <class name="thruster_allocation_matrix_controller/TamController"
+    type="thruster_allocation_matrix_controller::TamController"
+    base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Thruster allocation matrix controller for wrench to thrust control (?).
+    </description>
+  </class>
+
+</library>
