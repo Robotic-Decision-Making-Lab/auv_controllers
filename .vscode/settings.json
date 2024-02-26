@@ -6,7 +6,8 @@
     "*.srdf": "xml",
     "*.rviz": "yaml",
     "*.config": "xml",
-    "*.sdf": "xml"
+    "*.sdf": "xml",
+    "core": "cpp"
   },
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.profiles.linux": {

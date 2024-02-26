@@ -15,7 +15,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   realtime_tools
   eigen3_cmake_module
   Eigen3
-  hydrodynamics
   geometry_msgs
   control_msgs
 )
