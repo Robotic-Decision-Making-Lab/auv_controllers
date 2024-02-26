@@ -112,6 +112,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
   const rclcpp_lifecycle::State & previous_state)
 {
   // NOTE: We may actually need something here - Ever
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
