@@ -36,7 +36,7 @@ namespace
 void reset_command_msg(
   const std::shared_ptr<control_msgs::msg::MultiDOFCommand> & msg, const std::vector<std::string> & dof_names)
 {
-  // Allocate memory for the message/clear previous values
+  // Resize to the correct number of DoFs
   msg->dof_names = dof_names;
   msg->values.resize(dof_names.size(), std::numeric_limits<double>::quiet_NaN());
   msg->values_dot.resize(dof_names.size(), std::numeric_limits<double>::quiet_NaN());
@@ -48,8 +48,19 @@ void sort_command_msg_by_names(
 {
   const size_t dof = dof_names.size();
 
+  // Make a copy of the message so that we can sort the original in-place
   auto unsorted_msg = std::make_shared<control_msgs::msg::MultiDOFCommand>(*msg);
   reset_command_msg(msg, dof_names);
+
+  if (unsorted_msg->values_dot.size() != unsorted_msg->values.size()) {
+    RCLCPP_DEBUG(  // NOLINT
+      logger,
+      "Received a command message with mismatched value sizes (%zu values and %zu values_dot). Assuming that "
+      "values_dot is not defined.",
+      unsorted_msg->values.size(), unsorted_msg->values_dot.size());
+
+    unsorted_msg->values_dot.assign(unsorted_msg->values.size(), std::numeric_limits<double>::quiet_NaN());
+  }
 
   if (unsorted_msg->dof_names.empty() && unsorted_msg->values.size() == dof) {
     RCLCPP_WARN(  // NOLINT
@@ -60,16 +71,6 @@ void sort_command_msg_by_names(
     msg->values = unsorted_msg->values;
     msg->values_dot = unsorted_msg->values_dot;
   } else if (unsorted_msg->dof_names.size() == dof && unsorted_msg->values.size() == dof) {
-    if (unsorted_msg->values_dot.size() != unsorted_msg->values.size()) {
-      RCLCPP_DEBUG(  // NOLINT
-        logger,
-        "Received a command message with mismatched value sizes (%zu values and %zu values_dot). Assuming that "
-        "values_dot is not defined.",
-        unsorted_msg->values.size(), unsorted_msg->values_dot.size());
-
-      unsorted_msg->values_dot.resize(unsorted_msg->values.size(), std::numeric_limits<double>::quiet_NaN());
-    }
-
     for (size_t i = 0; i < dof; ++i) {
       auto it = std::find(unsorted_msg->dof_names.begin(), unsorted_msg->dof_names.end(), dof_names[i]);
 
@@ -232,9 +233,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
 controller_interface::CallbackReturn IntegralSlidingModeController::on_configure(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  auto success = configure_parameters();
-  if (success != controller_interface::CallbackReturn::SUCCESS) {
-    return success;
+  auto ret = configure_parameters();
+  if (ret != controller_interface::CallbackReturn::SUCCESS) {
+    return ret;
   }
 
   // Initialize the reference and state realtime messages
@@ -278,7 +279,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
 
-  // Initialize the controller state message
+  // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.dof_states.resize(dof_);
   for (size_t i = 0; i < dof_; ++i) {
@@ -332,7 +333,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   reset_command_msg(*(reference_.readFromRT()), dof_names_);
   reset_command_msg(*(system_state_.readFromRT()), dof_names_);
 
-  // Reset the reference interfaces
+  // Reset the reference and state interfaces
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
 
@@ -403,9 +404,8 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_acceleration_values);
 
   // Get the velocity state as an Eigen vector
-  const std::vector<double> velocity_state_values(system_state_values_.begin(), system_state_values_.end());
   const Eigen::Vector6d velocity_state =
-    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, velocity_state_values);
+    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, system_state_values_);
 
   // Calculate the velocity error
   std::vector<double> velocity_error_values;
