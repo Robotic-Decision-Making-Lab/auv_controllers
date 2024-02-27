@@ -58,6 +58,27 @@ pluginlib_export_plugin_description_file(controller_interface thruster_allocatio
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gmock REQUIRED)
+  find_package(controller_manager REQUIRED)
+  find_package(ros2_control_test_assets REQUIRED)
+
+  ament_add_gmock(test_load_thruster_allocation_matrix_controller
+    test/test_load_thruster_allocation_matrix_controller.cpp
+  )
+  target_link_libraries(test_load_thruster_allocation_matrix_controller
+    position_controllers
+  )
+  ament_target_dependencies(test_load_thruster_allocation_matrix_controller
+    controller_manager
+    ros2_control_test_assets
+  )
+
+  ament_add_gmock(test_thruster_allocation_matrix_controller
+    test/test_thruster_allocation_matrix_controller.cpp
+  )
+  target_link_libraries(test_thruster_allocation_matrix_controller
+    position_controllers
+  )
 
   set(ament_cmake_uncrustify_FOUND TRUE)
 
