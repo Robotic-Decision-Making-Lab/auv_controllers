@@ -1,0 +1,18 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 225 # Hz
+
+    integral_sliding_mode_controller:
+      type: velocity_controllers/IntegralSlidingModeController
+
+integral_sliding_mode_controller:
+  ros__parameters:
+    dof_names:
+      - "x"
+      - "y"
+      - "z"
+      - "rx"
+      - "ry"
+      - "rz"
+    hydrodynamics:
+      mass: 1.0

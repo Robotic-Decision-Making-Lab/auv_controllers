@@ -1,6 +1,7 @@
 integral_sliding_mode_controller:
   dof_names: {
     type: string_array,
+    read_only: true,
     default_value: ["x", "y", "z", "rx", "ry", "rz"],
     description: "Specifies the degrees-of-freedom used by the controller.",
     validation: {
@@ -11,6 +12,7 @@ integral_sliding_mode_controller:
   }
   use_external_measured_states: {
     type: bool,
+    read_only: true,
     default_value: false,
     description: "Use state measurements (velocity and acceleration) obtained from a topic instead of from state interfaces."
   }
