@@ -25,6 +25,7 @@
 #include <string>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "tf2_eigen/tf2_eigen.hpp"
 
 namespace velocity_controllers
 {
@@ -60,7 +61,7 @@ void sort_command_msg_by_names(
     msg->values_dot = unsorted_msg->values_dot;
   } else if (unsorted_msg->dof_names.size() == dof && unsorted_msg->values.size() == dof) {
     if (unsorted_msg->values_dot.size() != unsorted_msg->values.size()) {
-      RCLCPP_WARN(  // NOLINT
+      RCLCPP_DEBUG(  // NOLINT
         logger,
         "Received a command message with mismatched value sizes (%zu values and %zu values_dot). Assuming that "
         "values_dot is not defined.",
@@ -87,6 +88,29 @@ void sort_command_msg_by_names(
        << " values; expected " << dof << ".";
     throw std::invalid_argument(ss.str());
   }
+}
+
+Eigen::Vector6d create_six_dof_eigen_from_named_vector(
+  const std::vector<std::string> & dof_names, const std::array<std::string, 6> & six_dof_names,
+  const std::vector<double> & values)
+{
+  if (dof_names.size() != values.size()) {
+    throw std::invalid_argument("The DoF names and values must have the same size.");
+  }
+
+  Eigen::Vector6d vec = Eigen::Vector6d::Zero();
+
+  for (size_t i = 0; i < six_dof_names.size(); ++i) {
+    auto it = std::find(dof_names.begin(), dof_names.end(), six_dof_names[i]);
+
+    if (it == dof_names.end()) {
+      vec[i] = std::numeric_limits<double>::quiet_NaN();
+    } else {
+      vec[i] = values[std::distance(dof_names.begin(), it)];
+    }
+  }
+
+  return vec;
 }
 
 }  // namespace
@@ -126,14 +150,9 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    // The ISMC requires velocity and acceleration state information
-    const std::array<std::string, 2> state_interfaces = {
-      hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION};
-
-    for (const auto & state_interface : state_interfaces) {
-      for (const auto & name : dof_names_) {
-        state_interface_configuration.names.emplace_back(name + "/" + state_interface);
-      }
+    // The ISMC only requires velocity state information
+    for (const auto & name : dof_names_) {
+      state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
 
@@ -142,7 +161,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
 {
-  // This controller has a velocity and acceleration reference interface
+  // This controller has velocity and acceleration reference interfaces
   const std::array<std::string, 2> reference_interfaces_types = {
     hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION};
 
@@ -190,8 +209,8 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
   proportional_gain_ = Eigen::Vector6d(params_.gains.Kp.data()).asDiagonal().toDenseMatrix();
 
   // Update the hydrodynamic parameters used by the controller
-  Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
-  Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
+  const Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
+  const Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
   Eigen::Vector6d linear_damping(params_.hydrodynamics.linear_damping.data());
   Eigen::Vector6d quadratic_damping(params_.hydrodynamics.quadratic_damping.data());
   Eigen::Vector3d center_of_buoyancy(params_.hydrodynamics.center_of_buoyancy.data());
@@ -229,20 +248,28 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   reset_command_msg(system_state_msg, dof_names_);
   system_state_.writeFromNonRT(system_state_msg);
 
-  // Reset the measured state values; there are 2 state values for each DOF
-  system_state_values_.resize(2 * dof_, std::numeric_limits<double>::quiet_NaN());
+  // Reset the measured state values
+  system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
 
   // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<control_msgs::msg::MultiDOFCommand>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { reference_callback(msg); });
+    [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { reference_callback(msg); });  // NOLINT
+
+  // Subscribe to the system rotation topic
+  system_rotation_sub_ = get_node()->create_subscription<geometry_msgs::msg::Quaternion>(
+    "~/system_rotation", rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<geometry_msgs::msg::Quaternion> msg) {  // NOLINT
+      Eigen::Quaterniond rotation;
+      tf2::fromMsg(*msg, rotation);
+      system_rotation_.writeFromNonRT(rotation);
+    });
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
-  // TODO(evan-palmer): Move this to a different cb to sort the values
   if (params_.use_external_measured_states) {
     system_state_sub_ = get_node()->create_subscription<control_msgs::msg::MultiDOFCommand>(
       "~/system_state", rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { system_state_.writeFromNonRT(msg); });
+      [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { state_callback(msg); });  // NOLINT
   }
 
   // Setup the controller state publisher
@@ -251,22 +278,32 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
 
+  // Initialize the controller state message
+  rt_controller_state_pub_->lock();
+  rt_controller_state_pub_->msg_.dof_states.resize(dof_);
+  for (size_t i = 0; i < dof_; ++i) {
+    rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
+  }
+  rt_controller_state_pub_->unlock();
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void IntegralSlidingModeController::reference_callback(const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)
+void IntegralSlidingModeController::reference_callback(
+  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)  // NOLINT
 {
   try {
     sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
     reference_.writeFromNonRT(msg);
   }
   catch (const std::invalid_argument & e) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid reference message: %s", e.what());
+    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid reference message: %s", e.what());  // NOLINT
     return;
   }
 }
 
-void IntegralSlidingModeController::state_callback(const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)
+void IntegralSlidingModeController::state_callback(
+  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)  // NOLINT
 {
   try {
     sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
@@ -287,7 +324,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   // Clear the error terms
   total_velocity_error_ = Eigen::Vector6d::Zero();
   initial_velocity_error_ = Eigen::Vector6d::Zero();
-  initial_acceleration_error_ = Eigen::Vector6d::Zero();
+
+  // Reset the rotation
+  system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
 
   // Reset the controller state
   reset_command_msg(*(reference_.readFromRT()), dof_names_);
@@ -330,21 +369,20 @@ controller_interface::return_type IntegralSlidingModeController::update_referenc
   return controller_interface::return_type::OK;
 }
 
-controller_interface::return_type IntegralSlidingModeController::update_system_state_from_subscribers()
+controller_interface::return_type IntegralSlidingModeController::update_system_state_values()
 {
-  auto * current_system_state = system_state_.readFromRT();
+  if (params_.use_external_measured_states) {
+    auto * current_system_state = system_state_.readFromRT();
 
-  for (size_t i = 0; i < dof_; ++i) {
-    // Update the velocity state
-    if (!std::isnan((*current_system_state)->values[i])) {
-      system_state_values_[i] = (*current_system_state)->values[i];
-      (*current_system_state)->values[i] = std::numeric_limits<double>::quiet_NaN();
+    for (size_t i = 0; i < dof_; ++i) {
+      if (!std::isnan((*current_system_state)->values[i])) {
+        system_state_values_[i] = (*current_system_state)->values[i];
+        (*current_system_state)->values[i] = std::numeric_limits<double>::quiet_NaN();
+      }
     }
-
-    // Update the acceleration state
-    if (!std::isnan((*current_system_state)->values_dot[i])) {
-      system_state_values_[i + dof_] = (*current_system_state)->values_dot[i];
-      (*current_system_state)->values_dot[i] = std::numeric_limits<double>::quiet_NaN();
+  } else {
+    for (size_t i = 0; i < system_state_values_.size(); ++i) {
+      system_state_values_[i] = state_interfaces_[i].get_value();
     }
   }
 
@@ -354,6 +392,85 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
 controller_interface::return_type IntegralSlidingModeController::update_and_write_commands(
   const rclcpp::Time & time, const rclcpp::Duration & period)
 {
+  if (params_.enable_parameter_update_without_reactivation) {
+    configure_parameters();
+  }
+
+  // Get the reference acceleration as an Eigen vector
+  const std::vector<double> reference_acceleration_values(
+    reference_interfaces_.begin() + dof_, reference_interfaces_.end());
+  const Eigen::Vector6d reference_acceleration =
+    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_acceleration_values);
+
+  // Get the velocity state as an Eigen vector
+  const std::vector<double> velocity_state_values(system_state_values_.begin(), system_state_values_.end());
+  const Eigen::Vector6d velocity_state =
+    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, velocity_state_values);
+
+  // Calculate the velocity error
+  std::vector<double> velocity_error_values;
+  velocity_error_values.reserve(dof_);
+
+  std::transform(
+    reference_interfaces_.begin(), reference_interfaces_.begin() + dof_, system_state_values_.begin(),
+    std::back_inserter(velocity_error_values), [](double reference, double state) {
+      return !std::isnan(reference) && !std::isnan(state) ? reference - state
+                                                          : std::numeric_limits<double>::quiet_NaN();
+    });
+  const Eigen::Vector6d velocity_error =
+    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, velocity_error_values);
+
+  if (first_update_) {
+    // If this is the first update, set the initial error conditions
+    initial_velocity_error_ = velocity_error;
+    first_update_ = false;
+  } else {
+    // Update the total velocity error
+    total_velocity_error_ += velocity_error * period.seconds();
+  }
+
+  // Calculate the computed torque control
+  const Eigen::Vector6d tau0 =
+    inertia_->getMassMatrix() * (reference_acceleration + proportional_gain_ * velocity_error) +
+    coriolis_->calculateCoriolisMatrix(velocity_state) * velocity_state +
+    damping_->calculateDampingMatrix(velocity_state) * velocity_state +
+    restoring_forces_->calculateRestoringForcesVector(system_rotation_.readFromRT()->toRotationMatrix());
+
+  // Calculate the sliding surface
+  Eigen::Vector6d surface =
+    velocity_error + proportional_gain_ * total_velocity_error_ - proportional_gain_ * initial_velocity_error_;
+
+  // Apply the sign function to the surface
+  // Right now, we use the tanh function to reduce the chattering effect.
+  // TODO(evan-palmer): Implement the super twisting algorithm to improve this further
+  surface = surface.unaryExpr([this](double x) { return std::tanh(x / boundary_thickness_); });
+
+  // Calculate the disturbance rejection torque
+  const Eigen::Vector6d tau1 = -sliding_gain_ * surface;
+
+  // Total control torque
+  const Eigen::Vector6d tau = tau0 + tau1;
+
+  // Convert the control torque to a command interface value
+  for (size_t i = 0; i < dof_; ++i) {
+    auto it = std::find(six_dof_names_.begin(), six_dof_names_.end(), dof_names_[i]);
+    const size_t index = std::distance(six_dof_names_.begin(), it);
+    command_interfaces_[i].set_value(tau[index]);
+  }
+
+  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
+    rt_controller_state_pub_->msg_.header.stamp = time;
+    for (size_t i = 0; i < dof_; ++i) {
+      rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
+      rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
+      rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];
+      rt_controller_state_pub_->msg_.dof_states[i].time_step = period.seconds();
+      rt_controller_state_pub_->msg_.dof_states[i].output = command_interfaces_[i].get_value();
+    }
+    rt_controller_state_pub_->unlockAndPublish();
+  }
+
+  return controller_interface::return_type::OK;
 }
 
 }  // namespace velocity_controllers

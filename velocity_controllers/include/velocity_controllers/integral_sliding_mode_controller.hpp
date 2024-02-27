@@ -29,8 +29,7 @@
 #include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
-#include "geometry_msgs/msg/accel.hpp"
-#include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/quaternion.hpp"
 #include "hydrodynamics/eigen.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -87,13 +86,14 @@ protected:
   controller_interface::return_type update_reference_from_subscribers(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-  controller_interface::return_type update_system_state_from_subscribers();
+  controller_interface::return_type update_system_state_values();
 
   void update_parameters();
 
   controller_interface::CallbackReturn configure_parameters();
 
   // DOF information
+  const std::array<std::string, 6> six_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
   std::vector<std::string> dof_names_;
   size_t dof_;
 
@@ -105,6 +105,12 @@ protected:
   realtime_tools::RealtimeBuffer<std::shared_ptr<control_msgs::msg::MultiDOFCommand>> system_state_;
   std::shared_ptr<rclcpp::Subscription<control_msgs::msg::MultiDOFCommand>> system_state_sub_;
   std::vector<double> system_state_values_;
+
+  // We need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model. This isn't
+  // read from a state interface because of the disjoint between the state used for error calculation and the rotation
+  // which needs a specific set of dof data.
+  realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Quaternion>> system_rotation_sub_;
 
   // Publish the controller state
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;
@@ -122,7 +128,6 @@ protected:
   // Error terms
   bool first_update_{true};
   Eigen::Vector6d initial_velocity_error_;
-  Eigen::Vector6d initial_acceleration_error_;
   Eigen::Vector6d total_velocity_error_;
 
   // Hydrodynamic model

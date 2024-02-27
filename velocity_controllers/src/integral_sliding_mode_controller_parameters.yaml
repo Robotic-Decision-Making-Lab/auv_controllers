@@ -12,7 +12,12 @@ integral_sliding_mode_controller:
   use_external_measured_states: {
     type: bool,
     default_value: false,
-    description: "Use state measurements obtained from a topic instead of from state interfaces."
+    description: "Use state measurements (velocity and acceleration) obtained from a topic instead of from state interfaces."
+  }
+  enable_parameter_update_without_reactivation: {
+    type: bool,
+    default_value: true,
+    description: "If enabled, the parameters will be dynamically updated while the controller is running."
   }
   gains: {
     rho: {

@@ -18,6 +18,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   hydrodynamics
   geometry_msgs
   control_msgs
+  tf2_eigen
 )
 
 find_package(ament_cmake REQUIRED)
