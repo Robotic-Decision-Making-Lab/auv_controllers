@@ -87,6 +87,8 @@ protected:
   controller_interface::return_type update_reference_from_subscribers(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
+  controller_interface::return_type update_system_state_from_subscribers();
+
   void update_parameters();
 
   controller_interface::CallbackReturn configure_parameters();

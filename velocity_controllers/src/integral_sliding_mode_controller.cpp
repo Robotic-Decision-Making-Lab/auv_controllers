@@ -32,7 +32,7 @@ namespace velocity_controllers
 namespace
 {
 
-void reset_controller_command_msg(
+void reset_command_msg(
   const std::shared_ptr<control_msgs::msg::MultiDOFCommand> & msg, const std::vector<std::string> & dof_names)
 {
   // Allocate memory for the message/clear previous values
@@ -41,10 +41,52 @@ void reset_controller_command_msg(
   msg->values_dot.resize(dof_names.size(), std::numeric_limits<double>::quiet_NaN());
 }
 
-void read_named_data_into_eigen(
-  const std::vector<std::string> & names, const std::vector<double> & data, Eigen::Vector6d & vec)
+void sort_command_msg_by_names(
+  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> & msg, const std::vector<std::string> & dof_names,
+  const rclcpp::Logger & logger)
 {
-  /* data */
+  const size_t dof = dof_names.size();
+
+  auto unsorted_msg = std::make_shared<control_msgs::msg::MultiDOFCommand>(*msg);
+  reset_command_msg(msg, dof_names);
+
+  if (unsorted_msg->dof_names.empty() && unsorted_msg->values.size() == dof) {
+    RCLCPP_WARN(  // NOLINT
+      logger,
+      "Received a command message without any DoF names. Assuming that the values are defined in the same order as "
+      "the desired DoF names.");
+
+    msg->values = unsorted_msg->values;
+    msg->values_dot = unsorted_msg->values_dot;
+  } else if (unsorted_msg->dof_names.size() == dof && unsorted_msg->values.size() == dof) {
+    if (unsorted_msg->values_dot.size() != unsorted_msg->values.size()) {
+      RCLCPP_WARN(  // NOLINT
+        logger,
+        "Received a command message with mismatched value sizes (%zu values and %zu values_dot). Assuming that "
+        "values_dot is not defined.",
+        unsorted_msg->values.size(), unsorted_msg->values_dot.size());
+
+      unsorted_msg->values_dot.resize(unsorted_msg->values.size(), std::numeric_limits<double>::quiet_NaN());
+    }
+
+    for (size_t i = 0; i < dof; ++i) {
+      auto it = std::find(unsorted_msg->dof_names.begin(), unsorted_msg->dof_names.end(), dof_names[i]);
+
+      if (it == unsorted_msg->dof_names.end()) {
+        throw std::invalid_argument(
+          "Received a command message with a DoF name that does not match the controller's DoF names.");
+      }
+
+      const size_t index = std::distance(unsorted_msg->dof_names.begin(), it);
+      msg->values[i] = unsorted_msg->values[index];
+      msg->values_dot[i] = unsorted_msg->values_dot[index];
+    }
+  } else {
+    std::stringstream ss;
+    ss << "Reference message had " << unsorted_msg->dof_names.size() << " DoF names and " << unsorted_msg->values.size()
+       << " values; expected " << dof << ".";
+    throw std::invalid_argument(ss.str());
+  }
 }
 
 }  // namespace
@@ -69,7 +111,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
 
   // The ISMC is an effort controller, so we only need to export the effort interface
   for (const auto & name : dof_names_) {
-    command_interface_configuration.names.push_back(name + "/" + hardware_interface::HW_IF_EFFORT);
+    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_EFFORT);
   }
 
   return command_interface_configuration;
@@ -85,12 +127,12 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
     // The ISMC requires velocity and acceleration state information
-    std::array<std::string, 2> state_interfaces = {
+    const std::array<std::string, 2> state_interfaces = {
       hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION};
 
     for (const auto & state_interface : state_interfaces) {
       for (const auto & name : dof_names_) {
-        state_interface_configuration.names.push_back(name + "/" + state_interface);
+        state_interface_configuration.names.emplace_back(name + "/" + state_interface);
       }
     }
   }
@@ -101,7 +143,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
 {
   // This controller has a velocity and acceleration reference interface
-  std::array<std::string, 2> reference_interfaces_types = {
+  const std::array<std::string, 2> reference_interfaces_types = {
     hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION};
 
   reference_interfaces_.resize(2 * dof_, std::numeric_limits<double>::quiet_NaN());
@@ -111,8 +153,8 @@ std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController:
 
   for (const auto & reference_type : reference_interfaces_types) {
     for (size_t i = 0; i < dof_; ++i) {
-      reference_interfaces.push_back(hardware_interface::CommandInterface(
-        get_node()->get_name(), dof_names_[i] + "/" + reference_type, &reference_interfaces_[i]));
+      reference_interfaces.emplace_back(
+        get_node()->get_name(), dof_names_[i] + "/" + reference_type, &reference_interfaces_[i]);
     }
   }
 
@@ -177,14 +219,14 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   }
 
   // Initialize the reference and state realtime messages
-  std::shared_ptr<control_msgs::msg::MultiDOFCommand> reference_msg =
+  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> reference_msg =
     std::make_shared<control_msgs::msg::MultiDOFCommand>();
-  reset_controller_command_msg(reference_msg, dof_names_);
+  reset_command_msg(reference_msg, dof_names_);
   reference_.writeFromNonRT(reference_msg);
 
-  std::shared_ptr<control_msgs::msg::MultiDOFCommand> system_state_msg =
+  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> system_state_msg =
     std::make_shared<control_msgs::msg::MultiDOFCommand>();
-  reset_controller_command_msg(system_state_msg, dof_names_);
+  reset_command_msg(system_state_msg, dof_names_);
   system_state_.writeFromNonRT(system_state_msg);
 
   // Reset the measured state values; there are 2 state values for each DOF
@@ -214,58 +256,26 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
 
 void IntegralSlidingModeController::reference_callback(const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)
 {
-  if (msg->dof_names.empty() && msg->values.size() == dof_) {
-    RCLCPP_WARN(
-      get_node()->get_logger(),
-      "Received a reference message without any DOF names. Assuming that the values are defined in the same order as "
-      "the controller's DOF names.");
-
-    // Assume that the values are in the same order as the controller's DOF names and save them
-    auto reference = *msg;
-    reference.dof_names = dof_names_;
-    reference_.writeFromNonRT(std::make_shared<control_msgs::msg::MultiDOFCommand>(reference));
-  } else if (msg->dof_names.size() == dof_ && msg->values.size() == dof_) {
-    auto reference = *msg;
-    reference.dof_names = dof_names_;
-
-    if (msg->values_dot.size() != msg->values.size()) {
-      RCLCPP_WARN(
-        get_node()->get_logger(),
-        "Received a reference message with %zu values and %zu values_dot. Assuming that the values_dot are not "
-        "defined.",
-        msg->values.size(), msg->values_dot.size());
-      reference.values_dot.resize(msg->values.size(), 0.0);
-    }
-
-    // Sort the values according to the provided DOF names; we want the values to be in the same order as the controller
-    for (size_t i = 0; i < dof_; ++i) {
-      auto it = std::find(msg->dof_names.begin(), msg->dof_names.end(), dof_names_[i]);
-
-      if (it == msg->dof_names.end()) {
-        RCLCPP_WARN(
-          get_node()->get_logger(),
-          "Received a reference message with a DOF name that does not match the controller's DOF names. Ignoring the "
-          "reference message.");
-        return;
-      }
-
-      size_t index = std::distance(msg->dof_names.begin(), it);
-      reference.values[i] = msg->values[index];
-      reference.values_dot[i] = msg->values_dot[index];
-    }
-
-    reference_.writeFromNonRT(std::make_shared<control_msgs::msg::MultiDOFCommand>(reference));
-  } else {
-    RCLCPP_ERROR(
-      get_node()->get_logger(),
-      "Received an invalid reference message. Reference message had %zu DOF names and %zu values; expected %zu.",
-      msg->dof_names.size(), msg->values.size(), dof_);
+  try {
+    sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
+    reference_.writeFromNonRT(msg);
+  }
+  catch (const std::invalid_argument & e) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid reference message: %s", e.what());
+    return;
   }
 }
 
 void IntegralSlidingModeController::state_callback(const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)
 {
-  /* data */
+  try {
+    sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
+    system_state_.writeFromNonRT(msg);
+  }
+  catch (const std::invalid_argument & e) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid state message: %s", e.what());  // NOLINT
+    return;
+  }
 }
 
 controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
@@ -280,8 +290,8 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   initial_acceleration_error_ = Eigen::Vector6d::Zero();
 
   // Reset the controller state
-  reset_controller_command_msg(*(reference_.readFromRT()), dof_names_);
-  reset_controller_command_msg(*(system_state_.readFromRT()), dof_names_);
+  reset_command_msg(*(reference_.readFromRT()), dof_names_);
+  reset_command_msg(*(system_state_.readFromRT()), dof_names_);
 
   // Reset the reference interfaces
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -301,7 +311,7 @@ bool IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) {
 controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  auto current_reference = reference_.readFromRT();
+  auto * current_reference = reference_.readFromRT();
 
   for (size_t i = 0; i < dof_; ++i) {
     // Update the velocity reference
@@ -314,6 +324,27 @@ controller_interface::return_type IntegralSlidingModeController::update_referenc
     if (!std::isnan((*current_reference)->values_dot[i])) {
       reference_interfaces_[i + dof_] = (*current_reference)->values_dot[i];
       (*current_reference)->values_dot[i] = std::numeric_limits<double>::quiet_NaN();
+    }
+  }
+
+  return controller_interface::return_type::OK;
+}
+
+controller_interface::return_type IntegralSlidingModeController::update_system_state_from_subscribers()
+{
+  auto * current_system_state = system_state_.readFromRT();
+
+  for (size_t i = 0; i < dof_; ++i) {
+    // Update the velocity state
+    if (!std::isnan((*current_system_state)->values[i])) {
+      system_state_values_[i] = (*current_system_state)->values[i];
+      (*current_system_state)->values[i] = std::numeric_limits<double>::quiet_NaN();
+    }
+
+    // Update the acceleration state
+    if (!std::isnan((*current_system_state)->values_dot[i])) {
+      system_state_values_[i + dof_] = (*current_system_state)->values_dot[i];
+      (*current_system_state)->values_dot[i] = std::numeric_limits<double>::quiet_NaN();
     }
   }
 
