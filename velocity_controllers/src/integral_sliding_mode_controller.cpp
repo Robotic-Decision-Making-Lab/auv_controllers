@@ -22,6 +22,13 @@
 
 #include <Eigen/Dense>
 #include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <iterator>
+#include <limits>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"

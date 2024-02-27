@@ -86,10 +86,19 @@ protected:
   controller_interface::return_type update_reference_from_subscribers(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
+  /**
+   * @brief Update the system state values from the system state subscriber.
+   */
   controller_interface::return_type update_system_state_values();
 
+  /**
+   * @brief Update and retrieve the latest parameters.
+   */
   void update_parameters();
 
+  /**
+   * @brief Store the latest system parameters.
+   */
   controller_interface::CallbackReturn configure_parameters();
 
   // DOF information
