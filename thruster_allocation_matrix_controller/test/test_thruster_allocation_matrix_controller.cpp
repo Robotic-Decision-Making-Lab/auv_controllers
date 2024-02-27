@@ -1,222 +1,297 @@
-// Copyright 2020 PAL Robotics SL.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// // Copyright (c) 2021, Stogl Robotics Consulting UG (haftungsbeschränkt)
+// //
+// // Licensed under the Apache License, Version 2.0 (the "License");
+// // you may not use this file except in compliance with the License.
+// // You may obtain a copy of the License at
+// //
+// //     http://www.apache.org/licenses/LICENSE-2.0
+// //
+// // Unless required by applicable law or agreed to in writing, software
+// // distributed under the License is distributed on an "AS IS" BASIS,
+// // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// // See the License for the specific language governing permissions and
+// // limitations under the License.
+// //
+// /// \author: Denis Stogl
 
-#include <stddef.h>
+// #include "test_thruster_allocation_matrix_controller.hpp"
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+// #include <limits>
+// #include <memory>
+// #include <utility>
+// #include <vector>
 
-#include "hardware_interface/loaned_command_interface.hpp"
-#include "hardware_interface/types/hardware_interface_return_values.hpp"
-#include "lifecycle_msgs/msg/state.hpp"
-#include "rclcpp/utilities.hpp"
-#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
-// #include "test_joint_group_position_controller.hpp"
-#include "test_thruster_allocation_matrix_controller.hpp"
-
-using CallbackReturn = controller_interface::CallbackReturn;
-using hardware_interface::LoanedCommandInterface;
-
-namespace
-{
-rclcpp::WaitResultKind wait_for(rclcpp::SubscriptionBase::SharedPtr subscription)
-{
-  rclcpp::WaitSet wait_set;
-  wait_set.add_subscription(subscription);
-  const auto timeout = std::chrono::seconds(10);
-  return wait_set.wait(timeout).kind();
-}
-}  // namespace
-
-void ThrusterAllocationMatrixControllerTest::SetUpTestCase() { rclcpp::init(0, nullptr); }
-
-void ThrusterAllocationMatrixControllerTest::TearDownTestCase() { rclcpp::shutdown(); }
-
-void ThrusterAllocationMatrixControllerTest::SetUp()
-{
-  controller_ = std::make_unique<FriendThrusterAllocationMatrixController>();
-}
-
-void ThrusterAllocationMatrixControllerTest::TearDown() { controller_.reset(nullptr); }
-
-void ThrusterAllocationMatrixControllerTest::SetUpController()
-{
-  const auto result = controller_->init(
-    "test_thruster_allocation_matrix_controller", "", 0, "", controller_->define_custom_node_options());
-  ASSERT_EQ(result, controller_interface::return_type::OK);
-
-  //   std::vector<LoanedCommandInterface> command_ifs;
-  //   command_ifs.emplace_back(joint_1_pos_cmd_);
-  //   command_ifs.emplace_back(joint_2_pos_cmd_);
-  //   command_ifs.emplace_back(joint_3_pos_cmd_);
-  //   controller_->assign_interfaces(std::move(command_ifs), {});
-}
-
-// TEST_F(ThrusterAllocationMatrixControllerTest, JointsParameterNotSet)
+// // Test on_init returns ERROR when a required parameter is missing
+// TEST_P(ThrusterAllocationMatrixControllerTestParameterizedMissingParameters, one_init_parameter_is_missing)
 // {
-//   SetUpController();
-
-//   // configure failed, 'joints' parameter not set
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::ERROR);
+//   ASSERT_EQ(SetUpController(GetParam()), controller_interface::return_type::ERROR);
 // }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, JointsParameterIsEmpty)
-// {
-//   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", std::vector<std::string>()});
+// INSTANTIATE_TEST_SUITE_P(
+//   MissingMandatoryParameterDuringInit, ThrusterAllocationMatrixControllerTestParameterizedMissingParameters,
+//   ::testing::Values(
+//     "thruster_allocation_matrix.mass", "thruster_allocation_matrix.selected_axes",
+//     "thruster_allocation_matrix.stiffness", "chainable_command_interfaces", "command_interfaces", "control.frame.id",
+//     "fixed_world_frame.frame.id", "ft_sensor.frame.id", "ft_sensor.name", "gravity_compensation.CoG.pos",
+//     "gravity_compensation.frame.id", "joints", "kinematics.base", "kinematics.plugin_name",
+//     "kinematics.plugin_package", "kinematics.tip", "state_interfaces"));
 
-//   // configure failed, 'joints' is empty
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::ERROR);
+// INSTANTIATE_TEST_SUITE_P(
+//   InvalidParameterDuringConfiguration, ThrusterAllocationMatrixControllerTestParameterizedInvalidParameters,
+//   ::testing::Values(
+//     // wrong length COG
+//     std::make_tuple(
+//       std::string("gravity_compensation.CoG.pos"), rclcpp::ParameterValue(std::vector<double>() = {1, 2, 3, 4})),
+//     // wrong length stiffness
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.stiffness"), rclcpp::ParameterValue(std::vector<double>() = {1, 2,
+//       3})),
+//     // negative stiffness
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.stiffness"),
+//       rclcpp::ParameterValue(std::vector<double>() = {-1, -2, 3, 4, 5, 6})),
+//     // wrong length mass
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.mass"), rclcpp::ParameterValue(std::vector<double>() = {1, 2, 3})),
+//     // negative mass
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.mass"),
+//       rclcpp::ParameterValue(std::vector<double>() = {-1, -2, 3, 4, 5, 6})),
+//     // wrong length damping ratio
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.damping_ratio"),
+//       rclcpp::ParameterValue(std::vector<double>() = {1, 2, 3})),
+//     // wrong length selected axes
+//     std::make_tuple(
+//       std::string("thruster_allocation_matrix.selected_axes"),
+//       rclcpp::ParameterValue(std::vector<double>() = {1, 2, 3}))
+//     // invalid robot description.
+//     // TODO(anyone): deactivated, because SetUpController returns SUCCESS here?
+//     // ,std::make_tuple(
+//     //   std::string("robot_description"), rclcpp::ParameterValue(std::string() = "bad_robot")))
+//     ));
+
+// // Test on_init returns ERROR when a parameter is invalid
+// TEST_P(ThrusterAllocationMatrixControllerTestParameterizedInvalidParameters, invalid_parameters)
+// {
+//   ASSERT_EQ(SetUpController(), controller_interface::return_type::ERROR);
 // }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, ConfigureAndActivateParamsSuccess)
+// TEST_F(ThrusterAllocationMatrixControllerTest, all_parameters_set_configure_success)
 // {
-//   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", joint_names_});
+//   auto result = SetUpController();
 
-//   // configure successful
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
-//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
+//   ASSERT_EQ(result, controller_interface::return_type::OK);
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.joints.empty());
+//   ASSERT_TRUE(controller_->thruster_allocation_matrix_->parameters_.joints.size() == joint_names_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.joints.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.joints.end(), joint_names_.begin(), joint_names_.end()));
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.command_interfaces.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.command_interfaces.size() ==
+//     command_interface_types_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.command_interfaces.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.command_interfaces.end(), command_interface_types_.begin(),
+//     command_interface_types_.end()));
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.state_interfaces.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.state_interfaces.size() == state_interface_types_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.state_interfaces.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.state_interfaces.end(), state_interface_types_.begin(),
+//     state_interface_types_.end()));
+
+//   ASSERT_EQ(controller_->thruster_allocation_matrix_->parameters_.ft_sensor.name, ft_sensor_name_);
+//   ASSERT_EQ(controller_->thruster_allocation_matrix_->parameters_.kinematics.base, ik_base_frame_);
+//   ASSERT_EQ(controller_->thruster_allocation_matrix_->parameters_.ft_sensor.frame.id, sensor_frame_);
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.selected_axes.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.selected_axes.size() ==
+//     thruster_allocation_matrix_selected_axes_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.selected_axes.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.selected_axes.end(),
+//     thruster_allocation_matrix_selected_axes_.begin(), thruster_allocation_matrix_selected_axes_.end()));
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.mass.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.mass.size() ==
+//     thruster_allocation_matrix_mass_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.mass.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.mass.end(),
+//     thruster_allocation_matrix_mass_.begin(), thruster_allocation_matrix_mass_.end()));
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.damping_ratio.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.damping_ratio.size() ==
+//     thruster_allocation_matrix_damping_ratio_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.damping_ratio.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.damping_ratio.end(),
+//     thruster_allocation_matrix_damping_ratio_.begin(), thruster_allocation_matrix_damping_ratio_.end()));
+
+//   ASSERT_TRUE(!controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.stiffness.empty());
+//   ASSERT_TRUE(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.stiffness.size() ==
+//     thruster_allocation_matrix_stiffness_.size());
+//   ASSERT_TRUE(std::equal(
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.stiffness.begin(),
+//     controller_->thruster_allocation_matrix_->parameters_.thruster_allocation_matrix.stiffness.end(),
+//     thruster_allocation_matrix_stiffness_.begin(), thruster_allocation_matrix_stiffness_.end()));
 // }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, ActivateWithWrongJointsNamesFails)
+// TEST_F(ThrusterAllocationMatrixControllerTest, check_interfaces)
 // {
 //   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", std::vector<std::string>{"joint1", "joint4"}});
 
-//   // activate failed, 'joint4' is not a valid joint name for the hardware
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
-//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), CallbackReturn::ERROR);
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
 
-//   controller_->get_node()->set_parameter({"joints", std::vector<std::string>{"joint1", "joint2"}});
+//   auto command_interfaces = controller_->command_interface_configuration();
+//   ASSERT_EQ(command_interfaces.names.size(), joint_command_values_.size());
+//   EXPECT_EQ(command_interfaces.type, controller_interface::interface_configuration_type::INDIVIDUAL);
 
-//   // activate failed, 'acceleration' is not a registered interface for `joint1`
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
-//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), CallbackReturn::ERROR);
+//   ASSERT_EQ(controller_->command_interfaces_.size(), command_interface_types_.size() * joint_names_.size());
+
+//   auto state_interfaces = controller_->state_interface_configuration();
+//   ASSERT_EQ(state_interfaces.names.size(), joint_state_values_.size() + fts_state_values_.size());
+//   EXPECT_EQ(state_interfaces.type, controller_interface::interface_configuration_type::INDIVIDUAL);
+
+//   ASSERT_EQ(
+//     controller_->state_interfaces_.size(),
+//     state_interface_types_.size() * joint_names_.size() + fts_state_values_.size());
 // }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, CommandSuccessTest)
+// TEST_F(ThrusterAllocationMatrixControllerTest, activate_success)
 // {
 //   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", joint_names_});
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
 
-//   // update successful though no command has been send yet
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->command_interfaces_.size(), command_interface_types_.size() * joint_names_.size());
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+// }
+
+// TEST_F(ThrusterAllocationMatrixControllerTest, update_success)
+// {
+//   SetUpController();
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   broadcast_tfs();
+//   ASSERT_EQ(
+//     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
+//     controller_interface::return_type::OK);
+// }
+
+// TEST_F(ThrusterAllocationMatrixControllerTest, deactivate_success)
+// {
+//   SetUpController();
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_deactivate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+// }
+
+// TEST_F(ThrusterAllocationMatrixControllerTest, reactivate_success)
+// {
+//   SetUpController();
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_deactivate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   assign_interfaces();
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   broadcast_tfs();
+//   ASSERT_EQ(
+//     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
+//     controller_interface::return_type::OK);
+// }
+
+// TEST_F(ThrusterAllocationMatrixControllerTest, publish_status_success)
+// {
+//   SetUpController();
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+
+//   broadcast_tfs();
 //   ASSERT_EQ(
 //     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
 //     controller_interface::return_type::OK);
 
-//   // check joint commands are still the default ones
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 1.1);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 2.1);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 3.1);
+//   ControllerStateMsg msg;
+//   subscribe_and_get_messages(msg);
 
-//   // send command
-//   auto command_ptr = std::make_shared<forward_command_controller::CmdType>();
-//   command_ptr->data = {10.0, 20.0, 30.0};
-//   controller_->rt_command_ptr_.writeFromNonRT(command_ptr);
+//   //   // Check that wrench command are all zero since not used
+//   //   ASSERT_EQ(msg.wrench_base.header.frame_id, ik_base_frame_);
+//   //   ASSERT_EQ(msg.wrench_base.wrench.force.x, 0.0);
+//   //   ASSERT_EQ(msg.wrench_base.wrench.force.y, 0.0);
+//   //   ASSERT_TRUE(msg.wrench_base.wrench.force.z > 0.15);
+//   //   ASSERT_TRUE(msg.wrench_base.wrench.torque.x != 0.0);
+//   //   ASSERT_TRUE(msg.wrench_base.wrench.torque.y != 0.0);
+//   //   ASSERT_EQ(msg.wrench_base.wrench.torque.z, 0.0);
 
-//   // update successful, command received
+//   //   // Check joint command message
+//   //   for (auto i = 0ul; i < joint_names_.size(); i++)
+//   //   {
+//   //     ASSERT_EQ(joint_names_[i], msg.joint_state.name[i]);
+//   //     ASSERT_FALSE(std::isnan(msg.joint_state.position[i]));
+//   //     ASSERT_FALSE(std::isnan(msg.joint_state.velocity[i]));
+//   //     ASSERT_FALSE(std::isnan(msg.joint_state.effort[i]));
+//   //   }
+// }
+
+// TEST_F(ThrusterAllocationMatrixControllerTest, receive_message_and_publish_updated_status)
+// {
+//   SetUpController();
+//   rclcpp::executors::MultiThreadedExecutor executor;
+//   executor.add_node(controller_->get_node()->get_node_base_interface());
+
+//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   ASSERT_EQ(controller_->on_activate(rclcpp_lifecycle::State()), NODE_SUCCESS);
+//   broadcast_tfs();
 //   ASSERT_EQ(
 //     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
 //     controller_interface::return_type::OK);
 
-//   // check joint commands have been modified
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 10.0);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 20.0);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 30.0);
-// }
+//   // After first update state, commanded position should be near the start state
+//   for (auto i = 0ul; i < joint_state_values_.size(); i++) {
+//     ASSERT_NEAR(joint_state_values_[i], joint_command_values_[i], COMMON_THRESHOLD);
+//   }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, WrongCommandCheckTest)
-// {
-//   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", joint_names_});
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
+//   ControllerStateMsg msg;
+//   subscribe_and_get_messages(msg);
+//   //   ASSERT_EQ(msg.wrench_base.header.frame_id, ik_base_frame_);
+//   //   ASSERT_EQ(msg.wrench_base.header.frame_id, ik_base_frame_);
 
-//   // send command with wrong number of joints
-//   auto command_ptr = std::make_shared<forward_command_controller::CmdType>();
-//   command_ptr->data = {10.0, 20.0};
-//   controller_->rt_command_ptr_.writeFromNonRT(command_ptr);
+//   publish_commands();
+//   ASSERT_TRUE(controller_->wait_for_commands(executor));
 
-//   // update failed, command size does not match number of joints
-//   ASSERT_EQ(
-//     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
-//     controller_interface::return_type::ERROR);
-
-//   // check joint commands are still the default ones
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 1.1);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 2.1);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 3.1);
-// }
-
-// TEST_F(ThrusterAllocationMatrixControllerTest, NoCommandCheckTest)
-// {
-//   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", joint_names_});
-//   ASSERT_EQ(controller_->on_configure(rclcpp_lifecycle::State()), CallbackReturn::SUCCESS);
-
-//   // update successful, no command received yet
+//   broadcast_tfs();
 //   ASSERT_EQ(
 //     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
 //     controller_interface::return_type::OK);
 
-//   // check joint commands are still the default ones
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 1.1);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 2.1);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 3.1);
+//   EXPECT_NEAR(joint_command_values_[0], joint_state_values_[0], COMMON_THRESHOLD);
+
+//   subscribe_and_get_messages(msg);
 // }
 
-// TEST_F(ThrusterAllocationMatrixControllerTest, CommandCallbackTest)
+// int main(int argc, char ** argv)
 // {
-//   SetUpController();
-//   controller_->get_node()->set_parameter({"joints", joint_names_});
-
-//   // default values
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 1.1);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 2.1);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 3.1);
-
-//   auto node_state = controller_->get_node()->configure();
-//   ASSERT_EQ(node_state.id(), lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE);
-
-//   node_state = controller_->get_node()->activate();
-//   ASSERT_EQ(node_state.id(), lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
-
-//   // send a new command
-//   rclcpp::Node test_node("test_node");
-//   auto command_pub = test_node.create_publisher<std_msgs::msg::Float64MultiArray>(
-//     std::string(controller_->get_node()->get_name()) + "/commands", rclcpp::SystemDefaultsQoS());
-//   std_msgs::msg::Float64MultiArray command_msg;
-//   command_msg.data = {10.0, 20.0, 30.0};
-//   command_pub->publish(command_msg);
-
-//   // wait for command message to be passed
-//   ASSERT_EQ(wait_for(controller_->joints_command_subscriber_), rclcpp::WaitResultKind::Ready);
-
-//   // process callbacks
-//   rclcpp::spin_some(controller_->get_node()->get_node_base_interface());
-
-//   // update successful
-//   ASSERT_EQ(
-//     controller_->update(rclcpp::Time(0), rclcpp::Duration::from_seconds(0.01)),
-//     controller_interface::return_type::OK);
-
-//   // check command in handle was set
-//   ASSERT_EQ(joint_1_pos_cmd_.get_value(), 10.0);
-//   ASSERT_EQ(joint_2_pos_cmd_.get_value(), 20.0);
-//   ASSERT_EQ(joint_3_pos_cmd_.get_value(), 30.0);
+//   ::testing::InitGoogleTest(&argc, argv);
+//   rclcpp::init(argc, argv);
+//   int result = RUN_ALL_TESTS();
+//   rclcpp::shutdown();
+//   return result;
 // }
+
+// // Add test, wrong interfaces

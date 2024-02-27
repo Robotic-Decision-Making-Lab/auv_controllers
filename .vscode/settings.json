@@ -7,7 +7,11 @@
     "*.rviz": "yaml",
     "*.config": "xml",
     "*.sdf": "xml",
-    "core": "cpp"
+    "core": "cpp",
+    "array": "cpp",
+    "tuple": "cpp",
+    "utility": "cpp",
+    "variant": "cpp"
   },
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.profiles.linux": {

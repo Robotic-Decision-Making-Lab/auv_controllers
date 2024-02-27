@@ -66,7 +66,7 @@ if(BUILD_TESTING)
     test/test_load_thruster_allocation_matrix_controller.cpp
   )
   target_link_libraries(test_load_thruster_allocation_matrix_controller
-    position_controllers
+    thruster_allocation_matrix_controller
   )
   ament_target_dependencies(test_load_thruster_allocation_matrix_controller
     controller_manager
@@ -77,10 +77,10 @@ if(BUILD_TESTING)
     test/test_thruster_allocation_matrix_controller.cpp
   )
   target_link_libraries(test_thruster_allocation_matrix_controller
-    position_controllers
+    thruster_allocation_matrix_controller
   )
 
-  set(ament_cmake_uncrustify_FOUND TRUE)
+  # set(ament_cmake_uncrustify_FOUND TRUE)
 
   ament_lint_auto_find_test_dependencies()
 endif()

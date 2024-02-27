@@ -1,4 +1,4 @@
-// Copyright 2020 PAL Robotics SL.
+// Copyright (c) 2021, PickNik, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+// #include <gtest/internal/gtest-port.h>
 
+#include <iostream>
 #include <memory>
 
 #include "controller_manager/controller_manager.hpp"
@@ -25,19 +27,34 @@
 
 TEST(TestLoadThrusterAllocationMatrixController, load_controller)
 {
+  // TEST_LOG(INFO) << "This is an informational message.";
+  GTEST_LOG_(WARNING) << "This is a warning message.";
+  GTEST_LOG_(ERROR) << "This is an error message.";
+  GTEST_LOG_(FATAL) << "This is a fatal error message.";
   rclcpp::init(0, nullptr);
-
+  std::cout << "Printing" << std::endl;
   std::shared_ptr<rclcpp::Executor> executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
 
   controller_manager::ControllerManager cm(
     std::make_unique<hardware_interface::ResourceManager>(ros2_control_test_assets::minimal_robot_urdf), executor,
     "test_controller_manager");
 
-  ASSERT_NE(
+  std::cout << "Printing" << std::endl;
+
+  ASSERT_EQ(
     cm.load_controller(
-      "test_thruster_allocation-matrix_controller",
+      "load_thruster_allocation_matrix_controller",
       "thruster_allocation_matrix_controller/ThrusterAllocationMatrixController"),
     nullptr);
-
   rclcpp::shutdown();
 }
+
+// int main(int argc, char ** argv)
+// {
+//   std::cout << "Printing" << std::endl;
+//   ::testing::InitGoogleTest(&argc, argv);
+//   rclcpp::init(argc, argv);
+//   int result = RUN_ALL_TESTS();
+//   rclcpp::shutdown();
+//   return result;
+// }
