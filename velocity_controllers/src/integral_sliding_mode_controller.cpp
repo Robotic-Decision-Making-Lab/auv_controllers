@@ -321,6 +321,9 @@ void IntegralSlidingModeController::state_callback(
     RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid state message: %s", e.what());  // NOLINT
     return;
   }
+
+  // Update the current system state values
+  update_system_state_values();
 }
 
 controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
