@@ -1,4 +1,4 @@
-// Copyright 2024, Evan Palmer
+// Copyright 2024, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -134,7 +134,7 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
   // getting the reference forces and calculating the thrust forces using the tam
-  const std::vector<double> reference_forces_values(reference_interfaces_.begin() + dof_, reference_interfaces_.end());
+  const std::vector<double> reference_forces_values(reference_interfaces_.begin(), reference_interfaces_.end());
   auto reference_forces = create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_forces_values);
 
   Eigen::VectorXd thruster_forces = tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_forces;

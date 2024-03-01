@@ -17,6 +17,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   Eigen3
   geometry_msgs
   control_msgs
+  hydrodynamics
 )
 
 find_package(ament_cmake REQUIRED)
@@ -24,8 +25,8 @@ foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
-generate_parameter_library(thruster_allocation_matrix_parameters
-  src/thruster_allocation_matrix_parameters.yaml
+generate_parameter_library(thruster_allocation_matrix_controller_parameters
+  src/thruster_allocation_matrix_controller_parameters.yaml
 )
 
 add_library(thruster_allocation_matrix_controller SHARED
@@ -44,7 +45,7 @@ target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_17)
 target_link_libraries(thruster_allocation_matrix_controller
   PUBLIC
     ${rclcpp_LIBRARIES}
-    thruster_allocation_matrix_parameters
+    thruster_allocation_matrix_controller_parameters
 )
 
 # Use dllexport instead of dllimport
@@ -72,7 +73,7 @@ install(
 install(
   TARGETS
     thruster_allocation_matrix_controller
-    thruster_allocation_matrix_parameters
+    thruster_allocation_matrix_controller_parameters
   EXPORT
     export_thruster_allocation_matrix_controller
   RUNTIME DESTINATION bin
