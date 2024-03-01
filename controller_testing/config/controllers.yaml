@@ -5,6 +5,9 @@ controller_manager:
     integral_sliding_mode_controller:
       type: velocity_controllers/IntegralSlidingModeController
 
+    thruster_allocation_matrix_controller:
+      type: thruster_allocation_matrix_controller/ThrusterAllocationMatrixController
+
 integral_sliding_mode_controller:
   ros__parameters:
     dof_names:

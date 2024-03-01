@@ -159,6 +159,14 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
   return controller_interface::return_type::OK;
 }
 
+controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController::state_interface_configuration() const
+{
+  controller_interface::InterfaceConfiguration state_interface_configuration;
+
+  return state_interface_configuration;
+}
+
+
 bool ThrusterAllocationMatrixController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
 std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixController::on_export_reference_interfaces()
