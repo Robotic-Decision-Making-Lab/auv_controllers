@@ -140,10 +140,11 @@ IntegralSlidingModeController::CallbackReturn IntegralSlidingModeController::on_
 controller_interface::InterfaceConfiguration IntegralSlidingModeController::command_interface_configuration() const
 {
   controller_interface::InterfaceConfiguration command_interface_configuration;
+  command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   // The ISMC is an effort controller, so we only need to export the effort interface
   for (const auto & name : dof_names_) {
-    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_EFFORT);
+    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   return command_interface_configuration;
@@ -160,7 +161,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
     // The ISMC only requires velocity state information
     for (const auto & name : dof_names_) {
-      state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
+      state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_EFFORT);
     }
   }
 
@@ -255,6 +256,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
     std::make_shared<control_msgs::msg::MultiDOFCommand>();
   reset_command_msg(system_state_msg, dof_names_);
   system_state_.writeFromNonRT(system_state_msg);
+
+  // Pre-reserve the command interfaces
+  command_interfaces_.reserve(dof_);
 
   // Reset the measured state values
   system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
@@ -463,7 +467,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 
   // Convert the control torque to a command interface value
   for (size_t i = 0; i < dof_; ++i) {
-    auto it = std::find(six_dof_names_.begin(), six_dof_names_.end(), dof_names_[i]);
+    const auto * it = std::find(six_dof_names_.begin(), six_dof_names_.end(), dof_names_[i]);
     const size_t index = std::distance(six_dof_names_.begin(), it);
     command_interfaces_[i].set_value(tau[index]);
   }
