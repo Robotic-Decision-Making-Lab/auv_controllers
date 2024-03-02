@@ -14,37 +14,37 @@ thruster_allocation_matrix_controller:
     x: {
       type: double_array,
       read_only: true,
-      default_value: [-0.707,  -0.707,   0.707,  0.707,      0.0,     0.0,      0.0,     0.0],
+      default_value: [],
       description: "Thruster allocation matrix x."
     },
     y: {
       type: double_array,
       read_only: true,
-      default_value: [0.707,  -0.707,   0.707, -0.707,      0.0,     0.0,      0.0,     0.0],
+      default_value: [],
       description: "Thruster allocation matrix y."
     },
     z: {
       type: double_array,
       read_only: true,
-      default_value: [0.0,     0.0,     0.0,    0.0,      1.0,     1.0,      1.0,     1.0],
+      default_value: [],
       description: "Thruster allocation matrix z."
     },
     rx: {
       type: double_array,
       read_only: true,
-      default_value: [0.0,     0.0,     0.0,    0.0, -0.21805, 0.21805, -0.21805, 0.21805],
+      default_value: [],
       description: "Thruster allocation matrix rx."
     },
     ry: {
       type: double_array,
       read_only: true,
-      default_value: [0.0,     0.0,     0.0,    0.0,    -0.12,   -0.12,     0.12,    0.12],
+      default_value: [],
       description: "Thruster allocation matrix ry."
     },
     rz: {
       type: double_array,
       read_only: true,
-      default_value: [0.1888, -0.1888, -0.1888, 0.1888,      0.0,     0.0,      0.0 ,    0.0],
+      default_value: [],
       description: "Trhuster allocation matrix rz."
     }
   }

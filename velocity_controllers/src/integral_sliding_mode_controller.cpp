@@ -144,7 +144,10 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
 
   // The ISMC is an effort controller, so we only need to export the effort interface
   for (const auto & name : dof_names_) {
-    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
+    // TODO(anyone): This is a temporary fix to allow the ISMC to work with the thruster_allocation_matrix_controller we
+    // need to update this to be a parameter
+    command_interface_configuration.names.emplace_back(
+      std::string("thruster_allocation_matrix_controller") + "/" + name + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   return command_interface_configuration;
@@ -161,7 +164,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
     // The ISMC only requires velocity state information
     for (const auto & name : dof_names_) {
-      state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_EFFORT);
+      state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
 

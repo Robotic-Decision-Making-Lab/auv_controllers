@@ -7,7 +7,10 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </link>
 
-  <joint name="x" type="fixed">
+  <!-- Cartesian Joints -->
+  <!-- TODO(anyone): There is a weird thing going on right now with the cartesian joints and getting
+  the y joint loaded. Need to debug that. -->
+  <!-- <joint name="x" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
   </joint>
@@ -35,8 +38,9 @@
   <joint name="rz" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
-  </joint>
+  </joint> -->
 
+  <!-- Thruster joints -->
   <joint name="thruster_1" type="continuous" ccw="true">
     <origin rpy="-1.571 1.571 -0.785" xyz="0.14 -0.092 0.0" />
     <parent link="base_link" />
@@ -98,61 +102,48 @@
       <plugin>mock_components/GenericSystem</plugin>
       <param name="calculate_dynamics">true</param>
     </hardware>
-    <joint name="x">
-      <command_interface name="effort" />
+    <!-- <joint name="x">
       <state_interface name="velocity" />
     </joint>
     <joint name="y">
-      <command_interface name="effort" />
       <state_interface name="velocity" />
     </joint>
     <joint name="z">
-      <command_interface name="effort" />
       <state_interface name="velocity" />
     </joint>
     <joint name="rx">
-      <command_interface name="effort" />
       <state_interface name="velocity" />
     </joint>
     <joint name="ry">
-      <command_interface name="effort" />
       <state_interface name="velocity" />
     </joint>
     <joint name="rz">
-      <command_interface name="effort" />
       <state_interface name="velocity" />
-    </joint>
+    </joint> -->
+
     <joint name="thruster_1">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_2">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_3">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_4">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_5">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_6">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_7">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
     <joint name="thruster_8">
       <command_interface name="velocity" />
-      <state_interface name="velocity" />
     </joint>
 
   </ros2_control>

@@ -1,11 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
+
   <name>thruster_allocation_matrix_controller</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>0.0.1</version>
+  <description>Thruster allocation matrix controller used to convert wrench commands into thrust
+    commands</description>
+
   <maintainer email="gonzaeve@oregonstate.edu">ros</maintainer>
   <license>MIT</license>
+
+  <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
+  <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

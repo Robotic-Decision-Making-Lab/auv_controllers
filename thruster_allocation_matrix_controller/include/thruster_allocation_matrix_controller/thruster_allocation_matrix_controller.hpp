@@ -28,7 +28,6 @@
 #include <string>
 #include <vector>
 
-#include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
@@ -44,9 +43,6 @@
 namespace thruster_allocation_matrix_controller
 {
 
-/**
- * @brief Integral sliding mode controller (ISMC) for velocity control of an autonomous underwater vehicle.
- */
 class ThrusterAllocationMatrixController : public controller_interface::ChainableControllerInterface
 {
 public:
@@ -94,10 +90,6 @@ protected:
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Wrench>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
-  // Publish the controller state
-  std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>> rt_controller_state_pub_;
-
   // generate_parameter_library members
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
@@ -107,9 +99,8 @@ protected:
   std::vector<std::string> dof_names_;
   size_t dof_;
 
-  // rows for tam matrix
-  std::unique_pointer<Eigen::MatrixXd> tam_;
-  int num_thrusters_;
+  Eigen::MatrixXd tam_;
+  size_t num_thrusters_;
 };
 
 }  // namespace thruster_allocation_matrix_controller
