@@ -7,11 +7,16 @@
   <description>Thruster allocation matrix controller used to convert wrench commands into thrust
     commands</description>
 
-  <maintainer email="gonzaeve@oregonstate.edu">ros</maintainer>
+  <maintainer email="evanp922@gmail.com">ros</maintainer>
   <license>MIT</license>
 
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
   <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
+
+  <author>Everardo Gonzalez</author>
+  <author>Rakesh Vivekanandan</author>
+  <author>Colin Mitchell</author>
+  <author>Evan Palmer</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
