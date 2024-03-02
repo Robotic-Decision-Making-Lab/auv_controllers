@@ -53,7 +53,8 @@ public:
   THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC
   ThrusterAllocationMatrixController() = default;
 
-  THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC controller_interface::CallbackReturn on_init() override;
+  THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC
+  controller_interface::CallbackReturn on_init() override;
 
   THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC
   controller_interface::InterfaceConfiguration command_interface_configuration() const override;
@@ -122,9 +123,6 @@ protected:
 
   std::int64_t num_thrusters_;
 
-private:
-  THRUSTER_ALLOCATION_MATRIX_CONTROLLER_LOCAL
-  void reference_callback(std::shared_ptr<geometry_msgs::msg::Wrench> msg);
 };
 
 }  // namespace thruster_allocation_matrix_controller

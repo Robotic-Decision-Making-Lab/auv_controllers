@@ -73,12 +73,15 @@ ThrusterAllocationMatrixController::CallbackReturn ThrusterAllocationMatrixContr
 controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController::command_interface_configuration() const
 {
   controller_interface::InterfaceConfiguration command_interfaces_config;
-  command_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+  // command_interfaces_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  for (std::int64_t i = 0; i < num_thrusters_; i++) {
-    std::ostringstream temp_name;
-    temp_name << "thruster_" << i;
-    command_interfaces_config.names.emplace_back(temp_name.str() + "/" + hardware_interface::HW_IF_EFFORT);
+  // RCLCPP_INFO(get_node()->get_logger(), "command_interface_type: %d", command_interfaces_config.type);
+
+  command_interfaces_config.names.reserve(num_thrusters_);
+  for (size_t i = 0; i < num_thrusters_; ++i) {
+    std::ostringstream thruster_name;
+    thruster_name << "thruster_" << i + 1;
+    command_interfaces_config.names.emplace_back(thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   return command_interfaces_config;
@@ -105,7 +108,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
   // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_callback(msg); });  // NOLINT
+    [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
 
   // Setup the controller state publisher
   controller_state_pub_ =
@@ -134,14 +137,23 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
   // getting the reference forces and calculating the thrust forces using the tam
-  const std::vector<double> reference_forces_values(reference_interfaces_.begin(), reference_interfaces_.end());
-  auto reference_forces = create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_forces_values);
+  // const std::vector<double> reference_forces_values(reference_interfaces_.begin(), reference_interfaces_.end());
+  // auto reference_forces = create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_,
+  // reference_forces_values);
 
-  Eigen::VectorXd thruster_forces = tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_forces;
+  // RCLCPP_INFO(get_node()->get_logger(), "reference_forces size: %d", reference_forces.size());
+
+  // Eigen::VectorXd thruster_forces = Eigen::VectorXd::Zero(num_thrusters_);
+  // Eigen::VectorXd thruster_forces = tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_forces;
 
   // setting command interfaces with calculated thruster forces
+  const double value = 0.0;
+  // RCLCPP_INFO(get_node()->get_logger(), "command_interfaces_ size: %d", command_interfaces_.size());
+  // RCLCPP_INFO(get_node()->get_logger(), "thruster_forces size: %d", thruster_forces.size());
+
   for (std::int64_t i = 0; i < num_thrusters_; i++) {
-    command_interfaces_[i].set_value(thruster_forces[i]);
+    command_interfaces_[i].set_value(value);
+    // command_interfaces_[i].set_value(thruster_forces[i]);
   }
 
   // TODO: we still aren't sure if this is the correct type/way of doing this. we may need to come back and do
@@ -166,7 +178,6 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   return state_interface_configuration;
 }
 
-
 bool ThrusterAllocationMatrixController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
 std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixController::on_export_reference_interfaces()
@@ -178,7 +189,7 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
 
   for (size_t i = 0; i < dof_; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
+      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
@@ -224,12 +235,12 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   dof_ = dof_names_.size();
 
   // stroing each row of the tam matrix
-  Eigen::Map<Eigen::VectorXd> tam_x(params_.tam.x.data(), params_.tam.x.size());
-  Eigen::Map<Eigen::VectorXd> tam_y(params_.tam.y.data(), params_.tam.y.size());
-  Eigen::Map<Eigen::VectorXd> tam_z(params_.tam.z.data(), params_.tam.z.size());
-  Eigen::Map<Eigen::VectorXd> tam_rx(params_.tam.rx.data(), params_.tam.rx.size());
-  Eigen::Map<Eigen::VectorXd> tam_ry(params_.tam.ry.data(), params_.tam.ry.size());
-  Eigen::Map<Eigen::VectorXd> tam_rz(params_.tam.rz.data(), params_.tam.rz.size());
+  const Eigen::Map<Eigen::VectorXd> tam_x(params_.tam.x.data(), params_.tam.x.size());
+  const Eigen::Map<Eigen::VectorXd> tam_y(params_.tam.y.data(), params_.tam.y.size());
+  const Eigen::Map<Eigen::VectorXd> tam_z(params_.tam.z.data(), params_.tam.z.size());
+  const Eigen::Map<Eigen::VectorXd> tam_rx(params_.tam.rx.data(), params_.tam.rx.size());
+  const Eigen::Map<Eigen::VectorXd> tam_ry(params_.tam.ry.data(), params_.tam.ry.size());
+  const Eigen::Map<Eigen::VectorXd> tam_rz(params_.tam.rz.data(), params_.tam.rz.size());
 
   // checking that each of the vectors is the same size
   num_thrusters_ = tam_x.size();
@@ -243,19 +254,10 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
 
   // otherwise, they are all the same length and we can pack them into an Eigen matrix
   Eigen::MatrixXd tam_(dof_, num_thrusters_);
-  tam_ << tam_x, tam_y, tam_z, tam_rx, tam_ry, tam_rz;
+  tam_ << tam_x.transpose(), tam_y.transpose(), tam_z.transpose(), tam_rx.transpose(), tam_ry.transpose(),
+    tam_rz.transpose();
 
   return controller_interface::CallbackReturn::SUCCESS;
-}
-
-void ThrusterAllocationMatrixController::reference_callback(std::shared_ptr<geometry_msgs::msg::Wrench> msg)
-{
-  try {
-    reference_.writeFromNonRT(msg);
-  }
-  catch (const std::invalid_argument & e) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid reference message: %s", e.what());  // NOLINT
-  }
 }
 
 }  // namespace thruster_allocation_matrix_controller

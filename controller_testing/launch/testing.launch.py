@@ -64,8 +64,9 @@ def generate_launch_description():
                 ),
             ],
         ),
+        # velocity_controller_spawner,
         tam_controller_spawner,
-        velocity_controller_spawner,
+        delay_velocity_controller_spawner_after_tam_controller_spawner,
     ]
 
     return LaunchDescription(nodes)

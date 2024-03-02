@@ -37,68 +37,60 @@
     <child link="base_link" />
   </joint>
 
-  <joint name="thruster1_joint" type="continuous" ccw="true">
+  <joint name="thruster_1" type="continuous" ccw="true">
     <origin rpy="-1.571 1.571 -0.785" xyz="0.14 -0.092 0.0" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_1" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster2_joint" type="continuous" ccw="true">
+  <joint name="thruster_2" type="continuous" ccw="true">
     <origin rpy="-1.571 1.571 -2.356" xyz="0.14 0.092 0.0" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_2" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster3_joint" type="continuous" ccw="false">
+  <joint name="thruster_3" type="continuous" ccw="false">
     <origin rpy="-1.571 1.571 0.785" xyz="-0.15 -0.092 0.0" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_3" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster4_joint" type="continuous" ccw="false">
+  <joint name="thruster_4" type="continuous" ccw="false">
     <origin rpy="-1.571 1.571 2.356" xyz="-0.15 0.092 0.0" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_4" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster5_joint" type="continuous" ccw="true">
+  <joint name="thruster_5" type="continuous" ccw="true">
     <origin rpy="0 0 0" xyz="0.118 -0.215 0.064" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_5" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster6_joint" type="continuous" ccw="false">
+  <joint name="thruster_6" type="continuous" ccw="false">
     <origin rpy="0 0 0" xyz="0.118 0.215 0.064" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_6" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster7_joint" type="continuous" ccw="false">
+  <joint name="thruster_7" type="continuous" ccw="false">
     <origin rpy="0 0 0" xyz="-0.118 -0.215 0.064" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_7" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
-  <joint name="thruster8_joint" type="continuous" ccw="true">
+  <joint name="thruster_8" type="continuous" ccw="true">
     <origin rpy="0 0 0" xyz="-0.118 0.215 0.064" />
     <parent link="base_link" />
-    <child link="thruster" />
+    <child link="thruster_8" />
     <axis xyz="0 0 -1" />
-    <limits effort="-1" velocity="-1" />
   </joint>
 
   <ros2_control name="testing" type="system">
@@ -130,29 +122,37 @@
       <command_interface name="effort" />
       <state_interface name="velocity" />
     </joint>
-    <joint name="thruster1_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_1">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster2_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_2">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster3_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_3">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster4_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_4">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster5_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_5">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster6_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_6">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster7_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_7">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
-    <joint name="thruster8_joint">
-      <command_interface name="effort" />
+    <joint name="thruster_8">
+      <command_interface name="velocity" />
+      <state_interface name="velocity" />
     </joint>
 
   </ros2_control>
