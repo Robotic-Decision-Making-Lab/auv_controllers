@@ -252,6 +252,8 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  Eigen::MatrixXd tam_(dof_, num_thrusters_);
+
   // otherwise, they are all the same length and we can pack them into an Eigen matrix
   Eigen::MatrixXd tam_(dof_, num_thrusters_);
   tam_ << tam_x.transpose(), tam_y.transpose(), tam_z.transpose(), tam_rx.transpose(), tam_ry.transpose(),

@@ -87,18 +87,7 @@ protected:
   controller_interface::return_type update_reference_from_subscribers(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-  /**
-   * @brief Update the controller parameters, including the dynamic parameters.
-   */
   void update_parameters();
-
-  /**
-   * @brief Configure the controller parameters.
-   *
-   * @note This can be called in a control loop to update the dynamic parameters for online controller tuning.
-   *
-   * @return controller_interface::CallbackReturn
-   */
   controller_interface::CallbackReturn configure_parameters();
 
   // Reference signal to track
@@ -113,16 +102,14 @@ protected:
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
 
-  // DOF information
+  // DoF information
   const std::array<std::string, 6> six_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
   std::vector<std::string> dof_names_;
   size_t dof_;
 
   // rows for tam matrix
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> tam_;
-
-  std::int64_t num_thrusters_;
-
+  std::unique_pointer<Eigen::MatrixXd> tam_;
+  int num_thrusters_;
 };
 
 }  // namespace thruster_allocation_matrix_controller
