@@ -31,6 +31,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
@@ -40,90 +41,19 @@ namespace velocity_controllers
 namespace
 {
 
-void reset_command_msg(
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> & msg, const std::vector<std::string> & dof_names)
+void reset_twist_msg(std::shared_ptr<geometry_msgs::msg::Twist> msg)  // NOLINT
 {
-  // Resize to the correct number of DoFs
-  msg->dof_names = dof_names;
-  msg->values.resize(dof_names.size(), std::numeric_limits<double>::quiet_NaN());
-  msg->values_dot.resize(dof_names.size(), std::numeric_limits<double>::quiet_NaN());
-}
-
-void sort_command_msg_by_names(
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> & msg, const std::vector<std::string> & dof_names,
-  const rclcpp::Logger & logger)
-{
-  const size_t dof = dof_names.size();
-
-  // Make a copy of the message so that we can sort the original in-place
-  auto unsorted_msg = std::make_shared<control_msgs::msg::MultiDOFCommand>(*msg);
-  reset_command_msg(msg, dof_names);
-
-  if (unsorted_msg->values_dot.size() != unsorted_msg->values.size()) {
-    RCLCPP_DEBUG(  // NOLINT
-      logger,
-      "Received a command message with mismatched value sizes (%zu values and %zu values_dot). Assuming that "
-      "values_dot is not defined.",
-      unsorted_msg->values.size(), unsorted_msg->values_dot.size());
-
-    unsorted_msg->values_dot.assign(unsorted_msg->values.size(), std::numeric_limits<double>::quiet_NaN());
-  }
-
-  if (unsorted_msg->dof_names.empty() && unsorted_msg->values.size() == dof) {
-    RCLCPP_WARN(  // NOLINT
-      logger,
-      "Received a command message without any DoF names. Assuming that the values are defined in the same order as "
-      "the desired DoF names.");
-
-    msg->values = unsorted_msg->values;
-    msg->values_dot = unsorted_msg->values_dot;
-  } else if (unsorted_msg->dof_names.size() == dof && unsorted_msg->values.size() == dof) {
-    for (size_t i = 0; i < dof; ++i) {
-      auto it = std::find(unsorted_msg->dof_names.begin(), unsorted_msg->dof_names.end(), dof_names[i]);
-
-      if (it == unsorted_msg->dof_names.end()) {
-        throw std::invalid_argument(
-          "Received a command message with a DoF name that does not match the controller's DoF names.");
-      }
-
-      const size_t index = std::distance(unsorted_msg->dof_names.begin(), it);
-      msg->values[i] = unsorted_msg->values[index];
-      msg->values_dot[i] = unsorted_msg->values_dot[index];
-    }
-  } else {
-    std::stringstream ss;
-    ss << "Reference message had " << unsorted_msg->dof_names.size() << " DoF names and " << unsorted_msg->values.size()
-       << " values; expected " << dof << ".";
-    throw std::invalid_argument(ss.str());
-  }
-}
-
-Eigen::Vector6d create_six_dof_eigen_from_named_vector(
-  const std::vector<std::string> & dof_names, const std::array<std::string, 6> & six_dof_names,
-  const std::vector<double> & values)
-{
-  if (dof_names.size() != values.size()) {
-    throw std::invalid_argument("The DoF names and values must have the same size.");
-  }
-
-  Eigen::Vector6d vec = Eigen::Vector6d::Zero();
-
-  for (size_t i = 0; i < six_dof_names.size(); ++i) {
-    auto it = std::find(dof_names.begin(), dof_names.end(), six_dof_names[i]);
-
-    if (it == dof_names.end()) {
-      vec[i] = std::numeric_limits<double>::quiet_NaN();
-    } else {
-      vec[i] = values[std::distance(dof_names.begin(), it)];
-    }
-  }
-
-  return vec;
+  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
 }
 
 }  // namespace
 
-IntegralSlidingModeController::CallbackReturn IntegralSlidingModeController::on_init()
+controller_interface::CallbackReturn IntegralSlidingModeController::on_init()
 {
   try {
     param_listener_ = std::make_shared<integral_sliding_mode_controller::ParamListener>(get_node());
@@ -142,12 +72,12 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   controller_interface::InterfaceConfiguration command_interface_configuration;
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  // The ISMC is an effort controller, so we only need to export the effort interface
-  for (const auto & name : dof_names_) {
+  for (const auto & name : k_dof_names_) {
     // TODO(anyone): This is a temporary fix to allow the ISMC to work with the thruster_allocation_matrix_controller we
     // need to update this to be a parameter
-    command_interface_configuration.names.emplace_back(
-      std::string("thruster_allocation_matrix_controller") + "/" + name + "/" + hardware_interface::HW_IF_VELOCITY);
+    // command_interface_configuration.names.emplace_back(
+    //   std::string("thruster_allocation_matrix_controller") + "/" + name + "/" + hardware_interface::HW_IF_VELOCITY);
+    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
   }
 
   return command_interface_configuration;
@@ -162,8 +92,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    // The ISMC only requires velocity state information
-    for (const auto & name : dof_names_) {
+    for (const auto & name : k_dof_names_) {
       state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
@@ -173,20 +102,14 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
 {
-  // This controller has velocity and acceleration reference interfaces
-  const std::array<std::string, 2> reference_interfaces_types = {
-    hardware_interface::HW_IF_VELOCITY, hardware_interface::HW_IF_ACCELERATION};
-
-  reference_interfaces_.resize(2 * dof_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (const auto & reference_type : reference_interfaces_types) {
-    for (size_t i = 0; i < dof_; ++i) {
-      reference_interfaces.emplace_back(
-        get_node()->get_name(), dof_names_[i] + "/" + reference_type, &reference_interfaces_[i]);
-    }
+  for (size_t i = 0; i < k_dof_; ++i) {
+    reference_interfaces.emplace_back(
+      get_node()->get_name(), k_dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
@@ -211,14 +134,14 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
 {
   update_parameters();
 
-  // These are just used to improve readability
-  dof_names_ = params_.dof_names;
-  dof_ = dof_names_.size();
-
   // Update the controller gains used by the controller
   sliding_gain_ = params_.gains.rho;
   boundary_thickness_ = params_.gains.lambda;
   proportional_gain_ = Eigen::Vector6d(params_.gains.Kp.data()).asDiagonal().toDenseMatrix();
+
+  // Update the TF frames used by the controller
+  vehicle_frame_id_ = params_.tf.base_frame;
+  inertial_frame_id_ = params_.tf.odom_frame;
 
   // Update the hydrodynamic parameters used by the controller
   const Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
@@ -249,43 +172,34 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
     return ret;
   }
 
-  // Initialize the reference and state realtime messages
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> reference_msg =
-    std::make_shared<control_msgs::msg::MultiDOFCommand>();
-  reset_command_msg(reference_msg, dof_names_);
+  const std::shared_ptr<geometry_msgs::msg::Twist> reference_msg = std::make_shared<geometry_msgs::msg::Twist>();
   reference_.writeFromNonRT(reference_msg);
 
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> system_state_msg =
-    std::make_shared<control_msgs::msg::MultiDOFCommand>();
-  reset_command_msg(system_state_msg, dof_names_);
+  const std::shared_ptr<geometry_msgs::msg::Twist> system_state_msg = std::make_shared<geometry_msgs::msg::Twist>();
   system_state_.writeFromNonRT(system_state_msg);
 
   // Pre-reserve the command interfaces
-  command_interfaces_.reserve(dof_);
+  command_interfaces_.reserve(k_dof_);
 
-  // Reset the measured state values
-  system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  // Reset the state values
+  system_state_values_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
 
   // Subscribe to the reference topic
-  reference_sub_ = get_node()->create_subscription<control_msgs::msg::MultiDOFCommand>(
+  reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { reference_callback(msg); });  // NOLINT
-
-  // Subscribe to the system rotation topic
-  system_rotation_sub_ = get_node()->create_subscription<geometry_msgs::msg::Quaternion>(
-    "~/system_rotation", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<geometry_msgs::msg::Quaternion> msg) {  // NOLINT
-      Eigen::Quaterniond rotation;
-      tf2::fromMsg(*msg, rotation);
-      system_rotation_.writeFromNonRT(rotation);
-    });
+    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
   if (params_.use_external_measured_states) {
-    system_state_sub_ = get_node()->create_subscription<control_msgs::msg::MultiDOFCommand>(
+    system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
       "~/system_state", rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg) { state_callback(msg); });  // NOLINT
+      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { system_state_.writeFromNonRT(msg); });  // NOLINT
   }
+
+  // Configure the TF buffer and listener
+  // This will be slower than just reading the current system pose from a subscriber, but it's less overhead for users
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   // Setup the controller state publisher
   controller_state_pub_ =
@@ -295,42 +209,13 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
 
   // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_states.resize(dof_);
-  for (size_t i = 0; i < dof_; ++i) {
-    rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
+  rt_controller_state_pub_->msg_.dof_states.resize(k_dof_);
+  for (size_t i = 0; i < k_dof_; ++i) {
+    rt_controller_state_pub_->msg_.dof_states[i].name = k_dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
 
   return controller_interface::CallbackReturn::SUCCESS;
-}
-
-void IntegralSlidingModeController::reference_callback(
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)  // NOLINT
-{
-  try {
-    sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
-    reference_.writeFromNonRT(msg);
-  }
-  catch (const std::invalid_argument & e) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid reference message: %s", e.what());  // NOLINT
-    return;
-  }
-}
-
-void IntegralSlidingModeController::state_callback(
-  const std::shared_ptr<control_msgs::msg::MultiDOFCommand> msg)  // NOLINT
-{
-  try {
-    sort_command_msg_by_names(msg, dof_names_, get_node()->get_logger());
-    system_state_.writeFromNonRT(msg);
-  }
-  catch (const std::invalid_argument & e) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received an invalid state message: %s", e.what());  // NOLINT
-    return;
-  }
-
-  // Update the current system state values
-  update_system_state_values();
 }
 
 controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
@@ -346,9 +231,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   // Reset the rotation
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
 
-  // Reset the controller state
-  reset_command_msg(*(reference_.readFromRT()), dof_names_);
-  reset_command_msg(*(system_state_.readFromRT()), dof_names_);
+  // Reset the reference and state messages
+  reset_twist_msg(*(reference_.readFromNonRT()));
+  reset_twist_msg(*(system_state_.readFromNonRT()));
 
   // Reset the reference and state interfaces
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -368,21 +253,20 @@ bool IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) {
 controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  auto * current_reference = reference_.readFromRT();
+  auto * current_reference = reference_.readFromNonRT();
 
-  for (size_t i = 0; i < dof_; ++i) {
-    // Update the velocity reference
-    if (!std::isnan((*current_reference)->values[i])) {
-      reference_interfaces_[i] = (*current_reference)->values[i];
-      (*current_reference)->values[i] = std::numeric_limits<double>::quiet_NaN();
-    }
+  const std::vector<double> reference = {(*current_reference)->linear.x,  (*current_reference)->linear.y,
+                                         (*current_reference)->linear.z,  (*current_reference)->angular.x,
+                                         (*current_reference)->angular.y, (*current_reference)->angular.z};
 
-    // Update the acceleration reference
-    if (!std::isnan((*current_reference)->values_dot[i])) {
-      reference_interfaces_[i + dof_] = (*current_reference)->values_dot[i];
-      (*current_reference)->values_dot[i] = std::numeric_limits<double>::quiet_NaN();
+  // Update the thrust reference
+  for (size_t i = 0; i < reference.size(); ++i) {
+    if (!std::isnan(reference[i])) {
+      reference_interfaces_[i] = reference[i];
     }
   }
+
+  reset_twist_msg(*current_reference);
 
   return controller_interface::return_type::OK;
 }
@@ -392,12 +276,17 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
   if (params_.use_external_measured_states) {
     auto * current_system_state = system_state_.readFromRT();
 
-    for (size_t i = 0; i < dof_; ++i) {
-      if (!std::isnan((*current_system_state)->values[i])) {
-        system_state_values_[i] = (*current_system_state)->values[i];
-        (*current_system_state)->values[i] = std::numeric_limits<double>::quiet_NaN();
+    const std::vector<double> state = {(*current_system_state)->linear.x,  (*current_system_state)->linear.y,
+                                       (*current_system_state)->linear.z,  (*current_system_state)->angular.x,
+                                       (*current_system_state)->angular.y, (*current_system_state)->angular.z};
+
+    for (size_t i = 0; i < state.size(); ++i) {
+      if (!std::isnan(state[i])) {
+        system_state_values_[i] = state[i];
       }
     }
+
+    reset_twist_msg(*current_system_state);
   } else {
     for (size_t i = 0; i < system_state_values_.size(); ++i) {
       system_state_values_[i] = state_interfaces_[i].get_value();
@@ -414,28 +303,30 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     configure_parameters();
   }
 
-  // Get the reference acceleration as an Eigen vector
-  const std::vector<double> reference_acceleration_values(
-    reference_interfaces_.begin() + dof_, reference_interfaces_.end());
-  const Eigen::Vector6d reference_acceleration =
-    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_acceleration_values);
+  // Update the current system state
+  update_system_state_values();
 
-  // Get the velocity state as an Eigen vector
-  const Eigen::Vector6d velocity_state =
-    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, system_state_values_);
+  const Eigen::Vector6d velocity_state(system_state_values_.data());
 
   // Calculate the velocity error
   std::vector<double> velocity_error_values;
-  velocity_error_values.reserve(dof_);
+  velocity_error_values.reserve(k_dof_);
 
   std::transform(
-    reference_interfaces_.begin(), reference_interfaces_.begin() + dof_, system_state_values_.begin(),
+    reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
     std::back_inserter(velocity_error_values), [](double reference, double state) {
       return !std::isnan(reference) && !std::isnan(state) ? reference - state
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
-  const Eigen::Vector6d velocity_error =
-    create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, velocity_error_values);
+
+  // Wait for a valid error value to track before doing anything
+  auto all_nan =
+    std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
+  if (all_nan) {
+    return controller_interface::return_type::OK;
+  }
+
+  const Eigen::Vector6d velocity_error(velocity_error_values.data());
 
   if (first_update_) {
     // If this is the first update, set the initial error conditions
@@ -446,9 +337,22 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     total_velocity_error_ += velocity_error * period.seconds();
   }
 
+  // Try getting the latest orientation of the vehicle in the inertial frame. If the transform is not available, use the
+  // last known orientation.
+  try {
+    const geometry_msgs::msg::TransformStamped t =
+      tf_buffer_->lookupTransform(vehicle_frame_id_, inertial_frame_id_, tf2::TimePointZero);
+    tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
+  }
+  catch (const tf2::TransformException & e) {
+    RCLCPP_DEBUG(  // NOLINT
+      get_node()->get_logger(), "Could not transform %s to %s. Using latest available transform. %s",
+      vehicle_frame_id_.c_str(), inertial_frame_id_.c_str(), e.what());
+  }
+
   // Calculate the computed torque control
   const Eigen::Vector6d tau0 =
-    inertia_->getMassMatrix() * (reference_acceleration + proportional_gain_ * velocity_error) +
+    inertia_->getMassMatrix() * (proportional_gain_ * velocity_error) +
     coriolis_->calculateCoriolisMatrix(velocity_state) * velocity_state +
     damping_->calculateDampingMatrix(velocity_state) * velocity_state +
     restoring_forces_->calculateRestoringForcesVector(system_rotation_.readFromRT()->toRotationMatrix());
@@ -469,15 +373,13 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   const Eigen::Vector6d tau = tau0 + tau1;
 
   // Convert the control torque to a command interface value
-  for (size_t i = 0; i < dof_; ++i) {
-    const auto * it = std::find(six_dof_names_.begin(), six_dof_names_.end(), dof_names_[i]);
-    const size_t index = std::distance(six_dof_names_.begin(), it);
-    command_interfaces_[i].set_value(tau[index]);
+  for (size_t i = 0; i < k_dof_; ++i) {
+    command_interfaces_[i].set_value(tau[i]);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (size_t i = 0; i < dof_; ++i) {
+    for (size_t i = 0; i < k_dof_; ++i) {
       rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
       rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
       rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];

@@ -84,6 +84,7 @@ protected:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
   void update_parameters();
+
   controller_interface::CallbackReturn configure_parameters();
 
   // Reference signal to track

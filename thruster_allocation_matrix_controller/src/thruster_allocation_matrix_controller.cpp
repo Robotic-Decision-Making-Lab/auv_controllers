@@ -35,7 +35,6 @@ void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)
   wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->force.z = std::numeric_limits<double>::quiet_NaN();
-
   wrench_msg->torque.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->torque.y = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->torque.z = std::numeric_limits<double>::quiet_NaN();

@@ -7,15 +7,45 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </link>
 
+  <link name="thruster_1">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_2">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_3">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_4">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_5">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_6">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_7">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
+  <link name="thruster_8">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </link>
+
   <!-- Cartesian Joints -->
-  <!-- TODO(anyone): There is a weird thing going on right now with the cartesian joints and getting
-  the y joint loaded. Need to debug that. -->
-  <!-- <joint name="x" type="fixed">
+  <joint name="x" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
   </joint>
 
-  <joint name="y" type="fixed">
+  <joint name="yo" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
   </joint>
@@ -38,7 +68,7 @@
   <joint name="rz" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
-  </joint> -->
+  </joint>
 
   <!-- Thruster joints -->
   <joint name="thruster_1" type="continuous" ccw="true">
@@ -102,24 +132,30 @@
       <plugin>mock_components/GenericSystem</plugin>
       <param name="calculate_dynamics">true</param>
     </hardware>
-    <!-- <joint name="x">
+    <joint name="x">
       <state_interface name="velocity" />
+      <command_interface name="velocity" />
     </joint>
     <joint name="y">
       <state_interface name="velocity" />
+      <command_interface name="velocity" />
     </joint>
     <joint name="z">
       <state_interface name="velocity" />
+      <command_interface name="velocity" />
     </joint>
     <joint name="rx">
       <state_interface name="velocity" />
+      <command_interface name="velocity" />
     </joint>
     <joint name="ry">
       <state_interface name="velocity" />
+      <command_interface name="velocity" />
     </joint>
     <joint name="rz">
       <state_interface name="velocity" />
-    </joint> -->
+      <command_interface name="velocity" />
+    </joint>
 
     <joint name="thruster_1">
       <command_interface name="velocity" />

@@ -1,25 +1,28 @@
 integral_sliding_mode_controller:
-  dof_names: {
-    type: string_array,
-    read_only: true,
-    default_value: ["x", "y", "z", "rx", "ry", "rz"],
-    description: "Specifies the degrees-of-freedom used by the controller.",
-    validation: {
-      unique<>: null,
-      not_empty<>: null,
-      subset_of<>: [["x", "y", "z", "rx", "ry", "rz"]],
-    }
-  }
   use_external_measured_states: {
     type: bool,
     read_only: true,
-    default_value: false,
-    description: "Use state measurements (velocity and acceleration) obtained from a topic instead of from state interfaces."
+    default_value: true,
+    description: "Use velocity measurements obtained from a topic instead of from state interfaces."
   }
   enable_parameter_update_without_reactivation: {
     type: bool,
     default_value: true,
     description: "If enabled, the parameters will be dynamically updated while the controller is running."
+  }
+  tf: {
+    base_frame: {
+      type: string,
+      default_value: "base_link_fsd",
+      description: "The name of the vehicle base frame.",
+      read_only: true
+    },
+    odom_frame: {
+      type: string,
+      default_value: "odom_ned",
+      description: "The name of the inertial frame.",
+      read_only: true
+    }
   }
   gains: {
     rho: {

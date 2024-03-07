@@ -7,21 +7,27 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    robot_description = {
-        "robot_description": Command(
-            [
-                PathJoinSubstitution([FindExecutable(name="xacro")]),
-                " ",
-                PathJoinSubstitution(
-                    [
-                        FindPackageShare("controller_testing"),
-                        "urdf",
-                        "testing.urdf.xacro",
-                    ]
-                ),
-            ]
-        ),
-    }
+    robot_description_content = Command(
+        [
+            PathJoinSubstitution([FindExecutable(name="xacro")]),
+            " ",
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("controller_testing"),
+                    "urdf",
+                    "testing.urdf.xacro",
+                ]
+            ),
+        ]
+    )
+    robot_description = {"robot_description": robot_description_content}
+
+    # robot_state_publisher = Node(
+    #     package="robot_state_publisher",
+    #     executable="robot_state_publisher",
+    #     output="both",
+    #     parameters=[robot_description],
+    # )
     velocity_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -64,8 +70,10 @@ def generate_launch_description():
                 ),
             ],
         ),
-        tam_controller_spawner,
-        delay_velocity_controller_spawner_after_tam_controller_spawner,
+        # robot_state_publisher,
+        # tam_controller_spawner,
+        # delay_velocity_controller_spawner_after_tam_controller_spawner,
+        velocity_controller_spawner,
     ]
 
     return LaunchDescription(nodes)
