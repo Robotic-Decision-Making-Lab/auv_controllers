@@ -56,7 +56,7 @@ controller_interface::CallbackReturn PolynomialThrustCurveController::on_init()
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void PolynomialThrustCurveController::update_parameters()
+void PolynomialThrustCurveController::update_parameters()  // NOLINT
 {
   if (!param_listener_->is_old(params_)) {
     return;

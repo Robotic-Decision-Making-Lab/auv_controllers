@@ -73,7 +73,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   num_thrusters_ = thruster_names_.size();
 
   // Make sure that the number prefixes (if provided) provided match the number of thrusters
-  if (params_.command_interface_prefixes.size() > 0 && params_.command_interface_prefixes.size() != num_thrusters_) {
+  if (!params_.command_interface_prefixes.empty() && params_.command_interface_prefixes.size() != num_thrusters_) {
     RCLCPP_ERROR(  // NOLINT
       get_node()->get_logger(), "Mismatched number of command interface prefixes and thrusters. Expected %ld, got %ld.",
       num_thrusters_, params_.command_interface_prefixes.size());
@@ -164,7 +164,7 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   command_interfaces_configuration.names.reserve(num_thrusters_);
 
   for (size_t i = 0; i < num_thrusters_; ++i) {
-    if (!params_.command_interface_prefixes.size()) {
+    if (!params_.command_interface_prefixes.empty()) {
       command_interfaces_configuration.names.emplace_back(
         thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
     } else {
