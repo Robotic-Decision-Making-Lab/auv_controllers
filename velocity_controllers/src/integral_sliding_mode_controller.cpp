@@ -72,12 +72,13 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   controller_interface::InterfaceConfiguration command_interface_configuration;
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  for (const auto & name : k_dof_names_) {
-    // TODO(anyone): This is a temporary fix to allow the ISMC to work with the thruster_allocation_matrix_controller we
-    // need to update this to be a parameter
-    // command_interface_configuration.names.emplace_back(
-    //   std::string("thruster_allocation_matrix_controller") + "/" + name + "/" + hardware_interface::HW_IF_VELOCITY);
-    command_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
+  for (const auto & dof : dof_names_) {
+    if (!params_.command_interface_prefix.length()) {
+      command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_VELOCITY);
+    } else {
+      command_interface_configuration.names.emplace_back(
+        params_.command_interface_prefix + "/" + dof + "/" + hardware_interface::HW_IF_VELOCITY);
+    }
   }
 
   return command_interface_configuration;
@@ -92,7 +93,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    for (const auto & name : k_dof_names_) {
+    for (const auto & name : dof_names_) {
       state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
@@ -102,14 +103,14 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
 {
-  reference_interfaces_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < k_dof_; ++i) {
+  for (size_t i = 0; i < dof_; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), k_dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
+      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
@@ -144,6 +145,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
   inertial_frame_id_ = params_.tf.odom_frame;
 
   // Update the hydrodynamic parameters used by the controller
+  // TODO(evan-palmer): Read these from the robot_description instead of a parameters file
   const Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
   const Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
   Eigen::Vector6d linear_damping(params_.hydrodynamics.linear_damping.data());
@@ -179,10 +181,10 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   system_state_.writeFromNonRT(system_state_msg);
 
   // Pre-reserve the command interfaces
-  command_interfaces_.reserve(k_dof_);
+  command_interfaces_.reserve(dof_);
 
   // Reset the state values
-  system_state_values_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
+  system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
 
   // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
@@ -209,9 +211,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
 
   // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_states.resize(k_dof_);
-  for (size_t i = 0; i < k_dof_; ++i) {
-    rt_controller_state_pub_->msg_.dof_states[i].name = k_dof_names_[i];
+  rt_controller_state_pub_->msg_.dof_states.resize(dof_);
+  for (size_t i = 0; i < dof_; ++i) {
+    rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
 
@@ -310,7 +312,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 
   // Calculate the velocity error
   std::vector<double> velocity_error_values;
-  velocity_error_values.reserve(k_dof_);
+  velocity_error_values.reserve(dof_);
 
   std::transform(
     reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
@@ -319,10 +321,11 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
 
-  // Wait for a valid error value to track before doing anything
+  // Ignore the update if all the velocity error values are NaN
   auto all_nan =
     std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
   if (all_nan) {
+    RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Ignoring update.");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
@@ -351,6 +354,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   }
 
   // Calculate the computed torque control
+  // Assume a feedforward acceleration of 0
   const Eigen::Vector6d tau0 =
     inertia_->getMassMatrix() * (proportional_gain_ * velocity_error) +
     coriolis_->calculateCoriolisMatrix(velocity_state) * velocity_state +
@@ -373,13 +377,13 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   const Eigen::Vector6d tau = tau0 + tau1;
 
   // Convert the control torque to a command interface value
-  for (size_t i = 0; i < k_dof_; ++i) {
+  for (size_t i = 0; i < dof_; ++i) {
     command_interfaces_[i].set_value(tau[i]);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (size_t i = 0; i < k_dof_; ++i) {
+    for (size_t i = 0; i < dof_; ++i) {
       rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
       rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
       rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];

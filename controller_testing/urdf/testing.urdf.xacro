@@ -45,7 +45,7 @@
     <child link="base_link" />
   </joint>
 
-  <joint name="yo" type="fixed">
+  <joint name="y" type="fixed">
     <parent link="base_footprint" />
     <child link="base_link" />
   </joint>
@@ -71,56 +71,56 @@
   </joint>
 
   <!-- Thruster joints -->
-  <joint name="thruster_1" type="continuous" ccw="true">
+  <joint name="thruster_1_joint" type="continuous" ccw="true">
     <origin rpy="-1.571 1.571 -0.785" xyz="0.14 -0.092 0.0" />
     <parent link="base_link" />
     <child link="thruster_1" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_2" type="continuous" ccw="true">
+  <joint name="thruster_2_joint" type="continuous" ccw="true">
     <origin rpy="-1.571 1.571 -2.356" xyz="0.14 0.092 0.0" />
     <parent link="base_link" />
     <child link="thruster_2" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_3" type="continuous" ccw="false">
+  <joint name="thruster_3_joint" type="continuous" ccw="false">
     <origin rpy="-1.571 1.571 0.785" xyz="-0.15 -0.092 0.0" />
     <parent link="base_link" />
     <child link="thruster_3" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_4" type="continuous" ccw="false">
+  <joint name="thruster_4_joint" type="continuous" ccw="false">
     <origin rpy="-1.571 1.571 2.356" xyz="-0.15 0.092 0.0" />
     <parent link="base_link" />
     <child link="thruster_4" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_5" type="continuous" ccw="true">
+  <joint name="thruster_5_joint" type="continuous" ccw="true">
     <origin rpy="0 0 0" xyz="0.118 -0.215 0.064" />
     <parent link="base_link" />
     <child link="thruster_5" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_6" type="continuous" ccw="false">
+  <joint name="thruster_6_joint" type="continuous" ccw="false">
     <origin rpy="0 0 0" xyz="0.118 0.215 0.064" />
     <parent link="base_link" />
     <child link="thruster_6" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_7" type="continuous" ccw="false">
+  <joint name="thruster_7_joint" type="continuous" ccw="false">
     <origin rpy="0 0 0" xyz="-0.118 -0.215 0.064" />
     <parent link="base_link" />
     <child link="thruster_7" />
     <axis xyz="0 0 -1" />
   </joint>
 
-  <joint name="thruster_8" type="continuous" ccw="true">
+  <joint name="thruster_8_joint" type="continuous" ccw="true">
     <origin rpy="0 0 0" xyz="-0.118 0.215 0.064" />
     <parent link="base_link" />
     <child link="thruster_8" />
@@ -130,55 +130,67 @@
   <ros2_control name="testing" type="system">
     <hardware>
       <plugin>mock_components/GenericSystem</plugin>
-      <param name="calculate_dynamics">true</param>
+      <param name="calculate_dynamics">false</param>
     </hardware>
+
     <joint name="x">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
-    </joint>
-    <joint name="y">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
-    </joint>
-    <joint name="z">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
-    </joint>
-    <joint name="rx">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
-    </joint>
-    <joint name="ry">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
-    </joint>
-    <joint name="rz">
-      <state_interface name="velocity" />
-      <command_interface name="velocity" />
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
     </joint>
 
-    <joint name="thruster_1">
+    <joint name="y">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+    </joint>
+
+    <joint name="z">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+    </joint>
+
+    <joint name="rx">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+    </joint>
+
+    <joint name="ry">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+    </joint>
+
+    <joint name="rz">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+    </joint>
+
+    <joint name="thruster_1_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_2">
+    <joint name="thruster_2_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_3">
+    <joint name="thruster_3_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_4">
+    <joint name="thruster_4_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_5">
+    <joint name="thruster_5_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_6">
+    <joint name="thruster_6_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_7">
+    <joint name="thruster_7_joint">
       <command_interface name="velocity" />
     </joint>
-    <joint name="thruster_8">
+    <joint name="thruster_8_joint">
       <command_interface name="velocity" />
     </joint>
 

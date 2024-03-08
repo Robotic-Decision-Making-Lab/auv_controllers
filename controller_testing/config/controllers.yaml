@@ -10,13 +10,8 @@ controller_manager:
 
 integral_sliding_mode_controller:
   ros__parameters:
-    dof_names:
-      - "x"
-      - "y"
-      - "z"
-      - "rx"
-      - "ry"
-      - "rz"
+    use_external_measured_states: false
+    command_interface_prefix: "thruster_allocation_matrix_controller"
     gains:
       rho: 20.0
       lambda: 200.0
@@ -34,17 +29,10 @@ integral_sliding_mode_controller:
 
 thruster_allocation_matrix_controller:
   ros__parameters:
-    dof_names:
-      - "x"
-      - "y"
-      - "z"
-      - "rx"
-      - "ry"
-      - "rz"
     tam:
-      x: [-0.707,  -0.707,   0.707,  0.707,      0.0,     0.0,      0.0,     0.0]
-      y: [0.707,  -0.707,   0.707, -0.707,      0.0,     0.0,      0.0,     0.0]
-      z: [0.0,     0.0,     0.0,    0.0,      1.0,     1.0,      1.0,     1.0]
-      rx: [0.0,     0.0,     0.0,    0.0, -0.21805, 0.21805, -0.21805, 0.21805]
-      ry: [0.0,     0.0,     0.0,    0.0,    -0.12,   -0.12,     0.12,    0.12]
+      x:  [-0.707,  -0.707,   0.707,  0.707,      0.0,     0.0,      0.0,     0.0]
+      y:  [ 0.707,  -0.707,   0.707, -0.707,      0.0,     0.0,      0.0,     0.0]
+      z:  [   0.0,     0.0,     0.0,    0.0,      1.0,     1.0,      1.0,     1.0]
+      rx: [   0.0,     0.0,     0.0,    0.0, -0.21805, 0.21805, -0.21805, 0.21805]
+      ry: [   0.0,     0.0,     0.0,    0.0,    -0.12,   -0.12,     0.12,    0.12]
       rz: [0.1888, -0.1888, -0.1888, 0.1888,      0.0,     0.0,      0.0 ,    0.0]

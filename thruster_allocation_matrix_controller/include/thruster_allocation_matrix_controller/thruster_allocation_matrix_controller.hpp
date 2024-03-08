@@ -1,4 +1,4 @@
-// Copyright 2024, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
+// Copyright 2024, Evan Palmer, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -95,13 +95,12 @@ protected:
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
 
-  // DoF information
-  const std::array<std::string, 6> six_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
-  std::vector<std::string> dof_names_;
-  size_t dof_;
-
   Eigen::MatrixXd tam_;
   size_t num_thrusters_;
+
+private:
+  std::array<std::string, 6> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  size_t dof_{6};
 };
 
 }  // namespace thruster_allocation_matrix_controller

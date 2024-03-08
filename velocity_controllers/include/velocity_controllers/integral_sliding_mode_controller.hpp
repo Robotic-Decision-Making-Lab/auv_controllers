@@ -135,8 +135,8 @@ protected:
   std::unique_ptr<hydrodynamics::RestoringForces> restoring_forces_;
 
 private:
-  std::vector<std::string> k_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
-  size_t k_dof_{6};
+  std::vector<std::string> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  size_t dof_{6};
 };
 
 }  // namespace velocity_controllers

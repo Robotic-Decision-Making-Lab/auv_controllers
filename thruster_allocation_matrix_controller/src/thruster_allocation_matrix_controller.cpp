@@ -1,4 +1,4 @@
-// Copyright 2024, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
+// Copyright 2024, Evan Palmer, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ namespace thruster_allocation_matrix_controller
 namespace
 {
 
-void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)
+void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)  // NOLINT
 {
   wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
@@ -38,29 +38,6 @@ void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)
   wrench_msg->torque.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->torque.y = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->torque.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-Eigen::Vector6d create_six_dof_eigen_from_named_vector(
-  const std::vector<std::string> & dof_names, const std::array<std::string, 6> & six_dof_names,
-  const std::vector<double> & values)
-{
-  if (dof_names.size() != values.size()) {
-    throw std::invalid_argument("The DoF names and values must have the same size.");
-  }
-
-  Eigen::Vector6d vec = Eigen::Vector6d::Zero();
-
-  for (size_t i = 0; i < six_dof_names.size(); ++i) {
-    auto it = std::find(dof_names.begin(), dof_names.end(), six_dof_names[i]);
-
-    if (it == dof_names.end()) {
-      vec[i] = std::numeric_limits<double>::quiet_NaN();
-    } else {
-      vec[i] = values[std::distance(dof_names.begin(), it)];
-    }
-  }
-
-  return vec;
 }
 
 }  // namespace
@@ -92,10 +69,6 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
 {
   update_parameters();
 
-  // These are just used to improve readability
-  dof_names_ = params_.dof_names;
-  dof_ = dof_names_.size();
-
   const std::vector<std::vector<double>> vecs = {params_.tam.x,  params_.tam.y,  params_.tam.z,
                                                  params_.tam.rx, params_.tam.ry, params_.tam.rz};
 
@@ -103,9 +76,9 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   // x vector
   num_thrusters_ = params_.tam.x.size();
   for (const auto & vec : vecs) {
-    size_t vec_size = vec.size();
+    const size_t vec_size = vec.size();
     if (vec_size != num_thrusters_) {
-      RCLCPP_ERROR(
+      RCLCPP_ERROR(  // NOLINT
         get_node()->get_logger(), "Mismatched TAM vector sizes. Expected %ld, got %ld.", num_thrusters_, vec_size);
 
       return controller_interface::CallbackReturn::ERROR;
@@ -116,12 +89,12 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   tam_ = Eigen::MatrixXd::Zero(dof_, num_thrusters_);
 
   // Add the TAM rows to the matrix
-  tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), params_.tam.x.size()),
-    Eigen::RowVectorXd::Map(params_.tam.y.data(), params_.tam.y.size()),
-    Eigen::RowVectorXd::Map(params_.tam.z.data(), params_.tam.z.size()),
-    Eigen::RowVectorXd::Map(params_.tam.rx.data(), params_.tam.rx.size()),
-    Eigen::RowVectorXd::Map(params_.tam.ry.data(), params_.tam.ry.size()),
-    Eigen::RowVectorXd::Map(params_.tam.rz.data(), params_.tam.rz.size());
+  tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), num_thrusters_),
+    Eigen::RowVectorXd::Map(params_.tam.y.data(), num_thrusters_),
+    Eigen::RowVectorXd::Map(params_.tam.z.data(), num_thrusters_),
+    Eigen::RowVectorXd::Map(params_.tam.rx.data(), num_thrusters_),
+    Eigen::RowVectorXd::Map(params_.tam.ry.data(), num_thrusters_),
+    Eigen::RowVectorXd::Map(params_.tam.rz.data(), num_thrusters_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -179,10 +152,18 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   command_interfaces_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   command_interfaces_configuration.names.reserve(num_thrusters_);
+
   for (size_t i = 0; i < num_thrusters_; ++i) {
     std::ostringstream thruster_name;
-    thruster_name << "thruster_" << i + 1;
-    command_interfaces_configuration.names.emplace_back(thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
+    thruster_name << "thruster_" << i + 1 << "_joint";
+
+    if (!params_.command_interface_prefix.length()) {
+      command_interfaces_configuration.names.emplace_back(
+        thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
+    } else {
+      command_interfaces_configuration.names.emplace_back(
+        params_.command_interface_prefix + "/" + thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
+    }
   }
 
   return command_interfaces_configuration;
@@ -234,8 +215,8 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
 controller_interface::return_type ThrusterAllocationMatrixController::update_and_write_commands(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  auto reference_wrench = create_six_dof_eigen_from_named_vector(dof_names_, six_dof_names_, reference_interfaces_);
-  Eigen::VectorXd thrust = {tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench};
+  const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
+  const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);
 
   for (size_t i = 0; i < num_thrusters_; i++) {
     command_interfaces_[i].set_value(thrust[i]);
