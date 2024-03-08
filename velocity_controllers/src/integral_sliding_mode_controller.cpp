@@ -135,16 +135,16 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
 {
   update_parameters();
 
-  // Update the controller gains used by the controller
+  // Update the controller gains
   sliding_gain_ = params_.gains.rho;
   boundary_thickness_ = params_.gains.lambda;
   proportional_gain_ = Eigen::Vector6d(params_.gains.Kp.data()).asDiagonal().toDenseMatrix();
 
-  // Update the TF frames used by the controller
+  // Update the TF frames
   vehicle_frame_id_ = params_.tf.base_frame;
   inertial_frame_id_ = params_.tf.odom_frame;
 
-  // Update the hydrodynamic parameters used by the controller
+  // Update the hydrodynamic parameters
   // TODO(evan-palmer): Read these from the robot_description instead of a parameters file
   const Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
   const Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
@@ -174,19 +174,16 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
     return ret;
   }
 
-  const std::shared_ptr<geometry_msgs::msg::Twist> reference_msg = std::make_shared<geometry_msgs::msg::Twist>();
+  const auto reference_msg = std::make_shared<geometry_msgs::msg::Twist>();
   reference_.writeFromNonRT(reference_msg);
 
-  const std::shared_ptr<geometry_msgs::msg::Twist> system_state_msg = std::make_shared<geometry_msgs::msg::Twist>();
+  const auto system_state_msg = std::make_shared<geometry_msgs::msg::Twist>();
   system_state_.writeFromNonRT(system_state_msg);
 
-  // Pre-reserve the command interfaces
   command_interfaces_.reserve(dof_);
 
-  // Reset the state values
   system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
 
-  // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
@@ -203,13 +200,11 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // Setup the controller state publisher
   controller_state_pub_ =
     get_node()->create_publisher<control_msgs::msg::MultiDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
 
-  // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.dof_states.resize(dof_);
   for (size_t i = 0; i < dof_; ++i) {
@@ -226,18 +221,14 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   // Indicate that the next state update will be the first: this is used to set the error initial conditions
   first_update_ = true;
 
-  // Clear the error terms
   total_velocity_error_ = Eigen::Vector6d::Zero();
   initial_velocity_error_ = Eigen::Vector6d::Zero();
 
-  // Reset the rotation
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
 
-  // Reset the reference and state messages
   reset_twist_msg(*(reference_.readFromNonRT()));
   reset_twist_msg(*(system_state_.readFromNonRT()));
 
-  // Reset the reference and state interfaces
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
 
@@ -261,7 +252,6 @@ controller_interface::return_type IntegralSlidingModeController::update_referenc
                                          (*current_reference)->linear.z,  (*current_reference)->angular.x,
                                          (*current_reference)->angular.y, (*current_reference)->angular.z};
 
-  // Update the thrust reference
   for (size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
       reference_interfaces_[i] = reference[i];
@@ -305,15 +295,12 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     configure_parameters();
   }
 
-  // Update the current system state
   update_system_state_values();
-
   const Eigen::Vector6d velocity_state(system_state_values_.data());
 
   // Calculate the velocity error
   std::vector<double> velocity_error_values;
   velocity_error_values.reserve(dof_);
-
   std::transform(
     reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
     std::back_inserter(velocity_error_values), [](double reference, double state) {
@@ -321,18 +308,19 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
 
-  // Ignore the update if all the velocity error values are NaN
+  // Filter out NaN values. This will cause issues in the control update
   auto all_nan =
     std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
   if (all_nan) {
-    RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Ignoring update.");  // NOLINT
+    RCLCPP_DEBUG(  // NOLINT
+      get_node()->get_logger(), "All reference and system state values are NaN. Skipping control update.");
     return controller_interface::return_type::OK;
   }
 
   const Eigen::Vector6d velocity_error(velocity_error_values.data());
 
   if (first_update_) {
-    // If this is the first update, set the initial error conditions
+    // If this is the first update and we have a valid error value, set the initial error conditions
     initial_velocity_error_ = velocity_error;
     first_update_ = false;
   } else {
@@ -354,7 +342,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   }
 
   // Calculate the computed torque control
-  // Assume a feedforward acceleration of 0
+  // Assume a feed-forward acceleration of 0
   const Eigen::Vector6d tau0 =
     inertia_->getMassMatrix() * (proportional_gain_ * velocity_error) +
     coriolis_->calculateCoriolisMatrix(velocity_state) * velocity_state +
@@ -376,7 +364,6 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   // Total control torque
   const Eigen::Vector6d tau = tau0 + tau1;
 
-  // Convert the control torque to a command interface value
   for (size_t i = 0; i < dof_; ++i) {
     command_interfaces_[i].set_value(tau[i]);
   }

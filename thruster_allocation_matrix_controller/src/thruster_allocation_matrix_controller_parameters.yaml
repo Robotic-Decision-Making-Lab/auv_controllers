@@ -1,9 +1,18 @@
 thruster_allocation_matrix_controller:
-  command_interface_prefix: {
-    type: string,
-    default_value: "",
+  thrusters: {
+    type: string_array,
+    default_value: [],
     read_only: true,
-    description: "The prefix of the command interface. This can be used to configure command interfaces in chained mode."
+    description: "The list of thruster names. These should be provided in the same order as the thruster allocation matrix.",
+    validation: {
+      not_empty<>: null
+    }
+  }
+  command_interface_prefixes: {
+    type: string_array,
+    default_value: [],
+    read_only: true,
+    description: "The prefixes used for the command interfaces. This can be used to configure command interfaces in chained mode, and should be provided in the same order as the thruster names.",
   }
   tam: {
     x: {

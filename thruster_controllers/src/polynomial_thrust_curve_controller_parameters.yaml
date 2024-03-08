@@ -1,0 +1,31 @@
+polynomial_thrust_curve_controller:
+  thruster: {
+    type: string,
+    default_value: "",
+    read_only: true,
+    description: "The name of the thruster.",
+    validation: {
+      not_empty<>: null
+    }
+  }
+  thrust_curve_coefficients: {
+    type: double_array,
+    default_value: [],
+    read_only: true,
+    description: "The thrust-to-PWM curve polynomial coefficients. These should be provided in the order of the lowest degree to the highest degree.",
+    validation: {
+      not_empty<>: null
+    }
+  }
+  min_thrust: {
+    type: double,
+    default_value: 0.0,
+    read_only: true,
+    description: "The minimum thrust that can be produced by the thruster.",
+  }
+  max_thrust: {
+    type: double,
+    default_value: 0.0,
+    read_only: true,
+    description: "The maximum thrust that can be produced by the thruster.",
+  }

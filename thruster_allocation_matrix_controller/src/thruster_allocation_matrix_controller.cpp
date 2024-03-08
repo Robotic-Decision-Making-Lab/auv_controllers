@@ -69,17 +69,28 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
 {
   update_parameters();
 
+  thruster_names_ = params_.thrusters;
+  num_thrusters_ = thruster_names_.size();
+
+  // Make sure that the number prefixes (if provided) provided match the number of thrusters
+  if (params_.command_interface_prefixes.size() > 0 && params_.command_interface_prefixes.size() != num_thrusters_) {
+    RCLCPP_ERROR(  // NOLINT
+      get_node()->get_logger(), "Mismatched number of command interface prefixes and thrusters. Expected %ld, got %ld.",
+      num_thrusters_, params_.command_interface_prefixes.size());
+
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
   const std::vector<std::vector<double>> vecs = {params_.tam.x,  params_.tam.y,  params_.tam.z,
                                                  params_.tam.rx, params_.tam.ry, params_.tam.rz};
 
-  // Make sure that all of the rows are the same size; start by assuming that the number of thrusters is the size of the
-  // x vector
-  num_thrusters_ = params_.tam.x.size();
+  // Make sure that all of the rows are the same size
   for (const auto & vec : vecs) {
     const size_t vec_size = vec.size();
     if (vec_size != num_thrusters_) {
       RCLCPP_ERROR(  // NOLINT
-        get_node()->get_logger(), "Mismatched TAM vector sizes. Expected %ld, got %ld.", num_thrusters_, vec_size);
+        get_node()->get_logger(), "Mismatched TAM row sizes. Expected %ld thrusters, got %ld.", num_thrusters_,
+        vec_size);
 
       return controller_interface::CallbackReturn::ERROR;
     }
@@ -88,7 +99,6 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   // Eigen will always convert a dynamic matrix lvalue to match the size of the rvalue
   tam_ = Eigen::MatrixXd::Zero(dof_, num_thrusters_);
 
-  // Add the TAM rows to the matrix
   tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), num_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.y.data(), num_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.z.data(), num_thrusters_),
@@ -108,11 +118,11 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
   }
 
   // Initialize the reference realtime message
-  const std::shared_ptr<geometry_msgs::msg::Wrench> reference_msg = std::make_shared<geometry_msgs::msg::Wrench>();
+  const auto reference_msg = std::make_shared<geometry_msgs::msg::Wrench>();
   reference_.writeFromNonRT(reference_msg);
 
   // Pre-reserve the command interfaces
-  command_interfaces_.reserve(dof_);
+  command_interfaces_.reserve(num_thrusters_);
 
   // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
@@ -154,15 +164,12 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   command_interfaces_configuration.names.reserve(num_thrusters_);
 
   for (size_t i = 0; i < num_thrusters_; ++i) {
-    std::ostringstream thruster_name;
-    thruster_name << "thruster_" << i + 1 << "_joint";
-
-    if (!params_.command_interface_prefix.length()) {
+    if (!params_.command_interface_prefixes.size()) {
       command_interfaces_configuration.names.emplace_back(
-        thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
+        thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
     } else {
       command_interfaces_configuration.names.emplace_back(
-        params_.command_interface_prefix + "/" + thruster_name.str() + "/" + hardware_interface::HW_IF_VELOCITY);
+        params_.command_interface_prefixes[i] + "/" + thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
 
@@ -200,7 +207,6 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
                                       (*current_reference)->force.z,  (*current_reference)->torque.x,
                                       (*current_reference)->torque.y, (*current_reference)->torque.z};
 
-  // Update the thrust reference
   for (size_t i = 0; i < wrench.size(); ++i) {
     if (!std::isnan(wrench[i])) {
       reference_interfaces_[i] = wrench[i];

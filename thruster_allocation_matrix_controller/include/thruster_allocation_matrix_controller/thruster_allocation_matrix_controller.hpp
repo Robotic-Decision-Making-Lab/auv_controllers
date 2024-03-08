@@ -43,6 +43,9 @@
 namespace thruster_allocation_matrix_controller
 {
 
+/**
+ * @brief Controller used to convert desired wrenches into thruster forces using a thruster allocation matrix.
+ */
 class ThrusterAllocationMatrixController : public controller_interface::ChainableControllerInterface
 {
 public:
@@ -87,14 +90,13 @@ protected:
 
   controller_interface::CallbackReturn configure_parameters();
 
-  // Reference signal to track
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Wrench>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
-  // generate_parameter_library members
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
 
+  std::vector<std::string> thruster_names_;
   Eigen::MatrixXd tam_;
   size_t num_thrusters_;
 

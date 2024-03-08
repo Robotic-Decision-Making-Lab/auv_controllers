@@ -93,11 +93,9 @@ protected:
 
   controller_interface::CallbackReturn configure_parameters();
 
-  // Reference signal to track
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Twist>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
-  // The system state
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Twist>> system_state_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> system_state_sub_;
   std::vector<double> system_state_values_;
@@ -110,25 +108,20 @@ protected:
   std::string inertial_frame_id_;
   realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
 
-  // Publish the controller state
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;
   std::unique_ptr<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>> rt_controller_state_pub_;
 
-  // generate_parameter_library members
   std::shared_ptr<integral_sliding_mode_controller::ParamListener> param_listener_;
   integral_sliding_mode_controller::Params params_;
 
-  // Controller gains
   Eigen::Matrix6d proportional_gain_;
   double sliding_gain_;
   double boundary_thickness_;
 
-  // Error terms
   bool first_update_{true};
   Eigen::Vector6d initial_velocity_error_;
   Eigen::Vector6d total_velocity_error_;
 
-  // Hydrodynamic model
   std::unique_ptr<hydrodynamics::Inertia> inertia_;
   std::unique_ptr<hydrodynamics::Coriolis> coriolis_;
   std::unique_ptr<hydrodynamics::Damping> damping_;
