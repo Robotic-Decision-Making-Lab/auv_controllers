@@ -164,7 +164,7 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   command_interfaces_configuration.names.reserve(num_thrusters_);
 
   for (size_t i = 0; i < num_thrusters_; ++i) {
-    if (!params_.command_interface_prefixes.empty()) {
+    if (params_.command_interface_prefixes.empty()) {
       command_interfaces_configuration.names.emplace_back(
         thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
     } else {
