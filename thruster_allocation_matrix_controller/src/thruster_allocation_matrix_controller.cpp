@@ -129,7 +129,22 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
     "~/reference", rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
 
-  // TODO(someone): Add the controller state publisher and message configuration
+
+  // TODO: need to change MultiDOFStateStamped
+  // Setup the controller state publisher.
+  controller_state_pub_ =
+    get_node()->create_publisher<control_msgs::msg::MultiDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
+  rt_controller_state_pub_ =
+    std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
+
+  // Initialize the controller state message in the realtime publisher
+  rt_controller_state_pub_->lock();
+  rt_controller_state_pub_->msg_.dof_states.resize(num_thrusters_);
+  for (size_t i = 0; i < num_thrusters_; ++i) {
+    rt_controller_state_pub_->msg_.dof_states[i].name = thruster_names_[i];
+  }
+  rt_controller_state_pub_->unlock();
+
 
   return controller_interface::CallbackReturn::SUCCESS;
 }

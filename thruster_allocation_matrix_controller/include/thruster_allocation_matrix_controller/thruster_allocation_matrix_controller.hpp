@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "control_msgs/msg/multi_dof_command.hpp"
+#include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
