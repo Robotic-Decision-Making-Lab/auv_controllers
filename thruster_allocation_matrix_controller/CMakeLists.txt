@@ -16,6 +16,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   eigen3_cmake_module
   Eigen3
   geometry_msgs
+  auv_control_msgs
   control_msgs
   hydrodynamics
 )
