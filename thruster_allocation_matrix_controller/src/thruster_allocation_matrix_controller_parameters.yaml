@@ -8,11 +8,11 @@ thruster_allocation_matrix_controller:
       not_empty<>: null
     }
   }
-  command_interface_prefixes: {
+  reference_controllers: {
     type: string_array,
     default_value: [],
     read_only: true,
-    description: "The prefixes used for the command interfaces. This can be used to configure command interfaces in chained mode, and should be provided in the same order as the thruster names.",
+    description: "The names of the reference controllers. This can be used to configure command interfaces in chained mode, and should be provided in the same order as the thruster names.",
   }
   tam: {
     x: {

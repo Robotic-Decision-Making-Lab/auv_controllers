@@ -10,7 +10,7 @@ integral_sliding_mode_controller:
     default_value: true,
     description: "If enabled, the parameters will be dynamically updated while the controller is running."
   }
-  command_interface_prefix: {
+  reference_controller: {
     type: string,
     default_value: "",
     read_only: true,

@@ -73,11 +73,11 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   for (const auto & dof : dof_names_) {
-    if (params_.command_interface_prefix.length() <= 0) {
+    if (params_.reference_controller.length() <= 0) {
       command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_VELOCITY);
     } else {
       command_interface_configuration.names.emplace_back(
-        params_.command_interface_prefix + "/" + dof + "/" + hardware_interface::HW_IF_VELOCITY);
+        params_.reference_controller + "/" + dof + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
 
