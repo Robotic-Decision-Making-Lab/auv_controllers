@@ -174,8 +174,14 @@ controller_interface::return_type PolynomialThrustCurveController::update_and_wr
     command_interfaces_[0].set_value(reference_interfaces_[0]);
   } else {
     double clamped_reference = std::clamp(reference_interfaces_[0], params_.min_thrust, params_.max_thrust);
-    command_interfaces_[0].set_value(
-      calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients));
+    int pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
+
+    // If the PWM value is in the deadband, apply zero thrust
+    if (pwm > params_.min_deadband_pwm && pwm < params_.max_deadband_pwm) {
+      pwm = params_.zero_thrust_pwm;
+    }
+
+    command_interfaces_[0].set_value(pwm);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
