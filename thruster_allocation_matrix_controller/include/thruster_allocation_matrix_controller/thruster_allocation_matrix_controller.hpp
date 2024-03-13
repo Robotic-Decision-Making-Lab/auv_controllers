@@ -96,7 +96,6 @@ protected:
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Wrench>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
-  // TODO: make sure we change the types on these messages to our new custom message
   std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::MultiActuatorStateStamped>> controller_state_pub_;
   std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>
     rt_controller_state_pub_;

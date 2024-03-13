@@ -241,7 +241,6 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
     command_interfaces_[i].set_value(thrust[i]);
   }
 
-  // TODO(someone): Add in the controller state message publishing
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
     rt_controller_state_pub_->msg_.time_step = period.seconds();
