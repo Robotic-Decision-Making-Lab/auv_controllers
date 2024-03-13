@@ -28,6 +28,7 @@
   <depend>generate_parameter_library</depend>
   <depend>control_msgs</depend>
   <depend>tf2_eigen</depend>
+  <depend>hydrodynamics</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
