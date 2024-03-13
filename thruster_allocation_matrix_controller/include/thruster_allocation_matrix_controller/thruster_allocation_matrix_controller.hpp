@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 
+#include "auv_control_msgs/msg/multi_actuator_state_stamped.hpp"
 #include "control_msgs/msg/multi_dof_command.hpp"
 #include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
@@ -95,9 +96,15 @@ protected:
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Wrench>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
+  // TODO: make sure we change the types on these messages to our new custom message
+  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::MultiActuatorStateStamped>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>
+    rt_controller_state_pub_;
+
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
 
+  std::string controller_name_;
   std::vector<std::string> thruster_names_;
   Eigen::MatrixXd tam_;
   size_t num_thrusters_;

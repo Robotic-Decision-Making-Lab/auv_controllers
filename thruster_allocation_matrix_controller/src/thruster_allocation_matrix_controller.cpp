@@ -129,22 +129,20 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
     "~/reference", rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
 
-
-  // TODO: need to change MultiDOFStateStamped
   // Setup the controller state publisher.
-  controller_state_pub_ =
-    get_node()->create_publisher<control_msgs::msg::MultiDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
+  controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
+    "~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
-    std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
+    std::make_unique<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>(
+      controller_state_pub_);
 
   // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_states.resize(num_thrusters_);
-  for (size_t i = 0; i < num_thrusters_; ++i) {
-    rt_controller_state_pub_->msg_.dof_states[i].name = thruster_names_[i];
-  }
+  rt_controller_state_pub_->msg_.output_names = thruster_names_;
+  rt_controller_state_pub_->msg_.reference_names.assign(dof_names_.begin(), dof_names_.end());
+  rt_controller_state_pub_->msg_.reference.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  rt_controller_state_pub_->msg_.output.resize(num_thrusters_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->unlock();
-
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -234,7 +232,7 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
 }
 
 controller_interface::return_type ThrusterAllocationMatrixController::update_and_write_commands(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & time, const rclcpp::Duration & period)
 {
   const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
   const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);
@@ -244,6 +242,17 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
   }
 
   // TODO(someone): Add in the controller state message publishing
+  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
+    rt_controller_state_pub_->msg_.header.stamp = time;
+    rt_controller_state_pub_->msg_.time_step = period.seconds();
+    rt_controller_state_pub_->msg_.reference = reference_interfaces_;
+
+    for (size_t i = 0; i < num_thrusters_; i++) {
+      rt_controller_state_pub_->msg_.output[i] = command_interfaces_[i].get_value();
+    }
+
+    rt_controller_state_pub_->unlockAndPublish();
+  }
 
   return controller_interface::return_type::OK;
 }
