@@ -21,6 +21,7 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,6 +33,7 @@
 #include "hydrodynamics/eigen.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.h"
 #include "realtime_tools/realtime_publisher.h"
@@ -128,8 +130,9 @@ protected:
   std::unique_ptr<hydrodynamics::RestoringForces> restoring_forces_;
 
 private:
-  std::vector<std::string> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
-  size_t dof_{6};
+  // Can't mark an array of strings with constexpr, so we just keep it private
+  std::array<std::string, 6> k_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  static constexpr size_t k_dof_ = 6;
 };
 
 }  // namespace velocity_controllers

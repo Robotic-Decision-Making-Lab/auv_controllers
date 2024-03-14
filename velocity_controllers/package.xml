@@ -6,7 +6,7 @@
   <version>0.0.1</version>
   <description>A collection of velocity controllers for underwater vehicles</description>
 
-  <maintainer email="evanp922@gmail.com">ros</maintainer>
+  <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
@@ -32,8 +32,6 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <test_depend>controller_manager</test_depend>
-  <test_depend>hardware_interface</test_depend>
 
   <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 

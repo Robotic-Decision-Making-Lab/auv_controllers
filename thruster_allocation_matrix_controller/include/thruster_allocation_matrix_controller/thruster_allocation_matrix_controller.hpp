@@ -21,21 +21,20 @@
 #pragma once
 
 #include <Eigen/Dense>
+#include <array>
 #include <cstddef>
-#include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "auv_control_msgs/msg/multi_actuator_state_stamped.hpp"
-#include "control_msgs/msg/multi_dof_command.hpp"
-#include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
 #include "hydrodynamics/eigen.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
+#include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.h"
 #include "realtime_tools/realtime_publisher.h"
 #include "thruster_allocation_matrix_controller/visibility_control.h"
@@ -109,8 +108,8 @@ protected:
   size_t num_thrusters_;
 
 private:
-  std::array<std::string, 6> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
-  size_t dof_{6};
+  std::array<std::string, 6> k_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  static constexpr size_t k_dof_ = 6;
 };
 
 }  // namespace thruster_allocation_matrix_controller

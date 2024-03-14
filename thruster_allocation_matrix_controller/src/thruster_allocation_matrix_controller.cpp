@@ -21,6 +21,7 @@
 #include "thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp"
 
 #include <Eigen/Dense>
+#include <stdexcept>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 
@@ -97,7 +98,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   }
 
   // Eigen will always convert a dynamic matrix lvalue to match the size of the rvalue
-  tam_ = Eigen::MatrixXd::Zero(dof_, num_thrusters_);
+  tam_ = Eigen::MatrixXd::Zero(k_dof_, num_thrusters_);
 
   tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), num_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.y.data(), num_thrusters_),
@@ -117,30 +118,25 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
     return ret;
   }
 
-  // Initialize the reference realtime message
   const auto reference_msg = std::make_shared<geometry_msgs::msg::Wrench>();
   reference_.writeFromNonRT(reference_msg);
 
-  // Pre-reserve the command interfaces
   command_interfaces_.reserve(num_thrusters_);
 
-  // Subscribe to the reference topic
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
 
-  // Setup the controller state publisher.
   controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
     "~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>(
       controller_state_pub_);
 
-  // Initialize the controller state message in the realtime publisher
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.output_names = thruster_names_;
-  rt_controller_state_pub_->msg_.reference_names.assign(dof_names_.begin(), dof_names_.end());
-  rt_controller_state_pub_->msg_.reference.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  rt_controller_state_pub_->msg_.reference_names.assign(k_dof_names_.begin(), k_dof_names_.end());
+  rt_controller_state_pub_->msg_.reference.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->msg_.output.resize(num_thrusters_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->unlock();
 
@@ -198,14 +194,14 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
 
 std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixController::on_export_reference_interfaces()
 {
-  reference_interfaces_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < dof_; ++i) {
+  for (size_t i = 0; i < k_dof_; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
+      get_node()->get_name(), k_dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;

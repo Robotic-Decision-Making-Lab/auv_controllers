@@ -27,8 +27,6 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -72,7 +70,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   controller_interface::InterfaceConfiguration command_interface_configuration;
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  for (const auto & dof : dof_names_) {
+  for (const auto & dof : k_dof_names_) {
     if (params_.reference_controller.length() <= 0) {
       command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
@@ -93,7 +91,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    for (const auto & name : dof_names_) {
+    for (const auto & name : k_dof_names_) {
       state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
@@ -103,14 +101,14 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
 
 std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
 {
-  reference_interfaces_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < dof_; ++i) {
+  for (size_t i = 0; i < k_dof_; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
+      get_node()->get_name(), k_dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
@@ -180,9 +178,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   const auto system_state_msg = std::make_shared<geometry_msgs::msg::Twist>();
   system_state_.writeFromNonRT(system_state_msg);
 
-  command_interfaces_.reserve(dof_);
+  command_interfaces_.reserve(k_dof_);
 
-  system_state_values_.resize(dof_, std::numeric_limits<double>::quiet_NaN());
+  system_state_values_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(),
@@ -206,9 +204,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
     std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
 
   rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_states.resize(dof_);
-  for (size_t i = 0; i < dof_; ++i) {
-    rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
+  rt_controller_state_pub_->msg_.dof_states.resize(k_dof_);
+  for (size_t i = 0; i < k_dof_; ++i) {
+    rt_controller_state_pub_->msg_.dof_states[i].name = k_dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
 
@@ -300,7 +298,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 
   // Calculate the velocity error
   std::vector<double> velocity_error_values;
-  velocity_error_values.reserve(dof_);
+  velocity_error_values.reserve(k_dof_);
   std::transform(
     reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
     std::back_inserter(velocity_error_values), [](double reference, double state) {
@@ -332,13 +330,13 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   // last known orientation.
   try {
     const geometry_msgs::msg::TransformStamped t =
-      tf_buffer_->lookupTransform(vehicle_frame_id_, inertial_frame_id_, tf2::TimePointZero);
+      tf_buffer_->lookupTransform(inertial_frame_id_, vehicle_frame_id_, tf2::TimePointZero);
     tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
   }
   catch (const tf2::TransformException & e) {
     RCLCPP_DEBUG(  // NOLINT
       get_node()->get_logger(), "Could not transform %s to %s. Using latest available transform. %s",
-      vehicle_frame_id_.c_str(), inertial_frame_id_.c_str(), e.what());
+      inertial_frame_id_.c_str(), vehicle_frame_id_.c_str(), e.what());
   }
 
   // Calculate the computed torque control
@@ -359,18 +357,18 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   surface = surface.unaryExpr([this](double x) { return std::tanh(x / boundary_thickness_); });
 
   // Calculate the disturbance rejection torque
-  const Eigen::Vector6d tau1 = -sliding_gain_ * surface;
+  const Eigen::Vector6d tau1 = sliding_gain_ * surface;
 
   // Total control torque
   const Eigen::Vector6d tau = tau0 + tau1;
 
-  for (size_t i = 0; i < dof_; ++i) {
+  for (size_t i = 0; i < k_dof_; ++i) {
     command_interfaces_[i].set_value(tau[i]);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (size_t i = 0; i < dof_; ++i) {
+    for (size_t i = 0; i < k_dof_; ++i) {
       rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
       rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
       rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];

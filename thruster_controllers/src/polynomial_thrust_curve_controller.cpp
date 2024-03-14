@@ -173,7 +173,7 @@ controller_interface::return_type PolynomialThrustCurveController::update_and_wr
   if (std::isnan(reference_interfaces_[0])) {
     command_interfaces_[0].set_value(reference_interfaces_[0]);
   } else {
-    double clamped_reference = std::clamp(reference_interfaces_[0], params_.min_thrust, params_.max_thrust);
+    const double clamped_reference = std::clamp(reference_interfaces_[0], params_.min_thrust, params_.max_thrust);
     int pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
 
     // If the PWM value is in the deadband, apply zero thrust

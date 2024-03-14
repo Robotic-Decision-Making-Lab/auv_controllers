@@ -19,6 +19,7 @@
   <exec_depend>thruster_allocation_matrix_controller</exec_depend>
   <exec_depend>thruster_controllers</exec_depend>
   <exec_depend>velocity_controllers</exec_depend>
+  <exec_depend>auv_control_msgs</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
