@@ -130,7 +130,7 @@ controller_interface::InterfaceConfiguration PolynomialThrustCurveController::co
   command_interfaces_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   command_interfaces_configuration.names.reserve(1);
-  command_interfaces_configuration.names.emplace_back(thruster_name_ + "/" + hardware_interface::HW_IF_VELOCITY);
+  command_interfaces_configuration.names.emplace_back(thruster_name_ + "/" + "pwm");
 
   return command_interfaces_configuration;
 }
@@ -150,7 +150,7 @@ std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveControlle
   reference_interfaces.reserve(reference_interfaces_.size());
 
   reference_interfaces.emplace_back(
-    get_node()->get_name(), thruster_name_ + "/" + hardware_interface::HW_IF_VELOCITY,
+    get_node()->get_name(), thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
     &reference_interfaces_[0]);  // NOLINT
 
   return reference_interfaces;

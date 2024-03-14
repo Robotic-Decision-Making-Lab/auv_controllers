@@ -179,10 +179,10 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   for (size_t i = 0; i < num_thrusters_; ++i) {
     if (params_.reference_controllers.empty()) {
       command_interfaces_configuration.names.emplace_back(
-        thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
+        thruster_names_[i] + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
       command_interfaces_configuration.names.emplace_back(
-        params_.reference_controllers[i] + "/" + thruster_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY);
+        params_.reference_controllers[i] + "/" + thruster_names_[i] + "/" + hardware_interface::HW_IF_EFFORT);
     }
   }
 
@@ -205,7 +205,7 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
 
   for (size_t i = 0; i < dof_; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
+      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
