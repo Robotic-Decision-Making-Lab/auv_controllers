@@ -131,8 +131,8 @@ protected:
 
 private:
   // Can't mark an array of strings with constexpr, so we just keep it private
-  std::array<std::string, 6> k_dof_names_{"x", "y", "z", "rx", "ry", "rz"};
-  static constexpr size_t k_dof_ = 6;
+  static constexpr size_t DOF = 6;
+  std::array<std::string, DOF> DOF_NAMES{"x", "y", "z", "rx", "ry", "rz"};
 };
 
 }  // namespace velocity_controllers

@@ -98,7 +98,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   }
 
   // Eigen will always convert a dynamic matrix lvalue to match the size of the rvalue
-  tam_ = Eigen::MatrixXd::Zero(k_dof_, num_thrusters_);
+  tam_ = Eigen::MatrixXd::Zero(DOF, num_thrusters_);
 
   tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), num_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.y.data(), num_thrusters_),
@@ -135,8 +135,8 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
 
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.output_names = thruster_names_;
-  rt_controller_state_pub_->msg_.reference_names.assign(k_dof_names_.begin(), k_dof_names_.end());
-  rt_controller_state_pub_->msg_.reference.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
+  rt_controller_state_pub_->msg_.reference_names.assign(DOF_NAMES.begin(), DOF_NAMES.end());
+  rt_controller_state_pub_->msg_.reference.resize(DOF, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->msg_.output.resize(num_thrusters_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->unlock();
 
@@ -193,14 +193,14 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
 
 std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixController::on_export_reference_interfaces()
 {
-  reference_interfaces_.resize(k_dof_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < k_dof_; ++i) {
+  for (size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), k_dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
+      get_node()->get_name(), DOF_NAMES[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
