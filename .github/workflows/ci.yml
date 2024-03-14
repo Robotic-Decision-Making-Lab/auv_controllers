@@ -42,5 +42,3 @@ jobs:
             -Wall -Wextra -Wpedantic -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
           CC: ${{ env.CLANG_TIDY && 'clang' }}
           CXX: ${{ env.CLANG_TIDY && 'clang++' }}
-          AFTER_SETUP_TARGET_WORKSPACE: >-
-            vcs import /root/target_ws/src < ros2.repos

@@ -27,7 +27,8 @@ RUN apt-get -q update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install all ROS dependencies needed for CI
-RUN apt-get -q update \
+RUN vcs import src < src/$PROJECT_NAME/ros2.repos \
+    && apt-get -q update \
     && apt-get -q -y upgrade \
     && rosdep update \
     && rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
@@ -60,11 +61,10 @@ WORKDIR $USER_WORKSPACE
 
 COPY --chown=$USER_UID:$USER_GID . src/$PROJECT_NAME
 
-RUN vcs import src < src/$PROJECT_NAME/ros2.repos
-
 # Install all ROS dependencies
 WORKDIR $USER_WORKSPACE
-RUN sudo apt-get -q update \
+RUN vcs import src < src/$PROJECT_NAME/ros2.repos \
+    && sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
     && rosdep update \
     && rosdep install -y --from-paths src --ignore-src -r --rosdistro ${ROS_DISTRO} \
