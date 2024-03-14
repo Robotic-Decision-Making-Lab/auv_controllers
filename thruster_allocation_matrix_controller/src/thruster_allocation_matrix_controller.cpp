@@ -135,7 +135,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
 
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.output_names = thruster_names_;
-  rt_controller_state_pub_->msg_.reference_names.assign(DOF_NAMES.begin(), DOF_NAMES.end());
+  rt_controller_state_pub_->msg_.reference_names.assign(dof_names_.begin(), dof_names_.end());
   rt_controller_state_pub_->msg_.reference.resize(DOF, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->msg_.output.resize(num_thrusters_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->unlock();
@@ -200,7 +200,7 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
 
   for (size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), DOF_NAMES[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
+      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;

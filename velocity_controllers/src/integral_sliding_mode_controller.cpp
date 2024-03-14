@@ -70,7 +70,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   controller_interface::InterfaceConfiguration command_interface_configuration;
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  for (const auto & dof : DOF_NAMES) {
+  for (const auto & dof : dof_names_) {
     if (params_.reference_controller.length() <= 0) {
       command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
@@ -91,7 +91,7 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    for (const auto & name : DOF_NAMES) {
+    for (const auto & name : dof_names_) {
       state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
@@ -108,7 +108,7 @@ std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController:
 
   for (size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
-      get_node()->get_name(), DOF_NAMES[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
+      get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
 
   return reference_interfaces;
@@ -206,7 +206,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.dof_states.resize(DOF);
   for (size_t i = 0; i < DOF; ++i) {
-    rt_controller_state_pub_->msg_.dof_states[i].name = DOF_NAMES[i];
+    rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
 
