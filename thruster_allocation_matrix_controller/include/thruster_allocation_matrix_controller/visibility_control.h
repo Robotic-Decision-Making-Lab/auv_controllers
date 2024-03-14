@@ -1,4 +1,4 @@
-// Copyright 2024, Evan Palmer
+// Copyright 2024, Colin Mitchell, Everardo Gonzalez, Rakesh Vivekanandan
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,8 +37,7 @@
 #else
 #define THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC THRUSTER_ALLOCATION_MATRIX_CONTROLLER_IMPORT
 #endif
-#define THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC_TYPE \
-  THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC
+#define THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC_TYPE THRUSTER_ALLOCATION_MATRIX_CONTROLLER_PUBLIC
 #define THRUSTER_ALLOCATION_MATRIX_CONTROLLER_LOCAL
 #else
 #define THRUSTER_ALLOCATION_MATRIX_CONTROLLER_EXPORT __attribute__((visibility("default")))

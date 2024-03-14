@@ -1,0 +1,11 @@
+<library path="thruster_controllers">
+
+  <class name="thruster_controllers/PolynomialThrustCurveController"
+    type="thruster_controllers::PolynomialThrustCurveController"
+    base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Controller used to convert thrust values to PWM values using a polynomial thrust curve
+    </description>
+  </class>
+
+</library>
