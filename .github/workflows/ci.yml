@@ -43,4 +43,4 @@ jobs:
           CC: ${{ env.CLANG_TIDY && 'clang' }}
           CXX: ${{ env.CLANG_TIDY && 'clang++' }}
           AFTER_SETUP_TARGET_WORKSPACE: >-
-            vcs import src < ros2.repos
+            vcs import /root/target_ws < ros2.repos
