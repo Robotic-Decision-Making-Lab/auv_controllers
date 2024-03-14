@@ -4,8 +4,8 @@
 # Except the following
 !requirements-dev.txt
 !auv_controllers
-!position_controllers
 !velocity_controllers
 !thruster_allocation_matrix_controller
 !thruster_controllers
+!auv_control_msgs
 !ros2.repos
