@@ -4,7 +4,7 @@
     type="velocity_controllers::IntegralSlidingModeController"
     base_class_type="controller_interface::ChainableControllerInterface">
     <description>
-      Integral sliding mode controller for AUV velocity control.
+      Integral sliding mode controller for AUV velocity control
     </description>
   </class>
 

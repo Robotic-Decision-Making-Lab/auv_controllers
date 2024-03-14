@@ -4,7 +4,7 @@
     type="thruster_allocation_matrix_controller::ThrusterAllocationMatrixController"
     base_class_type="controller_interface::ChainableControllerInterface">
     <description>
-      Thruster allocation matrix controller for wrench-to-thruster.
+      Thruster allocation matrix controller used to convert wrench commands into thrust commands
     </description>
   </class>
 

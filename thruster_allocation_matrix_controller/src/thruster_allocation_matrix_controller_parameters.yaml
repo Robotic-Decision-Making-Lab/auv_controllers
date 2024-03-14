@@ -19,36 +19,36 @@ thruster_allocation_matrix_controller:
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Thruster allocation matrix x."
+      description: "Thruster allocation matrix row for translation along the x-axis."
     },
     y: {
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Thruster allocation matrix y."
+      description: "Thruster allocation matrix row for translation along the y-axis."
     },
     z: {
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Thruster allocation matrix z."
+      description: "Thruster allocation matrix row for translation along the z-axis."
     },
     rx: {
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Thruster allocation matrix rx."
+      description: "Thruster allocation matrix row for rotation about the x-axis."
     },
     ry: {
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Thruster allocation matrix ry."
+      description: "Thruster allocation matrix row for rotation about the y-axis."
     },
     rz: {
       type: double_array,
       read_only: true,
       default_value: [],
-      description: "Trhuster allocation matrix rz."
+      description: "Trhuster allocation matrix row for rotation about the z-axis."
     }
   }

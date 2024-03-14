@@ -102,7 +102,6 @@ protected:
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
 
-  std::string controller_name_;
   std::vector<std::string> thruster_names_;
   Eigen::MatrixXd tam_;
   size_t num_thrusters_;

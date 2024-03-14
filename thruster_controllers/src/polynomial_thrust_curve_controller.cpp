@@ -126,20 +126,20 @@ bool PolynomialThrustCurveController::on_set_chained_mode(bool /*chained_mode*/)
 
 controller_interface::InterfaceConfiguration PolynomialThrustCurveController::command_interface_configuration() const
 {
-  controller_interface::InterfaceConfiguration command_interfaces_configuration;
-  command_interfaces_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+  controller_interface::InterfaceConfiguration command_interface_config;
+  command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  command_interfaces_configuration.names.reserve(1);
-  command_interfaces_configuration.names.emplace_back(thruster_name_ + "/" + "pwm");
+  command_interface_config.names.reserve(1);
+  command_interface_config.names.emplace_back(thruster_name_ + "/" + "pwm");
 
-  return command_interfaces_configuration;
+  return command_interface_config;
 }
 
 controller_interface::InterfaceConfiguration PolynomialThrustCurveController::state_interface_configuration() const
 {
-  controller_interface::InterfaceConfiguration state_interface_configuration;
-  state_interface_configuration.type = controller_interface::interface_configuration_type::NONE;
-  return state_interface_configuration;
+  controller_interface::InterfaceConfiguration state_interface_config;
+  state_interface_config.type = controller_interface::interface_configuration_type::NONE;
+  return state_interface_config;
 }
 
 std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveController::on_export_reference_interfaces()
@@ -169,16 +169,19 @@ controller_interface::return_type PolynomialThrustCurveController::update_refere
 controller_interface::return_type PolynomialThrustCurveController::update_and_write_commands(
   const rclcpp::Time & time, const rclcpp::Duration & period)
 {
+  // Just for readability
+  const auto reference = reference_interfaces_[0];
+
   // If the reference is NaN, just apply the NaN to the output
-  if (std::isnan(reference_interfaces_[0])) {
-    command_interfaces_[0].set_value(reference_interfaces_[0]);
+  if (std::isnan(reference)) {
+    command_interfaces_[0].set_value(reference);
   } else {
-    const double clamped_reference = std::clamp(reference_interfaces_[0], params_.min_thrust, params_.max_thrust);
+    const double clamped_reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
     int pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
 
     // If the PWM value is in the deadband, apply zero thrust
     if (pwm > params_.min_deadband_pwm && pwm < params_.max_deadband_pwm) {
-      pwm = params_.zero_thrust_pwm;
+      pwm = params_.neutral_pwm;
     }
 
     command_interfaces_[0].set_value(pwm);
