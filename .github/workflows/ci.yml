@@ -19,29 +19,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env:
-          - IMAGE: iron-ci
-            ROS_DISTRO: iron
+        ros_distribution:
+          - iron
+        include:
+          - docker_image: ubuntu:jammy
+            ros_distribution: iron
+
+    container:
+      image: ${{ matrix.docker_image }}
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Setup ROS environment
+        uses: ros-tooling/setup-ros@v0.7
         with:
-          submodules: recursive
+          required-ros-distributions: ${{ matrix.ros_distribution }}
 
-      - name: Log into registry
-        uses: docker/login-action@v3.0.0
+      - name: Run action-ros-ci
+        uses: ros-tooling/action-ros-ci@v0.3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run ROS Industrial CI
-        uses: ros-industrial/industrial_ci@master
-        env:
-          DOCKER_IMAGE: ghcr.io/robotic-decision-making-lab/auv_controllers:${{ matrix.env.IMAGE }}
-          CXXFLAGS: >-
-            -Wall -Wextra -Wpedantic -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
-          CC: ${{ env.CLANG_TIDY && 'clang' }}
-          CXX: ${{ env.CLANG_TIDY && 'clang++' }}
-          AFTER_SETUP_TARGET_WORKSPACE: >-
-            vcs import src < src/auv_controllers/ros2.repos
+          target-ros2-distro: ${{ matrix.ros_distribution }}
+          vcs-repo-file-url: |
+            https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/ros2.repos
