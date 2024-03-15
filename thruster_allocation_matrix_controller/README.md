@@ -2,7 +2,7 @@
 Converts thrust from catesian space to thruster space. This is calculated by taking the psuedoinverse of the user provided thruster allocation matrix (TAM) and multiplying it by the reference forces: pinv(TAM) x input.
 
 ## Plugin Library
-thruster_allocation_matrix_controller/ThrusterAllocationMatrixController
+```thruster_allocation_matrix_controller/ThrusterAllocationMatrixController```
 
 ## References
 Input to this controller is a wrench with force components F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub> and torque components T<sub>rx</sub>, T<sub>ry</sub>, T<sub>rz</sub> in N and Nm respectively. 
@@ -11,10 +11,10 @@ Input to this controller is a wrench with force components F<sub>x</sub>, F<sub>
 The output of this controller is an N-dimentional vector whose elements represent the thrust associated with each thruster defined in the TAM.
 
 ## Subscribers
-- thruster_allocation_matrix_controller/reference [geometry_msgs::msg::Wrench]
+- ```thruster_allocation_matrix_controller/reference``` [```geometry_msgs::msg::Wrench```]
 
 ## Publishers
-- thruster_allocation_matrix_controller/status [auv_control_msgs::msg::MultiActuatorStateStamped]
+- ```thruster_allocation_matrix_controller/status``` [```auv_control_msgs::msg::MultiActuatorStateStamped```]
 
 ## Parameters
 - thrusters: List of thruster names. Should be provided in the same order as the TAM [N-sized string array]
