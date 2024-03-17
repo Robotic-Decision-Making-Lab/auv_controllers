@@ -4,24 +4,24 @@
   - Hydrostatic compensation uses measured position of pitch and roll for calculations.
   - Adjustment of mass based on measured velocity.
 
-# Plugin Library 
+## Plugin Library 
 velocity_controllers/integral_sliding_mode_controller
 
-# References
+## References
   - Target velocity V<sub>ref</sub>: v<sub>x<sub>ref</sub></sub>, v<sub>y<sub>ref</sub></sub>, v<sub>z<sub>ref</sub></sub>, w<sub>rx<sub>ref</sub></sub>, w<sub>ry<sub>ref</sub></sub>, w<sub>rz<sub>ref</sub></sub> [m/s and rad/s]
   - Measured velocity V<sub>me</sub>: v<sub>x<sub>me</sub></sub>, v<sub>y<sub>me</sub></sub>, v<sub>z<sub>me</sub></sub>, w<sub>rx<sub>me</sub></sub>, w<sub>ry<sub>me</sub></sub>, w<sub>rz<sub>me</sub></sub> [m/s and rad/s]
 
-# Commands
+## Commands
 The output of this controller is a wrench with force components F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub> and torque components T<sub>rx</sub>, T<sub>ry</sub>, T<sub>rz</sub> in N and Nm respectively.
 
-# subscribers
+## subscribers
   - integral_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
   - integral_sliding_mode_controller/system_state [geometry_msgs::msg::Twist]
 
-# Publishers
+## Publishers
   - integral_sliding_mode_controller/status [control_msgs::msg::MultiDOFStateStamped]
 
-# Parameters 
+## Parameters 
   - use_external_measured_states: Flag to use velocity measurements obtained from a topic instead of from state interfaces. [bool]
   - enable_parameter_update_without_reactivation: If enabled, the parameters will be dynamically updated while the controller is running. [bool]
   - reference_controller: The prefix of the reference controller to send command to. This can be used to configure command interfaces in chained mode. [string]
