@@ -1,22 +1,25 @@
-# Polynomial Thrust Curve Controller
+# Thruster Controllers 
+This is some general message
+
+## Polynomial Thrust Curve Controller
 Chainable controller to calculate the pwm command required to perform the thrust reference. 
 
-## plugin library
+### plugin library
 thruster_controllers/polynomial_thrust_curve_controller
 
-## References
+### References
 Input to this controller is thrust [double].
 
-## Commands
+### Commands
 Output of this controller is the pwm required by the thruster to perform the action [double].
 
-## Subscribers
+### Subscribers
 polynomial_thrust_curve_controller/reference [std_msgs::msg::Float64]
 
-## Publishers
+### Publishers
 polynomial_thrust_curve_controller/status [control_msgs::msg::SingleDOFStateStamped]
 
-## Parameters
+### Parameters
   - thruster: The name of the thruster. [string]
   - thrust_curve_coefficients: The thrust-to-PWM curve polynomial coefficients. These should be provided in the order of the lowest degree to the highest degree. [double array]
   - min_thrust: The minimum thrust that can be produced by the thruster. [double]
