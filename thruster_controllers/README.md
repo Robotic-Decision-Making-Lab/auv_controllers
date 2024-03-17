@@ -1,5 +1,5 @@
 # Thruster Controllers 
-This is some general message
+Thruster controllers convert the thrust calculated in previous controllers to something more useable for the hardware. This package contains controllers that perform this conversion. 
 
 ## Polynomial Thrust Curve Controller
 Chainable controller to calculate the pwm command required to perform the thrust reference. 
