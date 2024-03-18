@@ -7,7 +7,7 @@ and to enable benchmarking against other commonly-used control algorithms.
 
 > [!NOTE]
 > If you are interested in adding your own controller to this project, please
-consider submitting a Pull Request!
+> consider submitting a [pull request](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/pulls)!
 
 ## Installation
 
