@@ -1,23 +1,17 @@
 # auv_controllers
 
-auv_controllers is an open-source control platform for autonomous underwater
-vehicles using ros2_control. This framework enables developers to implement and
-deploy custom controllers to their underwater systems.
+auv_controllers is a collection of Chainable controllers for autonomous
+underwater vehicles implemented using [ros2_control](https://control.ros.org/master/index.html).
+Controllers have been designed to support the complete AUV control hierarchy
+and to enable benchmarking against other commonly-used control algorithms.
 
-## Main Features
-
-The main features of auv_controllers include:
-
-- **Modular Control Design**: Utilizes `ros2_control` to easily integrate and
-  deploy custom controllers for various AUV configurations and tasks.
-- **Chainable Controllers**: Allows for the implementation of chainable or
-  cascading controllers to handle complex control tasks.
-- **Docker Integration**: Supports seamless deployment of algorithms to hardware
-  using Docker containers.
+> [!NOTE]
+> If you are interested in adding your own controller to this project, please
+consider submitting a Pull Request!
 
 ## Installation
 
-auv_controllers is currently supported on Linux and is available for the ROS2
+auv_controllers is currently supported on Linux and is available for the ROS 2
 Iron distribution. To install auv_controllers, first clone this project to the
 `src` directory of your ROS workspace:
 
@@ -40,7 +34,8 @@ rosdep install -y --from-paths src --ignore-src
 
 ## Quick start
 
-
+To learn more about how to use the controllers provided in this project, please
+refer to the examples package.
 
 ## Getting help
 
