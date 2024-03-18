@@ -28,8 +28,8 @@ velocity_controllers/integral_sliding_mode_controller
 
 - Measured velocity V: v<sub>x</sub>, v<sub>y</sub>, v<sub>z</sub>,
   w<sub>rx</sub>, w<sub>ry</sub>, w<sub>rz</sub> [m/s and rad/s]
-- Vehicle orientation measured with respect to the inertial frame Q: q<sub>x</sub>,
-  q<sub>y</sub>, q<sub>z</sub>, q<sub>w</sub>
+- Vehicle orientation measured with respect to the inertial frame Q:
+  q<sub>x</sub>, q<sub>y</sub>, q<sub>z</sub>, q<sub>w</sub>
 
 ### Commands
 
