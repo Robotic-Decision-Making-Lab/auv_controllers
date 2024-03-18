@@ -1,8 +1,8 @@
 # auv_controllers
 
 auv_controllers is a collection of chainable controllers for autonomous
-underwater vehicles implemented using ros2_control. The controllers have been
-designed to support the complete AUV control hierarchy and to enable
+underwater vehicles (AUVs) implemented using ros2_control. The controllers have
+been designed to support the complete AUV control hierarchy and to enable
 benchmarking against other commonly-used control algorithms.
 
 > [!NOTE]
