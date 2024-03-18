@@ -1,6 +1,6 @@
 # Trusters Allocation Matrix (TAM) Controller
 
-A Chainable controller that converts thrust from Cartesian space to thruster
+A chainable controller that converts thrust from Cartesian space to thruster
 space. This is calculated by taking the psuedoinverse of the user-provided
 thruster allocation matrix (TAM) and multiplying it by the reference forces:
 pinv(TAM) x input.

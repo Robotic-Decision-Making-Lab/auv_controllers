@@ -6,7 +6,7 @@ signal.
 
 ## Integral Sliding Mode Controller
 
-A Chainable dynamic controller designed by Palmer et al. [^1] that provides
+A chainable dynamic controller designed by Palmer et al. [^1] that provides
 robustness to matched uncertainties and attenuates chatter.
 
 [^1]: E. Palmer, C. Holm, and G. Hollinger, "Angler: An Autonomy Framework for

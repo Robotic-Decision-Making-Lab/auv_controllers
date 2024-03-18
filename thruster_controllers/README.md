@@ -1,6 +1,6 @@
 # Thruster Controllers
 
-This package provides a collection of Chainable thruster controllers, which
+This package provides a collection of chainable thruster controllers, which
 compute a hardware-level command (e.g., a PWM) that tracks a thruster reference
 signal.
 
