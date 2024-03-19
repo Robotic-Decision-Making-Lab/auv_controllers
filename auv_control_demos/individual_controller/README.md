@@ -154,6 +154,6 @@ to launch a single controller.
   - [individual_controller.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/config/individual_controller.yaml)
 
 - Xacro Files:
-  - [individual_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controllers/xacro/individual_config.xacro)
-  - [individual_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controllers/xacro/individual_ros2_control.xacro)
-  - [individual_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controllers/xacro/individual_urdf.xacro)
+  - [individual_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_config.xacro)
+  - [individual_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_ros2_control.xacro)
+  - [individual_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_urdf.xacro)
