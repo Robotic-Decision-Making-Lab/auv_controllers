@@ -35,8 +35,8 @@ applies a PWM command to the hardware interface.
    thruster_8_controller[thruster_controllers/PolynomialThrustCurveController] active
    ```
 
-3. Verify that the hardware interfaces are loaded properly by opening another
-   terminal and executing:
+3. Verify that the hardware interfaces have been properly loaded by opening
+   another terminal and executing:
 
    ```bash
    ros2 control list_hardware_interfaces
@@ -91,9 +91,9 @@ applies a PWM command to the hardware interface.
    ros2 topic pub /integral_sliding_mode_controller/system_state geometry_msgs/msg/Twist
    ```
 
-5. Similar to state feedback, the ISMC accepts reference inputs over a topic
-   or a reference interface. Run the following command in a separate terminal
-   to provide the controller with a reference input:
+5. The ISMC accepts reference commands sent over a topic or a reference
+   interface. Run the following command in a separate terminal to provide the
+   controller with a reference input:
 
    ```bash
    ros2 topic pub /integral_sliding_mode_controller/reference geometry_msgs/msg/Twist "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.2}}"
@@ -125,10 +125,10 @@ applies a PWM command to the hardware interface.
      output: 1134.0
    ```
 
-  This output also demonstrates that the controller chaining was successful.
-  In particular, we can see that the velocity commands sent to the
-  `integral_sliding_mode_controller` are converted to thrust values, which is
-  reflected in the `thruster_controller` output.
+   This output indicates that the controller chaining was successful. In
+   particular, we can see that the velocity commands sent to the
+   `integral_sliding_mode_controller` are converted to thrust values, which is
+   reflected in the `thruster_controller` output.
 
 ## Files used for this demo
 
