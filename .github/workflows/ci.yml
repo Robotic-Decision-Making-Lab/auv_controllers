@@ -38,6 +38,9 @@ jobs:
         uses: ros-industrial/industrial_ci@master
         env:
           DOCKER_IMAGE: ghcr.io/robotic-decision-making-lab/auv_controllers:${{ matrix.env.IMAGE }}
+          UPSTREAM_WORKSPACE: ros2.repos
+          AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
+          AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src
           CXXFLAGS: >-
             -Wall -Wextra -Wpedantic -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
           CC: ${{ env.CLANG_TIDY && 'clang' }}

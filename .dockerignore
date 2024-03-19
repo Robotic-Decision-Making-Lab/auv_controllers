@@ -3,6 +3,9 @@
 
 # Except the following
 !requirements-dev.txt
-
-# Allow your ROS 2 packages here, e.g.:
-!example_pkg
+!auv_controllers
+!velocity_controllers
+!thruster_allocation_matrix_controller
+!thruster_controllers
+!auv_control_msgs
+!ros2.repos

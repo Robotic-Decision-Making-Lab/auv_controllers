@@ -1,7 +1,6 @@
-# Add external repositories that your project depends on here. For example,
-# repositories:
-#
-#   ros_gz:
-#     type: git
-#     url: https://github.com/gazebosim/ros_gz
-#     version: ros2
+repositories:
+
+  hydrodynamics:
+    type: git
+    url: https://github.com/Robotic-Decision-Making-Lab/hydrodynamics.git
+    version: main

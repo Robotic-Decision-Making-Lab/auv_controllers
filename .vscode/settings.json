@@ -38,7 +38,7 @@
   "C_Cpp.codeAnalysis.clangTidy.codeAction.formatFixes": true,
   "clang-format.executable": "/usr/bin/clang-format-14",
   "[cpp]": {
-    "editor.rulers": [100],
+    "editor.rulers": [120],
     "editor.tabSize": 2,
     "editor.defaultFormatter": "xaver.clang-format"
   },
