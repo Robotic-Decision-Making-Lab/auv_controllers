@@ -2,8 +2,8 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>auv_control_demos</name>
-  <version>0.0.0</version>
-  <description>Example package that includes demos for using auv_controllers in individual and chained modes.</description>
+  <version>0.0.1</version>
+  <description>Example package that includes demos for using auv_controllers in individual and chained modes</description>
 
   <maintainer email="mitchcol@oregonstate.edu">Colin Mitchell</maintainer>
   <maintainer email="everardo.a.gonzalez@gmail.com">Everardo Gonzalez</maintainer>
@@ -20,8 +20,6 @@
   <author>Evan Palmer</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <depend>teleop_twist_keyboard</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

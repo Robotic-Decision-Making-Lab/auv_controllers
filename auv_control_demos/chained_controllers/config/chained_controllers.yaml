@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 225 # Hz
+    update_rate: 30 # Hz
 
     integral_sliding_mode_controller:
       type: velocity_controllers/IntegralSlidingModeController

@@ -14,8 +14,8 @@ def generate_launch_description():
             PathJoinSubstitution(
                 [
                     FindPackageShare("auv_control_demos"),
-                    "urdf",
-                    "chaining.urdf.xacro",
+                    "xacro",
+                    "chained_config.xacro",
                 ]
             ),
         ]

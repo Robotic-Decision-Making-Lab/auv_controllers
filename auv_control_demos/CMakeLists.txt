@@ -12,7 +12,13 @@ foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 endforeach()
 
 install(
-  DIRECTORY launch config urdf
+  DIRECTORY individual_controller/launch
+            individual_controller/config
+            individual_controller/xacro
+            chained_controllers/launch
+            chained_controllers/config
+            chained_controllers/xacro
+
   DESTINATION share/${PROJECT_NAME}
 )
 
