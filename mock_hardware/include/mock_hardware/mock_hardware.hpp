@@ -79,7 +79,7 @@ private:
   template <typename HandleType>
   bool get_interface(
     const std::string & name, const std::vector<std::string> & interface_list, const std::string & interface_name,
-    const size_t vector_index, std::vector<std::vector<double>> & values, std::vector<HandleType> & interfaces);
+    size_t vector_index, std::vector<std::vector<double>> & values, std::vector<HandleType> & interfaces);
 
   void initialize_storage_vectors(
     std::vector<std::vector<double>> & commands, std::vector<std::vector<double>> & states,

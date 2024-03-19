@@ -187,7 +187,7 @@ bool MockHardware::get_interface(
   return false;
 }
 
-void MockHardware::initialize_storage_vectors(
+void MockHardware::initialize_storage_vectors(  // NOLINT
   std::vector<std::vector<double>> & commands, std::vector<std::vector<double>> & states,
   const std::vector<std::string> & interfaces, const std::vector<hardware_interface::ComponentInfo> & component_infos)
 {
