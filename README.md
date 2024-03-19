@@ -35,7 +35,7 @@ rosdep install -y --from-paths src --ignore-src
 ## Quick start
 
 To learn more about how to use the controllers provided in this project, please
-refer to the [examples package](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/auv_control_demos).
+refer to the [examples package](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/auv_control_demos).
 
 ## Getting help
 

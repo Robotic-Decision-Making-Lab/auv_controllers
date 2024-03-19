@@ -1,6 +1,6 @@
 # Example 1: Individual Controller
 
-This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers) to demonstrate how
+This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/velocity_controllers) to demonstrate how
 to launch a single controller.
 
 ## Tutorial Steps
@@ -145,15 +145,15 @@ to launch a single controller.
 ### Files used for this demo
 
 - Launch Files:
-  - [individual.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/launch/individual.launch.py)
+  - [individual.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/individual_controller/launch/individual.launch.py)
 
 - Controllers:
-  - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers)
+  - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/velocity_controllers)
 
 - Controller Config:
-  - [individual_controller.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/config/individual_controller.yaml)
+  - [individual_controller.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/individual_controller/config/individual_controller.yaml)
 
 - Xacro Files:
-  - [individual_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_config.xacro)
-  - [individual_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_ros2_control.xacro)
-  - [individual_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/xacro/individual_urdf.xacro)
+  - [individual_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/individual_controller/xacro/individual_config.xacro)
+  - [individual_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/individual_controller/xacro/individual_ros2_control.xacro)
+  - [individual_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/individual_controller/xacro/individual_urdf.xacro)

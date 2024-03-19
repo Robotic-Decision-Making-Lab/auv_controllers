@@ -133,17 +133,17 @@ applies a PWM command to the hardware interface.
 ## Files used for this demo
 
 - Launch Files:
-  - [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/launch/chaining.launch.py)
+  - [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/chained_controllers/launch/chaining.launch.py)
 
 - Controllers:
-  - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers)
-  - [Thruster Allocation Matrix Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/thruster_allocation_matrix_controller)
-  - [Polynomial Thrust Curve Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/thruster_controllers)
+  - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/velocity_controllers)
+  - [Thruster Allocation Matrix Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/thruster_allocation_matrix_controller)
+  - [Polynomial Thrust Curve Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/develop/thruster_controllers)
 
 - Controller Config:
-  - [chained_controllers.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/config/chained_controllers.yaml)
+  - [chained_controllers.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/chained_controllers/config/chained_controllers.yaml)
 
 - Xacro Files:
-  - [chained_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/xacro/chained_config.xacro)
-  - [chained_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/xacro/chained_ros2_control.xacro)
-  - [chained_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/xacro/chained_urdf.xacro)
+  - [chained_config.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/chained_controllers/xacro/chained_config.xacro)
+  - [chained_ros2_control.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/chained_controllers/xacro/chained_ros2_control.xacro)
+  - [chained_urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/develop/auv_control_demos/chained_controllers/xacro/chained_urdf.xacro)
