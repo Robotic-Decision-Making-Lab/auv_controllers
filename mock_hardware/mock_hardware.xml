@@ -3,7 +3,7 @@
     type="mock_hardware::MockHardware"
     base_class_type="hardware_interface::SystemInterface">
     <description>
-      Mock hardware interface that takes a wrench vector as input and ouputs commands to CLI.
+      Mock hardware interface that takes a wrench vector as input and outputs commands to CLI.
     </description>
   </class>
 </library>

@@ -37,7 +37,7 @@ namespace mock_hardware
 {
 
 /**
- * @brief Mock hardware interface that takes a wrench vector as input and ouputs commands to CLI
+ * @brief Mock hardware interface that takes a wrench vector as input and outputs commands to CLI
  */
 
 static constexpr size_t POSITION_INTERFACE_INDEX = 0;
