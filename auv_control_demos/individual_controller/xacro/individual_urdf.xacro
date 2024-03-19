@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="auv">
+
+    <link name="base_footprint" />
+
+    <link name="base_link">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </link>
+
+    <!-- Cartesian Joints -->
+    <joint name="x" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+    <joint name="y" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+    <joint name="z" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+    <joint name="rx" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+    <joint name="ry" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+    <joint name="rz" type="fixed">
+      <parent link="base_footprint" />
+      <child link="base_link" />
+    </joint>
+
+</robot>

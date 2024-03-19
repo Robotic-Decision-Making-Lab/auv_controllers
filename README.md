@@ -1,38 +1,47 @@
-# ROS 2 Project Template
+# auv_controllers
 
-Setting up a new ROS 2 project often requires a significant amount of
-preparation and boilerplate configuration, costing you valuable robot
-development time 🤖. Recognizing this, we have put together this template
-repository configured with a ROS 2 development environment, continuous
-integration, and more. This project is the result of much trial and error
-across many projects, and we hope that this helps you save some effort in
-setting up your own projects.
+auv_controllers is a collection of chainable controllers for autonomous
+underwater vehicles (AUVs) implemented using ros2_control. The controllers have
+been designed to support the complete AUV control hierarchy and to enable
+benchmarking against other commonly-used control algorithms.
 
-## Features
+> [!NOTE]
+> If you are interested in adding your own controller to this project, please
+> consider submitting a [pull request](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/pulls)!
 
-The main features of this template are:
+## Installation
 
-- A development environment for Visual Studio Code including a [development container](https://code.visualstudio.com/docs/devcontainers/containers)
-and configurations for linting and auto-formatting your code
-- Docker images that support deployment to a variety of systems (e.g., arm64
-systems)
-- Continuous integration and deployment pipelines using GitHub Actions
-- GitHub Issue and Pull Request templates
+auv_controllers is currently supported on Linux and is available for the ROS 2
+Iron distribution. To install auv_controllers, first clone this project to the
+`src` directory of your ROS workspace:
+
+```bash
+git clone git@github.com:Robotic-Decision-Making-Lab/auv_controllers.git
+```
+
+After cloning the project, install all external dependencies using `vcs`:
+
+```bash
+vcs import src < src/auv_controllers/ros2.repos
+```
+
+Finally, install the ROS dependencies using `rosdep`:
+
+```bash
+rosdep update && \
+rosdep install -y --from-paths src --ignore-src
+```
 
 ## Quick start
 
-Using this template is as easy as 1, 2, 3...
-
-1. Use this repository [as a template](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)
-for your project
-2. Replace all instances of "ros2-template" with your own project's name
-3. Replace the source code with your own project!
-
-Feel free to remove any unused configurations/pipelines and to adjust things as
-you see fit for your project!
+To learn more about how to use the controllers provided in this project, please
+refer to the examples package.
 
 ## Getting help
 
-If you have questions regarding usage of this project or would like to
-contribute, please ask a question on our [Discussions](https://github.com/Robotic-Decision-Making-Lab/ros2-template/discussions)
-board!
+If you have questions regarding usage of auv_controllers or regarding
+contributing to this project, please ask a question on our [Discussions](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/discussions) board!
+
+## License
+
+auv_controllers is released under the MIT license.
