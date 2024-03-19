@@ -3,8 +3,7 @@
   <ros2_control name="demo_hardware" type="system">
 
     <hardware>
-      <plugin>mock_components/GenericSystem</plugin>
-      <param name="calculate_dynamics">false</param>
+      <plugin>mock_hardware/MockHardware</plugin>
     </hardware>
 
     <joint name="x">
