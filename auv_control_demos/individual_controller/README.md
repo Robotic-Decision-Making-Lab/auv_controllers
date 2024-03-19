@@ -13,7 +13,7 @@ to launch a single controller.
 
    This launch file loads and starts the hardware interface and controller.
 
-2. Check if the controller is running by the following command:
+2. Verify that the controller is running by executing the following command:
 
    ```bash
    ros2 control list_controllers
@@ -25,8 +25,8 @@ to launch a single controller.
    integral_sliding_mode_controller[velocity_controllers/IntegralSlidingModeController] active
    ```
 
-3. Verify that the hardware interfaces have been properly loaded by opening
-   another terminal and executing the following command:
+3. Check that the hardware interfaces have been properly loaded by opening
+   another terminal and running the following command:
 
    ```bash
    ros2 control list_hardware_interfaces
@@ -65,10 +65,9 @@ to launch a single controller.
    ros2 topic pub /integral_sliding_mode_controller/system_state geometry_msgs/msg/Twist
    ```
 
-5. Similar to state feedback, the ISMC accepts reference commands sent via a
-   topic or using the controller's reference interfaces. Run the following
-   command in a separate terminal to provide the controller with a reference
-   input:
+5. The ISMC accepts reference commands sent via a topic or the controller's
+   reference interfaces. Run the following command in a separate terminal to
+   provide the controller with a dummy reference input:
 
    ```bash
    ros2 topic pub /integral_sliding_mode_controller/reference geometry_msgs/msg/Twist "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.2}}"
@@ -141,7 +140,7 @@ to launch a single controller.
    ```
 
    This output also demonstrates that the ISMC is functional. Any changes to
-   the reference command or state are reflected by the output of this topic.
+   the reference command or state are reflected in the output of this topic.
 
 ### Files used for this demo
 

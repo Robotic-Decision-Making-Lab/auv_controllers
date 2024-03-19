@@ -93,7 +93,7 @@ applies a PWM command to the hardware interface.
 
 5. The ISMC accepts reference commands sent over a topic or a reference
    interface. Run the following command in a separate terminal to provide the
-   controller with a reference input:
+   controller with a dummy reference input:
 
    ```bash
    ros2 topic pub /integral_sliding_mode_controller/reference geometry_msgs/msg/Twist "{linear: {x: 0.5, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.2}}"
