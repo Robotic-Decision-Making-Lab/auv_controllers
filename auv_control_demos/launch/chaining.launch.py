@@ -15,7 +15,7 @@ def generate_launch_description():
                 [
                     FindPackageShare("auv_control_demos"),
                     "urdf",
-                    "testing.urdf.xacro",
+                    "chaining.urdf.xacro",
                 ]
             ),
         ]
@@ -99,7 +99,7 @@ def generate_launch_description():
                     [
                         FindPackageShare("auv_control_demos"),
                         "config",
-                        "controllers.yaml",
+                        "chained_controllers.yaml",
                     ]
                 ),
             ],
