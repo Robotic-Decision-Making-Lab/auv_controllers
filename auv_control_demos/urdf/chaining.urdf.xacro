@@ -130,6 +130,7 @@
   <ros2_control name="testing" type="system">
     <hardware>
       <plugin>mock_components/GenericSystem</plugin>
+      <param name="calculate_dynamics">false</param>
     </hardware>
 
     <joint name="x">
@@ -169,28 +170,28 @@
     </joint>
 
     <joint name="thruster_1_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_2_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_3_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_4_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_5_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_6_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_7_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
     <joint name="thruster_8_joint">
-      <command_interface name="effort" />
+      <command_interface name="pwm" />
     </joint>
 
   </ros2_control>

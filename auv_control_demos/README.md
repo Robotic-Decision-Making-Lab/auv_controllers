@@ -1,20 +1,183 @@
 # AUV Control Demos
 
 This package contains examples that demonstrate how to use the controllers in
-`auv_controllers`. There are two examples. The first shows how to chain the
-controllers together to a mock hardware interface for an AUV. The second example
-shows how to lauch just a single controller on its own.
+`auv_controllers`. There are two examples. The first shows how to launch just a
+single controller on its own. The second example shows how to chain the
+controllers together to a mock hardware interface for an AUV.
 
-## Example 1: Controller Chaining
+## Example 1: Individual Controller
 
-The example shows how to launch the auv controllers chained together and connect
-them to a mock hardware interface. This framework takes a
+This example shows how to launch an individual auv controller connect them to a
+mock hardware interface. We launch the integral sliding mode controller which
+takes velocity reference and state interfaces and outputs a wrench command
+interface.
+
+The launch file [individual.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/launch/individual.launch.py)
+contains the code to launch the integral sliding mode controller to a mock
+hardware interface, and that is the launch file we use for this first example.
+
+### Tutorial Steps
+
+1. To test the chainable controller framework, run the following command:
+
+    ```bash
+    ros2 launch auv_control_demos individual.launch.py
+    ```
+
+    The launch file loads and starts the mock hardware and the controller.
+
+2. Check if controllers are running by:
+
+    ```bash
+    ros2 control list_controllers
+    ```
+
+    The output should resemble:
+
+    ```bash
+    integral_sliding_mode_controller[velocity_controllers/IntegralSlidingModeController] active
+    ```
+
+3. Verify if the hardware interfaces are loaded properly by opening another
+  terminal and executing:
+
+    ```bash
+    ros2 control list_hardware_interfaces
+    ```
+
+    The output should resemble:
+
+    ```bash
+    command interfaces
+      integral_sliding_mode_controller/rx/velocity [available] [unclaimed]
+      integral_sliding_mode_controller/ry/velocity [available] [unclaimed]
+      integral_sliding_mode_controller/rz/velocity [available] [unclaimed]
+      integral_sliding_mode_controller/x/velocity [available] [unclaimed]
+      integral_sliding_mode_controller/y/velocity [available] [unclaimed]
+      integral_sliding_mode_controller/z/velocity [available] [unclaimed]
+      rx/effort [available] [claimed]
+      ry/effort [available] [claimed]
+      rz/effort [available] [claimed]
+      x/effort [available] [claimed]
+      y/effort [available] [claimed]
+      z/effort [available] [claimed]
+    state interfaces
+      rx/velocity
+      ry/velocity
+      rz/velocity
+      x/velocity
+      y/velocity
+      z/velocity
+    ```
+
+4. Open another terminal and execute the following command:
+
+    ```bash
+    ros2 topic pub /integral_sliding_mode_controller/system_state geometry_msgs/msg/Twist
+    ```
+
+5. In another terminal, execute the following:
+
+    ```bash
+    ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap cmd_vel:=/integral_sliding_mode_controller/reference
+    ```
+
+6. If you echo the `/status' topic of any of the controllers, you would be able
+  to see the controller status messages being populated. For example:
+
+    ```bash
+    ros2 topic echo /integral_sliding_mode_controller/status
+    ```
+
+    The output should resemble:
+
+    ```bash
+    ---
+    header:
+      stamp:
+        sec: 1710806114
+        nanosec: 467363470
+      frame_id: ''
+    dof_states:
+    - name: x
+      reference: 0.5
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.5
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: 103.01240834476435
+    - name: y
+      reference: 0.0
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.0
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: 0.0
+    - name: z
+      reference: 0.0
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.0
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: -2.0
+    - name: rx
+      reference: 0.0
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.0
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: 0.0
+    - name: ry
+      reference: 0.0
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.0
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: 0.0
+    - name: rz
+      reference: 0.0
+      feedback: 0.0
+      feedback_dot: 0.0
+      error: 0.0
+      error_dot: 0.0
+      time_step: 0.004412119
+      output: 0.0
+      ```
+
+  This clearly demonstrates that the integral sliding mode controller is
+  functional, as the reference velocity commands sent to the
+  controller are converted to the appropriate wrench values as reflected in the
+  output field.
+
+### Files used for this demo
+
+- Launch Files:
+  - [individual.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/launch/individual.launch.py)
+
+- Controllers:
+  - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/documentation/velocity_controllers)
+
+- Controller Config:
+  - [individual_controller.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/config/individual_controller.yaml)
+
+- URDF File:
+  - [individual.urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/urdf/individual.urdf.xacro)
+
+## Example 2: Controller Chaining
+
+This example shows how to launch the auv controllers chained together and
+connect them to a mock hardware interface. This framework takes a
 velocity reference and state interfaces as input and converts them to their
 appropriate PWM signal for the hardware interface.
 
-The launch file [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/feat-mock-hardware/auv_control_demos/launch/chaining.launch.py)
+The launch file [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/launch/chaining.launch.py)
 contains the code to launch all of the auv controllers chained to a mock
-hardware interface, and that is the launch file we use for this first example.
+hardware interface, and that is the launch file we use for this second example.
 
 ### Tutorial Steps
 
@@ -143,7 +306,7 @@ hardware interface, and that is the launch file we use for this first example.
 ### Files used for this demo
 
 - Launch Files:
-  - [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/feat-mock-hardware/auv_control_demos/launch/chaining.launch.py)
+  - [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/launch/chaining.launch.py)
 
 - Controllers:
   - [Integral Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/documentation/velocity_controllers)
@@ -151,9 +314,8 @@ hardware interface, and that is the launch file we use for this first example.
   - [Polynomial Thrust Curve Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/documentation/thruster_controllers)
 
 - Controller Config:
-  - [controllers.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/feat-mock-hardware/auv_control_demos/config/controllers.yaml)
+  - [chained_controllers.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/config/chained_controllers.yaml)
 
 - URDF File:
-  - [testing.urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/feat-mock-hardware/auv_control_demos/urdf/testing.urdf.xacro)
+  - [chaining.urdf.xacro](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/urdf/chaining.urdf.xacro)
 
-## Example 2: Individual Controller

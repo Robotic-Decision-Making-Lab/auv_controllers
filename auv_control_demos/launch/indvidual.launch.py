@@ -15,7 +15,7 @@ def generate_launch_description():
                 [
                     FindPackageShare("auv_control_demos"),
                     "urdf",
-                    "testing.urdf.xacro",
+                    "individual.urdf.xacro",
                 ]
             ),
         ]
@@ -32,15 +32,6 @@ def generate_launch_description():
         ],
     )
 
-    # delay_velocity_controller_spawner_after_tam_controller_spawner = (
-    #     RegisterEventHandler(
-    #         event_handler=OnProcessExit(
-    #             target_action=tam_controller_spawner,
-    #             on_exit=[velocity_controller_spawner],
-    #         )
-    #     )
-    # )
-
     nodes = [
         Node(
             package="controller_manager",
@@ -52,7 +43,7 @@ def generate_launch_description():
                     [
                         FindPackageShare("auv_control_demos"),
                         "config",
-                        "controllers.yaml",
+                        "individual_controller.yaml",
                     ]
                 ),
             ],
