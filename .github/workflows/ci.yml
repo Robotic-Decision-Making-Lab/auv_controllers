@@ -3,7 +3,7 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - main
+      - iron
   pull_request:
   workflow_dispatch:
 

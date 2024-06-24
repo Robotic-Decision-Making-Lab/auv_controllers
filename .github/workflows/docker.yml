@@ -3,7 +3,7 @@ name: Docker
 on:
   push:
     branches:
-      - main
+      - iron
   pull_request:
     paths:
       - .docker/**
