@@ -156,8 +156,7 @@ std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveControlle
   return reference_interfaces;
 }
 
-controller_interface::return_type PolynomialThrustCurveController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+controller_interface::return_type PolynomialThrustCurveController::update_reference_from_subscribers()
 {
   auto * current_reference = reference_.readFromNonRT();
   reference_interfaces_[0] = (*current_reference)->data;

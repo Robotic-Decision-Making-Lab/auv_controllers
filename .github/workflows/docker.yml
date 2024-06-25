@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [iron]
+        ROS_DISTRO: [humble]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [iron]
+        ROS_DISTRO: [humble]
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ROS_DISTRO: [iron]
+        ROS_DISTRO: [humble]
     runs-on: ubuntu-latest
     permissions:
       packages: write

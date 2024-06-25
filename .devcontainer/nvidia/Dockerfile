@@ -1,4 +1,4 @@
-FROM ghcr.io/robotic-decision-making-lab/auv_controllers:iron-desktop-nvidia
+FROM ghcr.io/robotic-decision-making-lab/auv_controllers:humble-desktop-nvidia
 
 # Install ROS dependencies
 # This is done in a previous stage, but we include it again here in case anyone wants to
