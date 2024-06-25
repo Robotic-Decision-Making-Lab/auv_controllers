@@ -241,8 +241,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_deactivat
 
 bool IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
-controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers()
 {
   auto * current_reference = reference_.readFromNonRT();
 

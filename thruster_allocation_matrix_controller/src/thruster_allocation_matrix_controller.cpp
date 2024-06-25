@@ -206,8 +206,7 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
   return reference_interfaces;
 }
 
-controller_interface::return_type ThrusterAllocationMatrixController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+controller_interface::return_type ThrusterAllocationMatrixController::update_reference_from_subscribers()
 {
   auto * current_reference = reference_.readFromNonRT();
 
