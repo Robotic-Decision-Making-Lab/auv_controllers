@@ -3,7 +3,7 @@ name: Docker
 on:
   push:
     branches:
-      - main
+      - humble
   pull_request:
     paths:
       - .docker/**
