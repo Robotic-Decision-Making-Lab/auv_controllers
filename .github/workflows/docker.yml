@@ -45,7 +45,11 @@ jobs:
             type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
 
       - name: Build and push Docker image
+<<<<<<< HEAD
         uses: docker/build-push-action@v6.1.0
+=======
+        uses: docker/build-push-action@v6.6.1
+>>>>>>> 18dfbcf (Bump docker/build-push-action from 6.5.0 to 6.6.1 (#32))
         with:
           context: .
           file: .docker/Dockerfile
@@ -86,7 +90,11 @@ jobs:
             type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
 
       - name: Build and push Docker image
+<<<<<<< HEAD
         uses: docker/build-push-action@v6.1.0
+=======
+        uses: docker/build-push-action@v6.6.1
+>>>>>>> 18dfbcf (Bump docker/build-push-action from 6.5.0 to 6.6.1 (#32))
         with:
           context: .
           file: .docker/Dockerfile
@@ -127,7 +135,11 @@ jobs:
             type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
 
       - name: Build and push Docker image
+<<<<<<< HEAD
         uses: docker/build-push-action@v6.1.0
+=======
+        uses: docker/build-push-action@v6.6.1
+>>>>>>> 18dfbcf (Bump docker/build-push-action from 6.5.0 to 6.6.1 (#32))
         with:
           context: .
           file: .docker/Dockerfile
