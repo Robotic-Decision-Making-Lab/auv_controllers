@@ -39,9 +39,10 @@ namespace velocity_controllers
 namespace
 {
 
-void reset_twist_msg(std::shared_ptr<geometry_msgs::msg::Twist> msg)  // NOLINT
+void reset_twist_msg(const std::shared_ptr<geometry_msgs::msg::Twist> & m)  // NOLINT
 {
   // Make allocation of new shared_ptr explicit
+  auto msg(m);
   msg->linear.x = std::numeric_limits<double>::quiet_NaN();
   msg->linear.y = std::numeric_limits<double>::quiet_NaN();
   msg->linear.z = std::numeric_limits<double>::quiet_NaN();
