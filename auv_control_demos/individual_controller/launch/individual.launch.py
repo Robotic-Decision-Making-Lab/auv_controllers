@@ -48,11 +48,16 @@ def generate_launch_description():
     return LaunchDescription(
         [
             Node(
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                output="both",
+                parameters=[robot_description],
+            ),
+            Node(
                 package="controller_manager",
                 executable="ros2_control_node",
                 output="both",
                 parameters=[
-                    robot_description,
                     PathJoinSubstitution(
                         [
                             FindPackageShare("auv_control_demos"),
@@ -60,6 +65,9 @@ def generate_launch_description():
                             "individual_controller.yaml",
                         ]
                     ),
+                ],
+                remappings=[
+                    ("/controller_manager/robot_description", "/robot_description"),
                 ],
             ),
             Node(
