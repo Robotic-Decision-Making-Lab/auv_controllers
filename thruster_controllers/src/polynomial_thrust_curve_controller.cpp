@@ -86,8 +86,9 @@ controller_interface::CallbackReturn PolynomialThrustCurveController::on_configu
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
-    "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<std_msgs::msg::Float64> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {
+      reference_.writeFromNonRT(msg);
+    });  // NOLINT
 
   controller_state_pub_ =
     get_node()->create_publisher<control_msgs::msg::SingleDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
@@ -150,14 +151,16 @@ std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveControlle
   reference_interfaces.reserve(reference_interfaces_.size());
 
   reference_interfaces.emplace_back(
-    get_node()->get_name(), thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
+    get_node()->get_name(),
+    thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
     &reference_interfaces_[0]);  // NOLINT
 
   return reference_interfaces;
 }
 
 controller_interface::return_type PolynomialThrustCurveController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
 {
   auto * current_reference = reference_.readFromNonRT();
   reference_interfaces_[0] = (*current_reference)->data;
@@ -167,7 +170,8 @@ controller_interface::return_type PolynomialThrustCurveController::update_refere
 }
 
 controller_interface::return_type PolynomialThrustCurveController::update_and_write_commands(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+  const rclcpp::Time & time,
+  const rclcpp::Duration & period)
 {
   // Just for readability
   const auto reference = reference_interfaces_[0];
@@ -203,4 +207,5 @@ controller_interface::return_type PolynomialThrustCurveController::update_and_wr
 #include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
-  thruster_controllers::PolynomialThrustCurveController, controller_interface::ChainableControllerInterface)
+  thruster_controllers::PolynomialThrustCurveController,
+  controller_interface::ChainableControllerInterface)

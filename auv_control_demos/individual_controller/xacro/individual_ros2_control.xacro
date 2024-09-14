@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="control">
-  <ros2_control name="demo_hardware" type="system">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="control">
+  <ros2_control name="demo_hardware"
+                type="system">
 
     <hardware>
       <plugin>mock_components/GenericSystem</plugin>

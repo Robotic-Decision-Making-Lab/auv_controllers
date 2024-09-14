@@ -76,21 +76,25 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   // Make sure that the number prefixes (if provided) provided match the number of thrusters
   if (!params_.reference_controllers.empty() && params_.reference_controllers.size() != num_thrusters_) {
     RCLCPP_ERROR(  // NOLINT
-      get_node()->get_logger(), "Mismatched number of command interface prefixes and thrusters. Expected %ld, got %ld.",
-      num_thrusters_, params_.reference_controllers.size());
+      get_node()->get_logger(),
+      "Mismatched number of command interface prefixes and thrusters. Expected %ld, got %ld.",
+      num_thrusters_,
+      params_.reference_controllers.size());
 
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  const std::vector<std::vector<double>> vecs = {params_.tam.x,  params_.tam.y,  params_.tam.z,
-                                                 params_.tam.rx, params_.tam.ry, params_.tam.rz};
+  const std::vector<std::vector<double>> vecs = {
+    params_.tam.x, params_.tam.y, params_.tam.z, params_.tam.rx, params_.tam.ry, params_.tam.rz};
 
   // Make sure that all of the rows are the same size
   for (const auto & vec : vecs) {
     const size_t vec_size = vec.size();
     if (vec_size != num_thrusters_) {
       RCLCPP_ERROR(  // NOLINT
-        get_node()->get_logger(), "Mismatched TAM row sizes. Expected %ld thrusters, got %ld.", num_thrusters_,
+        get_node()->get_logger(),
+        "Mismatched TAM row sizes. Expected %ld thrusters, got %ld.",
+        num_thrusters_,
         vec_size);
 
       return controller_interface::CallbackReturn::ERROR;
@@ -124,8 +128,9 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
   command_interfaces_.reserve(num_thrusters_);
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
-    "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) {
+      reference_.writeFromNonRT(msg);
+    });  // NOLINT
 
   controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
     "~/status", rclcpp::SystemDefaultsQoS());
@@ -207,13 +212,18 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
 }
 
 controller_interface::return_type ThrusterAllocationMatrixController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
 {
   auto * current_reference = reference_.readFromNonRT();
 
-  const std::vector<double> wrench = {(*current_reference)->force.x,  (*current_reference)->force.y,
-                                      (*current_reference)->force.z,  (*current_reference)->torque.x,
-                                      (*current_reference)->torque.y, (*current_reference)->torque.z};
+  const std::vector<double> wrench = {
+    (*current_reference)->force.x,
+    (*current_reference)->force.y,
+    (*current_reference)->force.z,
+    (*current_reference)->torque.x,
+    (*current_reference)->torque.y,
+    (*current_reference)->torque.z};
 
   for (size_t i = 0; i < wrench.size(); ++i) {
     if (!std::isnan(wrench[i])) {
@@ -227,7 +237,8 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
 }
 
 controller_interface::return_type ThrusterAllocationMatrixController::update_and_write_commands(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+  const rclcpp::Time & time,
+  const rclcpp::Duration & period)
 {
   const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
   const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);

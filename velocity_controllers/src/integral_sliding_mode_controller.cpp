@@ -158,7 +158,9 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
   // Move the damping and restoring forces because we only use them once
   damping_ = std::make_unique<hydrodynamics::Damping>(std::move(linear_damping), std::move(quadratic_damping));
   restoring_forces_ = std::make_unique<hydrodynamics::RestoringForces>(
-    params_.hydrodynamics.weight, params_.hydrodynamics.buoyancy, std::move(center_of_buoyancy),
+    params_.hydrodynamics.weight,
+    params_.hydrodynamics.buoyancy,
+    std::move(center_of_buoyancy),
     std::move(center_of_gravity));
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -183,14 +185,16 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   system_state_values_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-    "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
+      reference_.writeFromNonRT(msg);
+    });  // NOLINT
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
   if (params_.use_external_measured_states) {
     system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-      "~/system_state", rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { system_state_.writeFromNonRT(msg); });  // NOLINT
+      "~/system_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
+        system_state_.writeFromNonRT(msg);
+      });  // NOLINT
   }
 
   // Configure the TF buffer and listener
@@ -242,13 +246,18 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_deactivat
 bool IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
 
 controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
 {
   auto * current_reference = reference_.readFromNonRT();
 
-  const std::vector<double> reference = {(*current_reference)->linear.x,  (*current_reference)->linear.y,
-                                         (*current_reference)->linear.z,  (*current_reference)->angular.x,
-                                         (*current_reference)->angular.y, (*current_reference)->angular.z};
+  const std::vector<double> reference = {
+    (*current_reference)->linear.x,
+    (*current_reference)->linear.y,
+    (*current_reference)->linear.z,
+    (*current_reference)->angular.x,
+    (*current_reference)->angular.y,
+    (*current_reference)->angular.z};
 
   for (size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
@@ -266,9 +275,13 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
   if (params_.use_external_measured_states) {
     auto * current_system_state = system_state_.readFromRT();
 
-    const std::vector<double> state = {(*current_system_state)->linear.x,  (*current_system_state)->linear.y,
-                                       (*current_system_state)->linear.z,  (*current_system_state)->angular.x,
-                                       (*current_system_state)->angular.y, (*current_system_state)->angular.z};
+    const std::vector<double> state = {
+      (*current_system_state)->linear.x,
+      (*current_system_state)->linear.y,
+      (*current_system_state)->linear.z,
+      (*current_system_state)->angular.x,
+      (*current_system_state)->angular.y,
+      (*current_system_state)->angular.z};
 
     for (size_t i = 0; i < state.size(); ++i) {
       if (!std::isnan(state[i])) {
@@ -287,7 +300,8 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
 }
 
 controller_interface::return_type IntegralSlidingModeController::update_and_write_commands(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+  const rclcpp::Time & time,
+  const rclcpp::Duration & period)
 {
   if (params_.enable_parameter_update_without_reactivation) {
     configure_parameters();
@@ -300,8 +314,11 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   std::vector<double> velocity_error_values;
   velocity_error_values.reserve(DOF);
   std::transform(
-    reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
-    std::back_inserter(velocity_error_values), [](double reference, double state) {
+    reference_interfaces_.begin(),
+    reference_interfaces_.end(),
+    system_state_values_.begin(),
+    std::back_inserter(velocity_error_values),
+    [](double reference, double state) {
       return !std::isnan(reference) && !std::isnan(state) ? reference - state
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
@@ -311,7 +328,8 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
   if (all_nan) {
     RCLCPP_DEBUG(  // NOLINT
-      get_node()->get_logger(), "All reference and system state values are NaN. Skipping control update.");
+      get_node()->get_logger(),
+      "All reference and system state values are NaN. Skipping control update.");
     return controller_interface::return_type::OK;
   }
 
@@ -335,8 +353,11 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   }
   catch (const tf2::TransformException & e) {
     RCLCPP_DEBUG(  // NOLINT
-      get_node()->get_logger(), "Could not transform %s to %s. Using latest available transform. %s",
-      inertial_frame_id_.c_str(), vehicle_frame_id_.c_str(), e.what());
+      get_node()->get_logger(),
+      "Could not transform %s to %s. Using latest available transform. %s",
+      inertial_frame_id_.c_str(),
+      vehicle_frame_id_.c_str(),
+      e.what());
   }
 
   // Calculate the computed torque control
@@ -386,4 +407,5 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 #include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
-  velocity_controllers::IntegralSlidingModeController, controller_interface::ChainableControllerInterface)
+  velocity_controllers::IntegralSlidingModeController,
+  controller_interface::ChainableControllerInterface)

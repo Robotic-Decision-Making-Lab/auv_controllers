@@ -73,7 +73,8 @@ public:
 
   THRUSTER_CONTROLLERS_PUBLIC
   controller_interface::return_type update_and_write_commands(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+    const rclcpp::Time & time,
+    const rclcpp::Duration & period) override;
 
   THRUSTER_CONTROLLERS_PUBLIC
   bool on_set_chained_mode(bool chained_mode) override;
@@ -82,7 +83,8 @@ protected:
   std::vector<hardware_interface::CommandInterface> on_export_reference_interfaces() override;
 
   controller_interface::return_type update_reference_from_subscribers(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+    const rclcpp::Time & time,
+    const rclcpp::Duration & period) override;
 
   void update_parameters();
 
