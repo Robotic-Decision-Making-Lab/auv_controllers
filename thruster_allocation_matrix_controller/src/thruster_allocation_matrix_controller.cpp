@@ -31,7 +31,7 @@ namespace thruster_allocation_matrix_controller
 namespace
 {
 
-void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)  // NOLINT
+auto reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg) -> void  // NOLINT
 {
   wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
@@ -43,7 +43,7 @@ void reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg)  /
 
 }  // namespace
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_init()
+auto ThrusterAllocationMatrixController::on_init() -> controller_interface::CallbackReturn
 {
   try {
     param_listener_ = std::make_shared<thruster_allocation_matrix_controller::ParamListener>(get_node());
@@ -57,7 +57,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_init
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void ThrusterAllocationMatrixController::update_parameters()
+auto ThrusterAllocationMatrixController::update_parameters() -> void  // NOLINT
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -66,7 +66,7 @@ void ThrusterAllocationMatrixController::update_parameters()
   params_ = param_listener_->get_params();
 }
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::configure_parameters()
+auto ThrusterAllocationMatrixController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
 
@@ -75,7 +75,7 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
 
   // Make sure that the number prefixes (if provided) provided match the number of thrusters
   if (!params_.reference_controllers.empty() && params_.reference_controllers.size() != num_thrusters_) {
-    RCLCPP_ERROR(  // NOLINT
+    RCLCPP_ERROR(
       get_node()->get_logger(),
       "Mismatched number of command interface prefixes and thrusters. Expected %ld, got %ld.",
       num_thrusters_,
@@ -89,9 +89,9 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
 
   // Make sure that all of the rows are the same size
   for (const auto & vec : vecs) {
-    const size_t vec_size = vec.size();
+    const std::size_t vec_size = vec.size();
     if (vec_size != num_thrusters_) {
-      RCLCPP_ERROR(  // NOLINT
+      RCLCPP_ERROR(
         get_node()->get_logger(),
         "Mismatched TAM row sizes. Expected %ld thrusters, got %ld.",
         num_thrusters_,
@@ -114,8 +114,8 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::configu
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_configure(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   auto ret = configure_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS) {
@@ -148,36 +148,25 @@ controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_conf
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   reset_wrench_msg(*(reference_.readFromNonRT()));
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_cleanup(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  return controller_interface::CallbackReturn::SUCCESS;
-}
+auto ThrusterAllocationMatrixController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
 
-controller_interface::CallbackReturn ThrusterAllocationMatrixController::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-bool ThrusterAllocationMatrixController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
-
-controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController::command_interface_configuration() const
+auto ThrusterAllocationMatrixController::command_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration command_interfaces_configuration;
   command_interfaces_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   command_interfaces_configuration.names.reserve(num_thrusters_);
 
-  for (size_t i = 0; i < num_thrusters_; ++i) {
+  for (std::size_t i = 0; i < num_thrusters_; ++i) {
     if (params_.reference_controllers.empty()) {
       command_interfaces_configuration.names.emplace_back(thruster_names_[i] + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
@@ -189,21 +178,23 @@ controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController:
   return command_interfaces_configuration;
 }
 
-controller_interface::InterfaceConfiguration ThrusterAllocationMatrixController::state_interface_configuration() const
+auto ThrusterAllocationMatrixController::state_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration state_interface_configuration;
   state_interface_configuration.type = controller_interface::interface_configuration_type::NONE;
   return state_interface_configuration;
 }
 
-std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixController::on_export_reference_interfaces()
+auto ThrusterAllocationMatrixController::on_export_reference_interfaces()
+  -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
       get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[i]);
   }
@@ -211,9 +202,9 @@ std::vector<hardware_interface::CommandInterface> ThrusterAllocationMatrixContro
   return reference_interfaces;
 }
 
-controller_interface::return_type ThrusterAllocationMatrixController::update_reference_from_subscribers(
+auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
-  const rclcpp::Duration & /*period*/)
+  const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
 
@@ -225,7 +216,7 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
     (*current_reference)->torque.y,
     (*current_reference)->torque.z};
 
-  for (size_t i = 0; i < wrench.size(); ++i) {
+  for (std::size_t i = 0; i < wrench.size(); ++i) {
     if (!std::isnan(wrench[i])) {
       reference_interfaces_[i] = wrench[i];
     }
@@ -236,14 +227,14 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_ref
   return controller_interface::return_type::OK;
 }
 
-controller_interface::return_type ThrusterAllocationMatrixController::update_and_write_commands(
+auto ThrusterAllocationMatrixController::update_and_write_commands(
   const rclcpp::Time & time,
-  const rclcpp::Duration & period)
+  const rclcpp::Duration & period) -> controller_interface::return_type
 {
   const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
   const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);
 
-  for (size_t i = 0; i < num_thrusters_; i++) {
+  for (std::size_t i = 0; i < num_thrusters_; i++) {
     command_interfaces_[i].set_value(thrust[i]);
   }
 
@@ -252,7 +243,7 @@ controller_interface::return_type ThrusterAllocationMatrixController::update_and
     rt_controller_state_pub_->msg_.time_step = period.seconds();
     rt_controller_state_pub_->msg_.reference = reference_interfaces_;
 
-    for (size_t i = 0; i < num_thrusters_; i++) {
+    for (std::size_t i = 0; i < num_thrusters_; i++) {
       rt_controller_state_pub_->msg_.output[i] = command_interfaces_[i].get_value();
     }
 

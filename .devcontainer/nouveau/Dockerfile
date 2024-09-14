@@ -57,7 +57,7 @@ WORKDIR $USER_WORKSPACE
 RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
     && rosdep update \
-    && rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --skip-keys nlohmann_json \
+    && rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
     && sudo apt-get autoremove -y \
     && sudo apt-get clean -y \
     && sudo rm -rf /var/lib/apt/lists/*

@@ -106,7 +106,7 @@ std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController:
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
       get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
@@ -209,7 +209,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
 
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.dof_states.resize(DOF);
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
@@ -259,7 +259,7 @@ controller_interface::return_type IntegralSlidingModeController::update_referenc
     (*current_reference)->angular.y,
     (*current_reference)->angular.z};
 
-  for (size_t i = 0; i < reference.size(); ++i) {
+  for (std::size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
       reference_interfaces_[i] = reference[i];
     }
@@ -283,7 +283,7 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
       (*current_system_state)->angular.y,
       (*current_system_state)->angular.z};
 
-    for (size_t i = 0; i < state.size(); ++i) {
+    for (std::size_t i = 0; i < state.size(); ++i) {
       if (!std::isnan(state[i])) {
         system_state_values_[i] = state[i];
       }
@@ -291,7 +291,7 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
 
     reset_twist_msg(*current_system_state);
   } else {
-    for (size_t i = 0; i < system_state_values_.size(); ++i) {
+    for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
       system_state_values_[i] = state_interfaces_[i].get_value();
     }
   }
@@ -383,13 +383,13 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   // Total control torque
   const Eigen::Vector6d tau = tau0 + tau1;
 
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     command_interfaces_[i].set_value(tau[i]);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (size_t i = 0; i < DOF; ++i) {
+    for (std::size_t i = 0; i < DOF; ++i) {
       rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
       rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
       rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];
