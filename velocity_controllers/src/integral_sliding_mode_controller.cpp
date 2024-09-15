@@ -72,7 +72,7 @@ auto IntegralSlidingModeController::command_interface_configuration() const
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   for (const auto & dof : dof_names_) {
-    if (params_.reference_controller.length() <= 0) {
+    if (params_.reference_controller.empty()) {
       command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
       command_interface_configuration.names.emplace_back(
@@ -188,16 +188,20 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
   system_state_values_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
       reference_.writeFromNonRT(msg);
     });  // NOLINT
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
   if (params_.use_external_measured_states) {
     system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-      "~/system_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
+      "~/system_state",
+      rclcpp::SystemDefaultsQoS(),
+      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
         system_state_.writeFromNonRT(msg);
-      });  // NOLINT
+      });
   }
 
   // Configure the TF buffer and listener
@@ -248,9 +252,9 @@ auto IntegralSlidingModeController::on_deactivate(const rclcpp_lifecycle::State 
 
 auto IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
 
-controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers(
+auto IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
-  const rclcpp::Duration & /*period*/)
+  const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
 

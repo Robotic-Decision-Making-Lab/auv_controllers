@@ -87,9 +87,9 @@ auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {  // NOLINT
       reference_.writeFromNonRT(msg);
-    });  // NOLINT
+    });
 
   controller_state_pub_ =
     get_node()->create_publisher<control_msgs::msg::SingleDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());

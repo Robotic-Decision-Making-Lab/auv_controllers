@@ -128,9 +128,11 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
   command_interfaces_.reserve(num_thrusters_);
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) {
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) {  // NOLINT
       reference_.writeFromNonRT(msg);
-    });  // NOLINT
+    });
 
   controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
     "~/status", rclcpp::SystemDefaultsQoS());
