@@ -57,12 +57,6 @@ target_link_libraries(
 )
 target_compile_features(velocity_controllers PUBLIC cxx_std_20)
 
-# Use dllexport instead of dllimport
-target_compile_definitions(
-    velocity_controllers
-    PRIVATE "VELOCITY_CONTROLLERS_BUILDING_DLL"
-)
-
 pluginlib_export_plugin_description_file(controller_interface velocity_controllers.xml)
 
 if(BUILD_TESTING)

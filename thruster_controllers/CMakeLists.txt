@@ -47,12 +47,6 @@ target_link_libraries(
     PUBLIC ${rclcpp_LIBRARIES} polynomial_thrust_curve_controller_parameters
 )
 
-# Use dllexport instead of dllimport
-target_compile_definitions(
-    thruster_controllers
-    PRIVATE "THRUSTER_CONTROLLERS_BUILDING_DLL"
-)
-
 pluginlib_export_plugin_description_file(controller_interface thruster_controllers.xml)
 
 if(BUILD_TESTING)

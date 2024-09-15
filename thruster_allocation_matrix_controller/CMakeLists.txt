@@ -51,12 +51,6 @@ target_link_libraries(
 ament_target_dependencies(thruster_allocation_matrix_controller PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_20)
 
-# Use dllexport instead of dllimport
-target_compile_definitions(
-    thruster_allocation_matrix_controller
-    PRIVATE "THRUSTER_ALLOCATION_MATRIX_CONTROLLER_BUILDING_DLL"
-)
-
 pluginlib_export_plugin_description_file(controller_interface thruster_allocation_matrix_controller.xml)
 
 if(BUILD_TESTING)
