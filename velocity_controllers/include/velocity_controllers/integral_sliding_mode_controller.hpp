@@ -82,7 +82,7 @@ protected:
 
   auto update_parameters() -> void;
 
-  controller_interface::CallbackReturn configure_parameters();
+  auto configure_parameters() -> controller_interface::CallbackReturn;
 
   realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Twist>> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
