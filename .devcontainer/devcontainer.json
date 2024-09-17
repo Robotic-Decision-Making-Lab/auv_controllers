@@ -1,5 +1,5 @@
 {
-  "name": "ROS 2 NVIDIA Dev Container",
+  "name": "ROS 2 Dev Container",
   "dockerFile": "Dockerfile",
   "context": "../",
   "workspaceMount": "source=${localWorkspaceFolder},target=/home/ubuntu/ws_ros/src/auv_controllers,type=bind",
