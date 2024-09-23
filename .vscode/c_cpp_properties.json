@@ -4,15 +4,19 @@
       "name": "Linux",
       "includePath": [
         "${workspaceFolder}/**",
+<<<<<<< HEAD
         "/opt/ros/humble/include/**",
+=======
+        "/opt/ros/rolling/include/**",
+>>>>>>> ad612dc (Updates to support ROS 2 Rolling (#41))
         "/usr/include/eigen3/**",
-        "/home/ros/ws_ros/**"
+        "/home/${USER}/ws_ros/install/**"
       ],
       "defines": [],
-      "compilerPath": "/usr/bin/gcc",
+      "compilerPath": "/usr/bin/clang",
       "cStandard": "c99",
       "cppStandard": "c++20",
-      "intelliSenseMode": "linux-gcc-x64"
+      "intelliSenseMode": "linux-clang-x64"
     }
   ],
   "version": 4

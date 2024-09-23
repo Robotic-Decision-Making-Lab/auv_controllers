@@ -51,7 +51,7 @@ void reset_twist_msg(std::shared_ptr<geometry_msgs::msg::Twist> msg)  // NOLINT
 
 }  // namespace
 
-controller_interface::CallbackReturn IntegralSlidingModeController::on_init()
+auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackReturn
 {
   try {
     param_listener_ = std::make_shared<integral_sliding_mode_controller::ParamListener>(get_node());
@@ -65,13 +65,14 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_init()
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::InterfaceConfiguration IntegralSlidingModeController::command_interface_configuration() const
+auto IntegralSlidingModeController::command_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration command_interface_configuration;
   command_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   for (const auto & dof : dof_names_) {
-    if (params_.reference_controller.length() <= 0) {
+    if (params_.reference_controller.empty()) {
       command_interface_configuration.names.emplace_back(dof + "/" + hardware_interface::HW_IF_EFFORT);
     } else {
       command_interface_configuration.names.emplace_back(
@@ -82,7 +83,8 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::comm
   return command_interface_configuration;
 }
 
-controller_interface::InterfaceConfiguration IntegralSlidingModeController::state_interface_configuration() const
+auto IntegralSlidingModeController::state_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration state_interface_configuration;
 
@@ -99,14 +101,15 @@ controller_interface::InterfaceConfiguration IntegralSlidingModeController::stat
   return state_interface_configuration;
 }
 
-std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController::on_export_reference_interfaces()
+auto IntegralSlidingModeController::on_export_reference_interfaces()
+  -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   std::vector<hardware_interface::CommandInterface> reference_interfaces;
   reference_interfaces.reserve(reference_interfaces_.size());
 
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     reference_interfaces.emplace_back(
       get_node()->get_name(), dof_names_[i] + "/" + hardware_interface::HW_IF_VELOCITY, &reference_interfaces_[i]);
   }
@@ -114,13 +117,13 @@ std::vector<hardware_interface::CommandInterface> IntegralSlidingModeController:
   return reference_interfaces;
 }
 
-controller_interface::CallbackReturn IntegralSlidingModeController::on_cleanup(
-  const rclcpp_lifecycle::State & /*previous state*/)
+auto IntegralSlidingModeController::on_cleanup(const rclcpp_lifecycle::State & /*previous state*/)
+  -> controller_interface::CallbackReturn
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void IntegralSlidingModeController::update_parameters()
+auto IntegralSlidingModeController::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -129,7 +132,7 @@ void IntegralSlidingModeController::update_parameters()
   params_ = param_listener_->get_params();
 }
 
-controller_interface::CallbackReturn IntegralSlidingModeController::configure_parameters()
+auto IntegralSlidingModeController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
 
@@ -158,14 +161,16 @@ controller_interface::CallbackReturn IntegralSlidingModeController::configure_pa
   // Move the damping and restoring forces because we only use them once
   damping_ = std::make_unique<hydrodynamics::Damping>(std::move(linear_damping), std::move(quadratic_damping));
   restoring_forces_ = std::make_unique<hydrodynamics::RestoringForces>(
-    params_.hydrodynamics.weight, params_.hydrodynamics.buoyancy, std::move(center_of_buoyancy),
+    params_.hydrodynamics.weight,
+    params_.hydrodynamics.buoyancy,
+    std::move(center_of_buoyancy),
     std::move(center_of_gravity));
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IntegralSlidingModeController::on_configure(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   auto ret = configure_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS) {
@@ -183,14 +188,20 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   system_state_values_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-    "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
+      reference_.writeFromNonRT(msg);
+    });  // NOLINT
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
   if (params_.use_external_measured_states) {
     system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-      "~/system_state", rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) { system_state_.writeFromNonRT(msg); });  // NOLINT
+      "~/system_state",
+      rclcpp::SystemDefaultsQoS(),
+      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
+        system_state_.writeFromNonRT(msg);
+      });
   }
 
   // Configure the TF buffer and listener
@@ -205,7 +216,7 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
 
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.dof_states.resize(DOF);
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     rt_controller_state_pub_->msg_.dof_states[i].name = dof_names_[i];
   }
   rt_controller_state_pub_->unlock();
@@ -213,8 +224,8 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_configure
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto IntegralSlidingModeController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   // Indicate that the next state update will be the first: this is used to set the error initial conditions
   first_update_ = true;
@@ -233,23 +244,33 @@ controller_interface::CallbackReturn IntegralSlidingModeController::on_activate(
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IntegralSlidingModeController::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto IntegralSlidingModeController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-bool IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
+auto IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
 
+<<<<<<< HEAD
 controller_interface::return_type IntegralSlidingModeController::update_reference_from_subscribers()
+=======
+auto IntegralSlidingModeController::update_reference_from_subscribers(
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/) -> controller_interface::return_type
+>>>>>>> ad612dc (Updates to support ROS 2 Rolling (#41))
 {
   auto * current_reference = reference_.readFromNonRT();
 
-  const std::vector<double> reference = {(*current_reference)->linear.x,  (*current_reference)->linear.y,
-                                         (*current_reference)->linear.z,  (*current_reference)->angular.x,
-                                         (*current_reference)->angular.y, (*current_reference)->angular.z};
+  const std::vector<double> reference = {
+    (*current_reference)->linear.x,
+    (*current_reference)->linear.y,
+    (*current_reference)->linear.z,
+    (*current_reference)->angular.x,
+    (*current_reference)->angular.y,
+    (*current_reference)->angular.z};
 
-  for (size_t i = 0; i < reference.size(); ++i) {
+  for (std::size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
       reference_interfaces_[i] = reference[i];
     }
@@ -260,16 +281,20 @@ controller_interface::return_type IntegralSlidingModeController::update_referenc
   return controller_interface::return_type::OK;
 }
 
-controller_interface::return_type IntegralSlidingModeController::update_system_state_values()
+auto IntegralSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
     auto * current_system_state = system_state_.readFromRT();
 
-    const std::vector<double> state = {(*current_system_state)->linear.x,  (*current_system_state)->linear.y,
-                                       (*current_system_state)->linear.z,  (*current_system_state)->angular.x,
-                                       (*current_system_state)->angular.y, (*current_system_state)->angular.z};
+    const std::vector<double> state = {
+      (*current_system_state)->linear.x,
+      (*current_system_state)->linear.y,
+      (*current_system_state)->linear.z,
+      (*current_system_state)->angular.x,
+      (*current_system_state)->angular.y,
+      (*current_system_state)->angular.z};
 
-    for (size_t i = 0; i < state.size(); ++i) {
+    for (std::size_t i = 0; i < state.size(); ++i) {
       if (!std::isnan(state[i])) {
         system_state_values_[i] = state[i];
       }
@@ -277,7 +302,7 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
 
     reset_twist_msg(*current_system_state);
   } else {
-    for (size_t i = 0; i < system_state_values_.size(); ++i) {
+    for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
       system_state_values_[i] = state_interfaces_[i].get_value();
     }
   }
@@ -285,8 +310,9 @@ controller_interface::return_type IntegralSlidingModeController::update_system_s
   return controller_interface::return_type::OK;
 }
 
-controller_interface::return_type IntegralSlidingModeController::update_and_write_commands(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+auto IntegralSlidingModeController::update_and_write_commands(
+  const rclcpp::Time & time,
+  const rclcpp::Duration & period) -> controller_interface::return_type
 {
   if (params_.enable_parameter_update_without_reactivation) {
     configure_parameters();
@@ -299,8 +325,11 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   std::vector<double> velocity_error_values;
   velocity_error_values.reserve(DOF);
   std::transform(
-    reference_interfaces_.begin(), reference_interfaces_.end(), system_state_values_.begin(),
-    std::back_inserter(velocity_error_values), [](double reference, double state) {
+    reference_interfaces_.begin(),
+    reference_interfaces_.end(),
+    system_state_values_.begin(),
+    std::back_inserter(velocity_error_values),
+    [](double reference, double state) {
       return !std::isnan(reference) && !std::isnan(state) ? reference - state
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
@@ -309,8 +338,7 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   auto all_nan =
     std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
   if (all_nan) {
-    RCLCPP_DEBUG(  // NOLINT
-      get_node()->get_logger(), "All reference and system state values are NaN. Skipping control update.");
+    RCLCPP_DEBUG(get_node()->get_logger(), "All reference and system state values are NaN. Skipping control update.");
     return controller_interface::return_type::OK;
   }
 
@@ -333,18 +361,21 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
     tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
   }
   catch (const tf2::TransformException & e) {
-    RCLCPP_DEBUG(  // NOLINT
-      get_node()->get_logger(), "Could not transform %s to %s. Using latest available transform. %s",
-      inertial_frame_id_.c_str(), vehicle_frame_id_.c_str(), e.what());
+    RCLCPP_DEBUG(
+      get_node()->get_logger(),
+      "Could not transform %s to %s. Using latest available transform. %s",
+      inertial_frame_id_.c_str(),
+      vehicle_frame_id_.c_str(),
+      e.what());
   }
 
   // Calculate the computed torque control
   // Assume a feed-forward acceleration of 0
   const Eigen::Vector6d tau0 =
-    inertia_->getMassMatrix() * (proportional_gain_ * velocity_error) +
-    coriolis_->calculateCoriolisMatrix(velocity_state) * velocity_state +
-    damping_->calculateDampingMatrix(velocity_state) * velocity_state +
-    restoring_forces_->calculateRestoringForcesVector(system_rotation_.readFromRT()->toRotationMatrix());
+    inertia_->mass_matrix * (proportional_gain_ * velocity_error) +
+    coriolis_->calculate_coriolis_matrix(velocity_state) * velocity_state +
+    damping_->calculate_damping_matrix(velocity_state) * velocity_state +
+    restoring_forces_->calculate_restoring_forces_vector(system_rotation_.readFromRT()->toRotationMatrix());
 
   // Calculate the sliding surface
   Eigen::Vector6d surface =
@@ -361,13 +392,13 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
   // Total control torque
   const Eigen::Vector6d tau = tau0 + tau1;
 
-  for (size_t i = 0; i < DOF; ++i) {
+  for (std::size_t i = 0; i < DOF; ++i) {
     command_interfaces_[i].set_value(tau[i]);
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (size_t i = 0; i < DOF; ++i) {
+    for (std::size_t i = 0; i < DOF; ++i) {
       rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
       rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
       rt_controller_state_pub_->msg_.dof_states[i].error = velocity_error_values[i];
@@ -385,4 +416,5 @@ controller_interface::return_type IntegralSlidingModeController::update_and_writ
 #include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
-  velocity_controllers::IntegralSlidingModeController, controller_interface::ChainableControllerInterface)
+  velocity_controllers::IntegralSlidingModeController,
+  controller_interface::ChainableControllerInterface)

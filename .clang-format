@@ -12,8 +12,11 @@ AlignAfterOpenBracket: AlwaysBreak
 ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 2
 DerivePointerAlignment: false
+AllowAllParametersOfDeclarationOnNextLine: false
 PointerAlignment: Middle
 PackConstructorInitializers: Never
+BinPackArguments: false
+BinPackParameters: false
 
 # Configure brace wrapping cases
 BreakBeforeBraces: Custom

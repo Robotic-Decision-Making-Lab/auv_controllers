@@ -2,3 +2,6 @@
 build/
 install/
 log/
+
+.mypy_cache/
+.ruff_cache/
