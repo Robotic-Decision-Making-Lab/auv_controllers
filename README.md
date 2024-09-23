@@ -12,8 +12,8 @@ benchmarking against other commonly-used control algorithms.
 ## Installation
 
 auv_controllers is currently supported on Linux and is available for the ROS 2
-Iron and Humble distributions. To install auv_controllers, first clone this
-project to the `src` directory of your ROS workspace:
+Rolling, Jazzy, Iron and Humble distributions. To install auv_controllers, first
+clone this project to the `src` directory of your ROS workspace:
 
 ```bash
 git clone git@github.com:Robotic-Decision-Making-Lab/auv_controllers.git

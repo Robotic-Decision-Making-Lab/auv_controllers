@@ -6,13 +6,13 @@
         "${workspaceFolder}/**",
         "/opt/ros/humble/include/**",
         "/usr/include/eigen3/**",
-        "/home/ros/ws_ros/**"
+        "/home/${USER}/ws_ros/install/**"
       ],
       "defines": [],
-      "compilerPath": "/usr/bin/gcc",
+      "compilerPath": "/usr/bin/clang",
       "cStandard": "c99",
       "cppStandard": "c++20",
-      "intelliSenseMode": "linux-gcc-x64"
+      "intelliSenseMode": "linux-clang-x64"
     }
   ],
   "version": 4

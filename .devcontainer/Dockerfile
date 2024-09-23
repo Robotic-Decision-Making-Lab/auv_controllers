@@ -15,32 +15,17 @@ RUN apt-get -q update \
     git \
     sudo \
     clang \
-    clang-format-14 \
-    clang-tidy \
-    clang-tools \
     python3-pip \
     python3-dev \
+    python3-venv \
     apt-utils \
     software-properties-common \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-# Install all ROS dependencies needed for CI
-RUN vcs import src < src/$PROJECT_NAME/ros2.repos \
-    && apt-get -q update \
-    && apt-get -q -y upgrade \
-    && rosdep update \
-    && rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-    && rm -rf src \
-    && apt-get autoremove -y \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
-
-FROM ci as desktop
-
-# Configure a new non-root user
-ARG USERNAME=ros
+# Configure the ubuntu non-root user
+ARG USERNAME=ubuntu
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
@@ -51,50 +36,57 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && usermod -a -G dialout $USERNAME \
     && echo "source /usr/share/bash-completion/completions/git" >> /home/$USERNAME/.bashrc
 
-# Switch to the non-root user
+# Switch to the ubuntu user
 USER $USERNAME
 ENV USER=$USERNAME
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV USER_WORKSPACE=/home/$USERNAME/ws_ros
 WORKDIR $USER_WORKSPACE
 
 COPY --chown=$USER_UID:$USER_GID . src/$PROJECT_NAME
 
+# Create a new virtual environment for Python
+ENV VIRTUAL_ENV=$USER_WORKSPACE/.venv/$PROJECT_NAME
+RUN python3 -m venv --system-site-packages $VIRTUAL_ENV \
+    && echo "source ${VIRTUAL_ENV}/bin/activate" >> /home/$USERNAME/.bashrc \
+    && touch .venv/COLCON_IGNORE \
+    && echo "\n# Ensure colcon is run in the venv\nalias colcon='python3 -m colcon'" >> /home/$USERNAME/.bashrc
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 # Install all ROS dependencies
+RUN vcs import src < src/$PROJECT_NAME/ros2.repos
 WORKDIR $USER_WORKSPACE
-RUN vcs import src < src/$PROJECT_NAME/ros2.repos \
-    && sudo apt-get -q update \
+RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
     && rosdep update \
-    && rosdep install -y --from-paths src --ignore-src -r --rosdistro ${ROS_DISTRO} \
+    && rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
     && sudo apt-get autoremove -y \
     && sudo apt-get clean -y \
     && sudo rm -rf /var/lib/apt/lists/*
 
 RUN . "/opt/ros/${ROS_DISTRO}/setup.sh" \
-    && colcon build \
-    && sudo sed -i "s#/opt/ros/\$ROS_DISTRO/setup.bash#$USER_WORKSPACE/setup.sh#g" /ros_entrypoint.sh \
-    && echo "source ${USER_WORKSPACE}/install/setup.bash" >> /home/$USERNAME/.bashrc \
+    # && colcon build \
+    # && echo "source ${USER_WORKSPACE}/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "if [ -f /opt/ros/${ROS_DISTRO}/setup.bash ]; then source /opt/ros/${ROS_DISTRO}/setup.bash; fi" >> /home/$USERNAME/.bashrc
 
-FROM desktop as desktop-nvidia
+WORKDIR $USER_WORKSPACE
 
-# Install NVIDIA software
-RUN sudo apt-get update \
+# Install debugging/linting Python packages
+RUN pip install \
+    pre-commit \
+    mypy
+
+# Install debugging/linting C++ packages
+RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
-    && sudo apt-get install -y -qq --no-install-recommends \
-    libglvnd0 \
-    libgl1 \
-    libglx0 \
-    libegl1 \
-    libxext6 \
-    libx11-6 \
+    && sudo apt-get install -y \
+    clang-format-14 \
+    clang-tidy \
+    clang-tools \
     && sudo apt-get autoremove -y \
     && sudo apt-get clean -y \
     && sudo rm -rf /var/lib/apt/lists/*
 
-# Env vars for the nvidia-container-runtime.
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
-ENV QT_X11_NO_MITSHM 1
+# Disable the setuputils installation warning
+# This prevents us from needing to pin the setuputils version (which doesn't always work)
+ENV PYTHONWARNINGS="ignore"

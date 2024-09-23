@@ -19,29 +19,17 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: humble-ci
-            ROS_DISTRO: humble
+          - ROS_DISTRO: humble
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Log into registry
-        uses: docker/login-action@v3.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ROS Industrial CI
         uses: ros-industrial/industrial_ci@master
         env:
-          DOCKER_IMAGE: ghcr.io/robotic-decision-making-lab/auv_controllers:${{ matrix.env.IMAGE }}
+          ROS_DISTRO: ${{ matrix.env.ROS_DISTRO }}
+          CXXFLAGS: -Wall -Wextra -Wpedantic
+          CLANG_TIDY: true
           UPSTREAM_WORKSPACE: ros2.repos
           AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
           AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src
-          CXXFLAGS: >-
-            -Wall -Wextra -Wpedantic -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
-          CC: ${{ env.CLANG_TIDY && 'clang' }}
-          CXX: ${{ env.CLANG_TIDY && 'clang++' }}

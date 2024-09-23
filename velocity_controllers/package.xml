@@ -29,6 +29,7 @@
   <depend>control_msgs</depend>
   <depend>tf2_eigen</depend>
   <depend>hydrodynamics</depend>
+  <depend>geometry_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
