@@ -3,9 +3,8 @@
 <package format="3">
 
   <name>thruster_allocation_matrix_controller</name>
-  <version>0.0.1</version>
-  <description>Thruster allocation matrix controller used to convert wrench commands into thrust
-    commands</description>
+  <version>0.0.2</version>
+  <description>Thruster allocation matrix controller used to convert wrench commands into thrust commands</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>

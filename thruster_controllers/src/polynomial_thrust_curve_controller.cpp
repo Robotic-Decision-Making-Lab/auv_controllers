@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 
@@ -31,10 +32,10 @@ namespace thruster_controllers
 namespace
 {
 
-[[nodiscard]] int calculate_pwm_from_thrust_curve(double force, const std::vector<double> & coefficients)
+[[nodiscard]] auto calculate_pwm_from_thrust_curve(double force, const std::vector<double> & coefficients) -> int
 {
   double pwm = 0.0;
-  for (size_t i = 0; i < coefficients.size(); ++i) {
+  for (std::size_t i = 0; i < coefficients.size(); ++i) {
     pwm += coefficients[i] * std::pow(force, i);
   }
   return static_cast<int>(std::round(pwm));
@@ -42,7 +43,7 @@ namespace
 
 }  // namespace
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::on_init()
+auto PolynomialThrustCurveController::on_init() -> controller_interface::CallbackReturn
 {
   try {
     param_listener_ = std::make_shared<polynomial_thrust_curve_controller::ParamListener>(get_node());
@@ -56,7 +57,7 @@ controller_interface::CallbackReturn PolynomialThrustCurveController::on_init()
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-void PolynomialThrustCurveController::update_parameters()  // NOLINT
+auto PolynomialThrustCurveController::update_parameters() -> void  // NOLINT
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -65,15 +66,15 @@ void PolynomialThrustCurveController::update_parameters()  // NOLINT
   params_ = param_listener_->get_params();
 }
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::configure_parameters()
+auto PolynomialThrustCurveController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
   thruster_name_ = params_.thruster;
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::on_configure(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   auto ret = configure_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS) {
@@ -86,8 +87,9 @@ controller_interface::CallbackReturn PolynomialThrustCurveController::on_configu
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
-    "~/reference", rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<std_msgs::msg::Float64> msg) { reference_.writeFromNonRT(msg); });  // NOLINT
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {  // NOLINT
+      reference_.writeFromNonRT(msg);
+    });
 
   controller_state_pub_ =
     get_node()->create_publisher<control_msgs::msg::SingleDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
@@ -102,29 +104,18 @@ controller_interface::CallbackReturn PolynomialThrustCurveController::on_configu
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
+auto PolynomialThrustCurveController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+  -> controller_interface::CallbackReturn
 {
   (*reference_.readFromNonRT())->data = std::numeric_limits<double>::quiet_NaN();
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::on_cleanup(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  return controller_interface::CallbackReturn::SUCCESS;
-}
+auto PolynomialThrustCurveController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
 
-controller_interface::CallbackReturn PolynomialThrustCurveController::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  return controller_interface::CallbackReturn::SUCCESS;
-}
-
-bool PolynomialThrustCurveController::on_set_chained_mode(bool /*chained_mode*/) { return true; }
-
-controller_interface::InterfaceConfiguration PolynomialThrustCurveController::command_interface_configuration() const
+auto PolynomialThrustCurveController::command_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration command_interface_config;
   command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -135,14 +126,16 @@ controller_interface::InterfaceConfiguration PolynomialThrustCurveController::co
   return command_interface_config;
 }
 
-controller_interface::InterfaceConfiguration PolynomialThrustCurveController::state_interface_configuration() const
+auto PolynomialThrustCurveController::state_interface_configuration() const
+  -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration state_interface_config;
   state_interface_config.type = controller_interface::interface_configuration_type::NONE;
   return state_interface_config;
 }
 
-std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveController::on_export_reference_interfaces()
+auto PolynomialThrustCurveController::on_export_reference_interfaces()
+  -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(1, std::numeric_limits<double>::quiet_NaN());
 
@@ -150,14 +143,16 @@ std::vector<hardware_interface::CommandInterface> PolynomialThrustCurveControlle
   reference_interfaces.reserve(reference_interfaces_.size());
 
   reference_interfaces.emplace_back(
-    get_node()->get_name(), thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
+    get_node()->get_name(),
+    thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
     &reference_interfaces_[0]);  // NOLINT
 
   return reference_interfaces;
 }
 
-controller_interface::return_type PolynomialThrustCurveController::update_reference_from_subscribers(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+auto PolynomialThrustCurveController::update_reference_from_subscribers(
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
   reference_interfaces_[0] = (*current_reference)->data;
@@ -166,8 +161,9 @@ controller_interface::return_type PolynomialThrustCurveController::update_refere
   return controller_interface::return_type::OK;
 }
 
-controller_interface::return_type PolynomialThrustCurveController::update_and_write_commands(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+auto PolynomialThrustCurveController::update_and_write_commands(
+  const rclcpp::Time & time,
+  const rclcpp::Duration & period) -> controller_interface::return_type
 {
   // Just for readability
   const auto reference = reference_interfaces_[0];
@@ -203,4 +199,5 @@ controller_interface::return_type PolynomialThrustCurveController::update_and_wr
 #include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
-  thruster_controllers::PolynomialThrustCurveController, controller_interface::ChainableControllerInterface)
+  thruster_controllers::PolynomialThrustCurveController,
+  controller_interface::ChainableControllerInterface)
