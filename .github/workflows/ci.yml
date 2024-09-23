@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - ROS_DISTRO: rolling
+          - ROS_DISTRO: jazzy
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

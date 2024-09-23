@@ -1,4 +1,4 @@
-ARG ROS_DISTRO=rolling
+ARG ROS_DISTRO=jazzy
 FROM ros:$ROS_DISTRO-ros-base
 
 ENV DEBIAN_FRONTEND=noninteractive
