@@ -19,11 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: iron-ci
-            ROS_DISTRO: iron
+          - ROS_DISTRO: rolling
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+<<<<<<< HEAD
         with:
           submodules: recursive
 
@@ -33,15 +33,15 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+=======
+>>>>>>> ad612dc (Updates to support ROS 2 Rolling (#41))
 
       - name: Run ROS Industrial CI
         uses: ros-industrial/industrial_ci@master
         env:
-          DOCKER_IMAGE: ghcr.io/robotic-decision-making-lab/auv_controllers:${{ matrix.env.IMAGE }}
+          ROS_DISTRO: ${{ matrix.env.ROS_DISTRO }}
+          CXXFLAGS: -Wall -Wextra -Wpedantic
+          CLANG_TIDY: true
           UPSTREAM_WORKSPACE: ros2.repos
           AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
           AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src
-          CXXFLAGS: >-
-            -Wall -Wextra -Wpedantic -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
-          CC: ${{ env.CLANG_TIDY && 'clang' }}
-          CXX: ${{ env.CLANG_TIDY && 'clang++' }}
