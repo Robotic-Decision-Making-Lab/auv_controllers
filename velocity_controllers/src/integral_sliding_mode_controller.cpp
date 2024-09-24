@@ -39,14 +39,17 @@ namespace velocity_controllers
 namespace
 {
 
-void reset_twist_msg(std::shared_ptr<geometry_msgs::msg::Twist> msg)  // NOLINT
+std::shared_ptr<geometry_msgs::msg::Twist> empty_twist_msg()  // NOLINT
 {
+  auto msg = std::make_shared<geometry_msgs::msg::Twist>();
   msg->linear.x = std::numeric_limits<double>::quiet_NaN();
   msg->linear.y = std::numeric_limits<double>::quiet_NaN();
   msg->linear.z = std::numeric_limits<double>::quiet_NaN();
   msg->angular.x = std::numeric_limits<double>::quiet_NaN();
   msg->angular.y = std::numeric_limits<double>::quiet_NaN();
   msg->angular.z = std::numeric_limits<double>::quiet_NaN();
+
+  return msg;
 }
 
 }  // namespace
@@ -235,8 +238,8 @@ auto IntegralSlidingModeController::on_activate(const rclcpp_lifecycle::State & 
 
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
 
-  reset_twist_msg(*(reference_.readFromNonRT()));
-  reset_twist_msg(*(system_state_.readFromNonRT()));
+  reference_.writeFromNonRT(empty_twist_msg());
+  system_state_.writeFromNonRT(empty_twist_msg());
 
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -256,7 +259,13 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromNonRT();
+  // Explicitly create a new shared_ptr to ensure usage is incremented
+  auto current_reference = reference_.readFromNonRT();
+
+  // no command received yet
+  if (!current_reference || !(*current_reference)) {
+    return controller_interface::return_type::OK;
+  }
 
   const std::vector<double> reference = {
     (*current_reference)->linear.x,
@@ -272,7 +281,7 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
     }
   }
 
-  reset_twist_msg(*current_reference);
+  reference_.writeFromNonRT(empty_twist_msg());
 
   return controller_interface::return_type::OK;
 }
@@ -280,7 +289,13 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
 auto IntegralSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
-    auto * current_system_state = system_state_.readFromRT();
+    // Explicitly create a new shared_ptr to ensure usage is incremented
+    auto current_system_state = system_state_.readFromRT();
+
+    // no command received yet
+    if (!current_system_state || !(*current_system_state)) {
+      return controller_interface::return_type::OK;
+    }
 
     const std::vector<double> state = {
       (*current_system_state)->linear.x,
@@ -296,7 +311,8 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
       }
     }
 
-    reset_twist_msg(*current_system_state);
+    system_state_.writeFromNonRT(empty_twist_msg());
+
   } else {
     for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
       system_state_values_[i] = state_interfaces_[i].get_value();
