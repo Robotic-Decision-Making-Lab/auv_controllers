@@ -81,14 +81,13 @@ auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State
     return ret;
   }
 
-  const auto reference_msg = std::make_shared<std_msgs::msg::Float64>();
-  reference_.writeFromNonRT(reference_msg);
+  reference_.writeFromNonRT(std_msgs::msg::Float64());
 
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {  // NOLINT
-      reference_.writeFromNonRT(msg);
+      reference_.writeFromNonRT(*msg);
     });
 
   controller_state_pub_ =
@@ -107,7 +106,7 @@ auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State
 auto PolynomialThrustCurveController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  (*reference_.readFromNonRT())->data = std::numeric_limits<double>::quiet_NaN();
+  reference_.readFromNonRT()->data = std::numeric_limits<double>::quiet_NaN();
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -153,8 +152,8 @@ auto PolynomialThrustCurveController::on_export_reference_interfaces()
 auto PolynomialThrustCurveController::update_reference_from_subscribers() -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
-  reference_interfaces_[0] = (*current_reference)->data;
-  (*current_reference)->data = std::numeric_limits<double>::quiet_NaN();
+  reference_interfaces_[0] = current_reference->data;
+  current_reference->data = std::numeric_limits<double>::quiet_NaN();
 
   return controller_interface::return_type::OK;
 }
