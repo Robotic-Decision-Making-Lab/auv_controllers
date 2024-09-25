@@ -39,7 +39,7 @@ namespace velocity_controllers
 namespace
 {
 
-void reset_twist_msg(std::shared_ptr<geometry_msgs::msg::Twist> msg)  // NOLINT
+void reset_twist_msg(geometry_msgs::msg::Twist * msg)  // NOLINT
 {
   msg->linear.x = std::numeric_limits<double>::quiet_NaN();
   msg->linear.y = std::numeric_limits<double>::quiet_NaN();
@@ -61,6 +61,12 @@ auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackR
     fprintf(stderr, "An exception occurred while initializing the controller: %s\n", e.what());
     return controller_interface::CallbackReturn::ERROR;
   }
+
+  // Notify users about this. This can be confusing for folks that expect the controller to work without a reference
+  // or state message.
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    "Reference and state messages are required for operation - commands will not be sent until both are received.");
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -177,11 +183,8 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
     return ret;
   }
 
-  const auto reference_msg = std::make_shared<geometry_msgs::msg::Twist>();
-  reference_.writeFromNonRT(reference_msg);
-
-  const auto system_state_msg = std::make_shared<geometry_msgs::msg::Twist>();
-  system_state_.writeFromNonRT(system_state_msg);
+  reference_.writeFromNonRT(geometry_msgs::msg::Twist());
+  system_state_.writeFromNonRT(geometry_msgs::msg::Twist());
 
   command_interfaces_.reserve(DOF);
 
@@ -191,16 +194,16 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
     "~/reference",
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
-      reference_.writeFromNonRT(msg);
+      reference_.writeFromNonRT(*msg);
     });  // NOLINT
 
   // If we aren't reading from the state interfaces, subscribe to the system state topic
   if (params_.use_external_measured_states) {
-    system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
+    system_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::TwistStamped>(
       "~/system_state",
       rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
-        system_state_.writeFromNonRT(msg);
+      [this](const std::shared_ptr<geometry_msgs::msg::TwistStamped> msg) {  // NOLINT
+        system_state_.writeFromNonRT(msg->twist);
       });
   }
 
@@ -235,8 +238,8 @@ auto IntegralSlidingModeController::on_activate(const rclcpp_lifecycle::State & 
 
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
 
-  reset_twist_msg(*(reference_.readFromNonRT()));
-  reset_twist_msg(*(system_state_.readFromNonRT()));
+  reset_twist_msg(reference_.readFromNonRT());
+  reset_twist_msg(system_state_.readFromNonRT());
 
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -259,12 +262,12 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   auto * current_reference = reference_.readFromNonRT();
 
   const std::vector<double> reference = {
-    (*current_reference)->linear.x,
-    (*current_reference)->linear.y,
-    (*current_reference)->linear.z,
-    (*current_reference)->angular.x,
-    (*current_reference)->angular.y,
-    (*current_reference)->angular.z};
+    current_reference->linear.x,
+    current_reference->linear.y,
+    current_reference->linear.z,
+    current_reference->angular.x,
+    current_reference->angular.y,
+    current_reference->angular.z};
 
   for (std::size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
@@ -272,7 +275,7 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
     }
   }
 
-  reset_twist_msg(*current_reference);
+  reset_twist_msg(current_reference);
 
   return controller_interface::return_type::OK;
 }
@@ -283,12 +286,12 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
     auto * current_system_state = system_state_.readFromRT();
 
     const std::vector<double> state = {
-      (*current_system_state)->linear.x,
-      (*current_system_state)->linear.y,
-      (*current_system_state)->linear.z,
-      (*current_system_state)->angular.x,
-      (*current_system_state)->angular.y,
-      (*current_system_state)->angular.z};
+      current_system_state->linear.x,
+      current_system_state->linear.y,
+      current_system_state->linear.z,
+      current_system_state->angular.x,
+      current_system_state->angular.y,
+      current_system_state->angular.z};
 
     for (std::size_t i = 0; i < state.size(); ++i) {
       if (!std::isnan(state[i])) {
@@ -296,7 +299,7 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
       }
     }
 
-    reset_twist_msg(*current_system_state);
+    reset_twist_msg(current_system_state);
   } else {
     for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
       system_state_values_[i] = state_interfaces_[i].get_value();
@@ -334,7 +337,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
   auto all_nan =
     std ::all_of(velocity_error_values.begin(), velocity_error_values.end(), [&](double i) { return std::isnan(i); });
   if (all_nan) {
-    RCLCPP_DEBUG(get_node()->get_logger(), "All reference and system state values are NaN. Skipping control update.");
+    RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Skipping control update.");
     return controller_interface::return_type::OK;
   }
 
@@ -379,7 +382,6 @@ auto IntegralSlidingModeController::update_and_write_commands(
 
   // Apply the sign function to the surface
   // Right now, we use the tanh function to reduce the chattering effect.
-  // TODO(evan-palmer): Implement the super twisting algorithm to improve this further
   surface = surface.unaryExpr([this](double x) { return std::tanh(x / boundary_thickness_); });
 
   // Calculate the disturbance rejection torque

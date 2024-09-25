@@ -71,7 +71,7 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  realtime_tools::RealtimeBuffer<std::shared_ptr<std_msgs::msg::Float64>> reference_;
+  realtime_tools::RealtimeBuffer<std_msgs::msg::Float64> reference_;
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::Float64>> reference_sub_;
 
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::SingleDOFStateStamped>> controller_state_pub_;
