@@ -75,7 +75,7 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Wrench>> reference_;
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Wrench> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
   std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::MultiActuatorStateStamped>> controller_state_pub_;

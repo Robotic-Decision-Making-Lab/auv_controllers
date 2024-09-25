@@ -30,7 +30,7 @@
 #include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
-#include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
 #include "hydrodynamics/eigen.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -84,11 +84,11 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Twist>> reference_;
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
-  realtime_tools::RealtimeBuffer<std::shared_ptr<geometry_msgs::msg::Twist>> system_state_;
-  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> system_state_sub_;
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> system_state_;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::TwistStamped>> system_state_sub_;
   std::vector<double> system_state_values_;
 
   // We need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model.
