@@ -31,7 +31,7 @@ namespace thruster_allocation_matrix_controller
 namespace
 {
 
-auto reset_wrench_msg(std::shared_ptr<geometry_msgs::msg::Wrench> wrench_msg) -> void  // NOLINT
+auto reset_wrench_msg(geometry_msgs::msg::Wrench * wrench_msg) -> void  // NOLINT
 {
   wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
   wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
@@ -122,8 +122,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
     return ret;
   }
 
-  const auto reference_msg = std::make_shared<geometry_msgs::msg::Wrench>();
-  reference_.writeFromNonRT(reference_msg);
+  reference_.writeFromNonRT(geometry_msgs::msg::Wrench());
 
   command_interfaces_.reserve(num_thrusters_);
 
@@ -131,7 +130,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
     "~/reference",
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) {  // NOLINT
-      reference_.writeFromNonRT(msg);
+      reference_.writeFromNonRT(*msg);
     });
 
   controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
@@ -153,7 +152,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
 auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  reset_wrench_msg(*(reference_.readFromNonRT()));
+  reset_wrench_msg(reference_.readFromNonRT());
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -209,12 +208,12 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers() -> 
   auto * current_reference = reference_.readFromNonRT();
 
   const std::vector<double> wrench = {
-    (*current_reference)->force.x,
-    (*current_reference)->force.y,
-    (*current_reference)->force.z,
-    (*current_reference)->torque.x,
-    (*current_reference)->torque.y,
-    (*current_reference)->torque.z};
+    current_reference->force.x,
+    current_reference->force.y,
+    current_reference->force.z,
+    current_reference->torque.x,
+    current_reference->torque.y,
+    current_reference->torque.z};
 
   for (std::size_t i = 0; i < wrench.size(); ++i) {
     if (!std::isnan(wrench[i])) {
@@ -222,7 +221,7 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers() -> 
     }
   }
 
-  reset_wrench_msg(*current_reference);
+  reset_wrench_msg(current_reference);
 
   return controller_interface::return_type::OK;
 }
