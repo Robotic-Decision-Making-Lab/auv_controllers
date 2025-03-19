@@ -18,11 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <Eigen/Dense>
+
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 
 namespace whole_body_controllers
 {
+
+namespace tasks
+{
+
+class Task
+{
+public:
+  auto priority() -> int;
+
+  auto gain() -> double;
+
+private:
+  int priority_;
+  double gain_;
+};
+
+class PoseEqualityTask : public Task
+{
+public:
+  PoseEqualityTask() = default;
+
+private:
+};
+
+class JointInequalityTask : public Task
+{
+public:
+private:
+};
+
+class ManipulabilityTask : public Task
+{
+public:
+private:
+};
+
+}  // namespace tasks
 
 class TaskPriorityIKControl : public controller_interface::ChainableControllerInterface
 {

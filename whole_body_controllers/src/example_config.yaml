@@ -1,0 +1,106 @@
+task_priority_ik_controller:
+  ros__parameters:
+    # Specify the base link for the vehicle. This should be the body frame for
+    # the system.
+    base_link_frame_id: base_link
+
+    # Specify the end effector frame that pose tracking will be done with. At
+    # the moment, we only support pose tracking for a single end effector.
+    end_effector_frame_id: tcp
+
+    # The names of the revolute joints comprising the manipulator.
+    revolute_joints:
+      - axis_b
+      - axis_c
+      - axis_d
+      - axis_e
+
+    # The task hierarchy for the system uses the following priority:
+    # 1. Joint position constraints
+    # 2. Joint velocity constraints
+    # 3. End effector pose tracking
+    # 4. Manipulability optimization
+
+    # The end effector task hierarchy includes the pose tracking task (an
+    # equality constraint) and the manipulability optimization task, which
+    # attempts to optimize the manipulabilty of the system in order to avoid
+    # singular configurations.
+    end_effector_task_hierarchy:
+      pose_task:
+        gain: 0.3
+
+      manipulability_task:
+        gain: 0.0
+
+    # The revolute task hierarchy includes inequality constraints on the joint
+    # position and velocity. Configuring the inequality constraints involves
+    # setting physical/safety limits and the activation threshold for the
+    # constraint. The physical limits define the true limits for the joint. The
+    # safety limits establish a buffer around the physical limit to prevent
+    # damaging the hardware. The activation threshold is a distance away from
+    # the safety limit that triggers activation of the task in the constraint
+    # hierarchy.
+    revolute_task_hierarchy:
+      axis_b:
+        joint_angle_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+        joint_velocity_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+
+      axis_c:
+        joint_angle_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+        joint_velocity_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+
+      axis_d:
+        joint_angle_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+        joint_velocity_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+
+      axis_e:
+        joint_angle_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
+        joint_velocity_task:
+          physical_upper_limit:
+          physical_lower_limit:
+          safety_upper_limit:
+          safety_lower_limit:
+          activation_threshold:
+          gain:
