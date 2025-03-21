@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "ik_solver.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace ik_solvers
 {
@@ -23,6 +24,11 @@ public:
 
   /// Destructor.
   virtual ~Constraint() = default;
+
+  /// Compute the Jacobian for the constraint.
+  [[nodiscard]] virtual auto jacobian() const -> Eigen::MatrixXd = 0;
+
+  [[nodiscard]] virtual auto error() const -> Eigen::VectorXd = 0;
 
   /// Get the priority of the constraint.
   [[nodiscard]] auto priority() const -> int { return priority_; }
@@ -73,6 +79,47 @@ protected:
   double activation_threshold_;
 };
 
+/// Comparator used to sort constraints based on their priority.
+/// If the priorities are equal, the constraints are sorted based on their memory address.
+struct ConstraintCompare
+{
+  bool operator()(const std::shared_ptr<Constraint> & lhs, const std::shared_ptr<Constraint> & rhs) const
+  {
+    return lhs->priority() == rhs->priority() ? lhs.get() < rhs.get() : lhs->priority() < rhs->priority();
+  }
+};
+
+/// Type alias for a set of constraints.
+using ConstraintSet = std::set<std::shared_ptr<Constraint>, ConstraintCompare>;
+
+/// Class used to manage the task hierarchy.
+class TaskHierarchy
+{
+public:
+  /// Constructor.
+  TaskHierarchy() = default;
+
+  /// Insert a new constraint into the hierarchy. This will automatically sort the constraints based on their priority.
+  /// For now, only equality constraints and high priority set constraints are supported.
+  auto insert(const std::shared_ptr<Constraint> & constraint) -> void;
+
+  /// Clear all constraints from the hierarchy.
+  auto clear() -> void;
+
+  /// Get the set of all active inequality constraints in the hierarchy.
+  [[nodiscard]] auto set_constraints() const -> ConstraintSet;
+
+  /// Get the set of all equality constraints in the hierarchy.
+  [[nodiscard]] auto equality_constraints() const -> ConstraintSet;
+
+  /// Get the set of all potential hierarchies for the active tasks.
+  [[nodiscard]] auto hierarchies() const -> std::vector<ConstraintSet>;
+
+private:
+  ConstraintSet constraints_;
+};
+
+// TODO(evan-palmer): Figure this out
 class PoseConstraint : public Constraint
 {
 public:
@@ -85,38 +132,6 @@ public:
   JointLimitConstraint(Eigen::VectorXd ub, Eigen::VectorXd lb, Eigen::VectorXd tolerance, int priority, double gain);
 };
 
-/// Class used to manage the task hierarchy.
-class TaskHierarchy
-{
-public:
-  /// Constructor.
-  TaskHierarchy() = default;
-
-  /// Insert a new constraint into the hierarchy. This will automatically sort the constraints based on their priority.
-  auto insert_constraint(std::shared_ptr<Constraint> constraint) -> void;
-
-  /// Clear all constraints from the hierarchy.
-  auto clear_constraints() -> void;
-
-  /// Get the set of all active tasks.
-  [[nodiscard]] auto active_tasks() const -> std::vector<std::shared_ptr<Constraint>>;
-
-  /// Get the set of all potential hierarchies for the active tasks.
-  [[nodiscard]] auto hierarchies() const -> std::vector<std::set<std::shared_ptr<Constraint>>>;
-
-private:
-  /// Comparator used to sort constraints based on their priority.
-  struct Compare
-  {
-    bool operator()(const std::shared_ptr<Constraint> & lhs, const std::shared_ptr<Constraint> & rhs) const
-    {
-      return lhs->priority() < rhs->priority();
-    }
-  };
-
-  std::set<std::shared_ptr<Constraint>, Compare> constraints_;
-};
-
 }  // namespace hierarchy
 
 class TaskPriorityIKSolver : public IKSolver
@@ -124,7 +139,14 @@ class TaskPriorityIKSolver : public IKSolver
 public:
   TaskPriorityIKSolver() = default;
 
-  [[nodiscard]] auto solve() const -> trajectory_msgs::msg::JointTrajectoryPoint override;
+  [[nodiscard]] auto solve(rclcpp::Duration period) const -> trajectory_msgs::msg::JointTrajectoryPoint override;
+
+  auto add_constraint(const std::shared_ptr<hierarchy::Constraint> & constraint) -> void;
+
+  auto clear_constraints() -> void;
+
+private:
+  hierarchy::TaskHierarchy task_hierarchy_;
 };
 
 }  // namespace ik_solvers
