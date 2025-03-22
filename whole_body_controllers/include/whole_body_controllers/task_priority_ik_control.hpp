@@ -1,4 +1,4 @@
-// Copyright 2024, Evan Palmer
+// Copyright 2025, Evan Palmer
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <Eigen/Dense>
+#pragma once
 
+#include "control_msgs/msg/multi_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/algorithm/kinematics.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
+#include "realtime_tools/realtime_buffer.hpp"
+#include "realtime_tools/realtime_publisher.hpp"
+#include "std_msgs/msg/string.hpp"
 
 namespace whole_body_controllers
 {
 
-class TaskPriorityIKControl : public controller_interface::ChainableControllerInterface
+class IKController : public controller_interface::ChainableControllerInterface
 {
 public:
-  TaskPriorityIKControl() = default;
+  IKController() = default;
 
   auto on_init() -> controller_interface::CallbackReturn override;
 
+  // NOLINTNEXTLINE(modernize-use-nodiscard)
   auto command_interface_configuration() const -> controller_interface::InterfaceConfiguration override;
 
+  // NOLINTNEXTLINE(modernize-use-nodiscard)
   auto state_interface_configuration() const -> controller_interface::InterfaceConfiguration override;
 
   auto on_configure(const rclcpp_lifecycle::State & previous_state) -> controller_interface::CallbackReturn override;
@@ -44,7 +54,7 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
-private:
+protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
   auto update_reference_from_subscribers(const rclcpp::Time & time, const rclcpp::Duration & period)
@@ -56,18 +66,21 @@ private:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  // TODO(evan-palmer): Define static tasks and priorities:
-  // We could define the task as a struct to hold its parameters
-  // task type, priority, gain, etc.
-  // - EE position
-  // - EE orientation
-  // - Joint limits
-  // - Joint velocity limits
-  // - Vehicle orientation
-  // - Vehicle position
+  std::unique_ptr<pinocchio::Model> model_;
+  std::unique_ptr<pinocchio::Data> data_;
 
-  // TODO(evan-palmer) We need an interface to read the current state of the system
-  // TODO(evan-palmer) We need to define the hierarchy of tasks and their combinations for set-based control
+  std::string robot_base_link_;
+  std::string robot_end_effector_link_;
+
+  // TODO(evan-palmer): Add IK solver interface
+
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::PoseStamped> reference_;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::PoseStamped>> reference_sub_;
+
+  std::string robot_description_;
+  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
+
+  bool model_initialized_{false};
 };
 
 }  // namespace whole_body_controllers
