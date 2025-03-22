@@ -136,9 +136,9 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
 }
 
 /// Closed-loop TPIK using the damped pseudoinverse.
-auto cltpik(hierarchy::ConstraintSet task_set, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
+auto cltpik(const hierarchy::ConstraintSet & tasks, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
 {
-  if (task_set.empty()) {
+  if (tasks.empty()) {
     throw std::runtime_error("No constraints have been added to the task hierarchy.");
   }
 
@@ -146,7 +146,7 @@ auto cltpik(hierarchy::ConstraintSet task_set, const pinocchio::Model & model, d
   std::vector<Eigen::MatrixXd> jacs;
   Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(model.nv, model.nv);
 
-  for (const auto & task : task_set) {
+  for (const auto & task : tasks) {
     const Eigen::MatrixXd x = task->jacobian() * nullspace;
     const auto eye = Eigen::MatrixXd::Identity(x.rows(), x.rows());
 
