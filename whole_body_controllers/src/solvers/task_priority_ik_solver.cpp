@@ -54,6 +54,7 @@ auto TaskHierarchy::equality_constraints() const -> ConstraintSet
 
 auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
 {
+  // Use only the active tasks in the hierarchies
   auto active = active_tasks(constraints_);
   const ConstraintSet equality_constraints = this->equality_constraints();
   const ConstraintSet set_constraints = this->set_constraints();
@@ -71,7 +72,6 @@ auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
 
   for (size_t mask = 1; mask < (1 << n_set_constraints); ++mask) {  // start from 1 to avoid the empty set
     ConstraintSet subset;
-
     for (size_t i = 0; i < n_set_constraints; ++i) {
       if ((mask & (1 << i)) != 0U) {
         subset.insert(set_constraints_vector[i]);
@@ -79,11 +79,9 @@ auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
     }
 
     // Insert equality constraints into this subset
-    for (const auto & eq_constraint : equality_constraints) {
-      subset.insert(eq_constraint);
-    }
+    subset.insert(equality_constraints.begin(), equality_constraints.end());
 
-    result.push_back(subset);
+    result.push_back(std::move(subset));
   }
 
   return result;
@@ -108,18 +106,14 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
     throw std::invalid_argument("At least one Jacobian matrix must be provided.");
   }
 
-  if (jacobians.size() == 1) {
-    return jacobians.front();
-  }
-
-  int n_rows = 0;
   const int n_cols = jacobians.front().cols();
+  int n_rows = 0;
 
   for (const auto & jac : jacobians) {
-    n_rows += jac.rows();
     if (jac.cols() != n_cols) {
       throw std::invalid_argument("All Jacobian matrices must have the same number of columns.");
     }
+    n_rows += jac.rows();
   }
 
   Eigen::MatrixXd augmented(n_rows, n_cols);
@@ -173,8 +167,7 @@ auto solve_hierarchy(const hierarchy::ConstraintSet & task_set, const pinocchio:
 
 }  // namespace
 
-auto TaskPriorityIKSolver::solve(const rclcpp::Duration & /*period*/) const
-  -> trajectory_msgs::msg::JointTrajectoryPoint
+auto TaskPriorityIKSolver::solve(const rclcpp::Duration & period) const -> trajectory_msgs::msg::JointTrajectoryPoint
 {
   const auto hierarchies = task_hierarchy_.hierarchies();
 
@@ -183,61 +176,54 @@ auto TaskPriorityIKSolver::solve(const rclcpp::Duration & /*period*/) const
   }
 
   Eigen::VectorXd solution;
+  const auto set_constraints = task_hierarchy_.set_constraints();
 
-  if (task_hierarchy_.set_constraints().empty()) {
+  if (set_constraints.empty()) {
     solution = solve_hierarchy(hierarchies.front(), *model_);
   } else {
     std::vector<Eigen::VectorXd> solutions;
+    solutions.reserve(hierarchies.size());
 
-    for (const auto & hierarchy : hierarchies) {
-      // Get the system velocities for the current hierarchy
-      const Eigen::VectorXd current_solution = solve_hierarchy(hierarchy, *model_);
+    for (const auto & tasks : hierarchies) {
+      const Eigen::VectorXd current_solution = solve_hierarchy(tasks, *model_);
 
       // Check if the solution violates any set constraints
-      auto set_constraints = task_hierarchy_.set_constraints();
+      bool valid = true;
       for (const auto & constraint : set_constraints) {
         auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
         const double pred = (constraint->jacobian() * current_solution).value();
-
-        bool valid = true;
         const double primal = set_task->primal();
-        if (primal > set_task->lower_threshold() && pred < 0) {
+
+        if ((primal > set_task->lower_threshold() && pred < 0) || (primal < set_task->upper_threshold() && pred > 0)) {
           valid = false;
-        } else if (primal < set_task->upper_threshold() && pred > 0) {
-          valid = false;
+          break;
         }
 
         // TODO(evan-palmer): check whether or not this is needed
         // if (std::abs(pred) > 0.02) {
         //   valid = false;
         // }
+      }
 
-        if (valid) {
-          solutions.push_back(current_solution);
-        }
+      if (valid) {
+        solutions.push_back(current_solution);
       }
     }
+
     if (solutions.empty()) {
       throw std::runtime_error("No valid solutions found for the task hierarchy.");
     }
 
     // Choose the solution with the smallest norm
-    solution = solutions.front();
-    double min_norm = solution.norm();
-    for (const auto & sol : solutions) {
-      const double norm = sol.norm();
-      if (norm < min_norm) {
-        solution = sol;
-        min_norm = norm;
-      }
-    }
+    solution = *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
   }
 
   // Convert the solution into a JointTrajectoryPoint
   trajectory_msgs::msg::JointTrajectoryPoint point;
 
-  // TODO: Forward kinematics to get the joint positions from the solution
-  // TODO: Fill in the joint positions and velocities
+  // TODO(evan-palmer): Forward kinematics to get the joint positions from the solution
+
+  // TODO(evan-palmer): Fill in the joint positions and velocities
 
   return point;
 }

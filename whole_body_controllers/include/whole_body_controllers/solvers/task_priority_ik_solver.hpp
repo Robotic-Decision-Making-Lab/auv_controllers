@@ -26,7 +26,7 @@ public:
 
   /// Create a new constraint given the constraint value, task priority and feedback gain.
   Constraint(Eigen::MatrixXd constraint, int priority, double gain)
-  : primal_(Eigen::MatrixXd::Zero(constraint.size())),
+  : primal_(Eigen::MatrixXd::Zero(constraint.rows(), constraint.cols())),
     constraint_(constraint),
     priority_(priority),
     gain_(gain){};
@@ -66,7 +66,7 @@ public:
   /// Create a new set constraint given the current primal value, constraint value, constraint bounds, tolerance,
   /// activation threshold, task priority,and gain.
   SetConstraint(double primal, double ub, double lb, double tol, double activation, int priority, double gain)
-  : Constraint(Eigen::MatrixXd::Constant(primal), Eigen::MatrixXd::Zero(1), priority, gain),
+  : Constraint(Eigen::MatrixXd::Constant(1, 1, primal), Eigen::MatrixXd::Zero(1), priority, gain),
     upper_limit_(ub),
     lower_limit_(lb),
     upper_safety_(ub - tol),
@@ -84,20 +84,16 @@ public:
   [[nodiscard]] auto is_active() const -> bool
   {
     double primal = primal_.value();
-    if (primal < lower_threshold_ || primal > upper_threshold_) {
-      return true;
-    }
-    return false;
+    return primal < lower_threshold_ || primal > upper_threshold_;
   };
 
-  // TODO: Check why this isn't overriding the base class
-  [[nodiscard]] auto update_primal(const Eigen::MatrixXd & primal) -> void
+  [[nodiscard]] auto update_primal(const Eigen::MatrixXd & primal) -> void override
   {
     primal_ = primal;
     update_constraint();
   };
 
-  auto update_primal(double primal) -> void { update_primal(Eigen::MatrixXd::Constant(primal)); };
+  auto update_primal(double primal) -> void { update_primal(Eigen::MatrixXd::Constant(1, 1, primal)); }
 
   auto primal() const -> double { return primal_.value(); }
 
@@ -126,10 +122,10 @@ protected:
   {
     // Set the constraint value based on whether or not the task is active
     double primal = primal_.value();
-    if (primal < lower_threshold_) {
-      constraint_ = Eigen::MatrixXd::Constant(lower_safety_);
-    } else if (primal > upper_threshold_) {
-      constraint_ = Eigen::MatrixXd::Constant(upper_safety_);
+    if (primal < lower_threshold_ + std::numeric_limits<double>::epsilon()) {
+      constraint_ = Eigen::MatrixXd::Constant(1, 1, lower_safety_);
+    } else if (primal > upper_threshold_ - std::numeric_limits<double>::epsilon()) {
+      constraint_ = Eigen::MatrixXd::Constant(1, 1, upper_safety_);
     } else {
       constraint_ = primal_;
     }
@@ -146,7 +142,7 @@ struct ConstraintCompare
 {
   bool operator()(const std::shared_ptr<Constraint> & lhs, const std::shared_ptr<Constraint> & rhs) const
   {
-    return lhs->priority() == rhs->priority() ? lhs.get() < rhs.get() : lhs->priority() < rhs->priority();
+    return lhs->priority() == rhs->priority() ? std::less<>{}(lhs, rhs) : lhs->priority() < rhs->priority();
   }
 };
 
