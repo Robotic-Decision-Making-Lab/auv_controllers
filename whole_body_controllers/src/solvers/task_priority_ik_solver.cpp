@@ -1,5 +1,11 @@
 #include "task_priority_ik_solver.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <pinocchio/algorithm/frames.hpp>
+#include <pinocchio/algorithm/jacobian.hpp>
+#include <pinocchio/algorithm/kinematics.hpp>
+#include <ranges>
 #include <vector>
 
 namespace ik_solvers
@@ -12,16 +18,35 @@ namespace
 {
 
 /// Return the set of active tasks in the given hierarchy.
-auto active_tasks(const ConstraintSet & task_set) -> ConstraintSet
+auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
 {
-  ConstraintSet active_task_set;
-  for (const auto & constraint : task_set) {
-    auto set_task = std::dynamic_pointer_cast<SetConstraint>(constraint);
-    if (!set_task || set_task->is_active()) {
-      active_task_set.insert(constraint);
-    }
-  }
-  return active_task_set;
+  ConstraintSet result;
+  std::ranges::copy(
+    tasks | std::views::filter([](const auto & task) {
+      auto set_task = std::dynamic_pointer_cast<SetConstraint>(task);
+      return !std::dynamic_pointer_cast<SetConstraint>(set_task) || set_task->is_active();
+    }),
+    std::inserter(result, result.end()));
+  return result;
+}
+
+auto filter_set_constraints(const ConstraintSet & tasks) -> ConstraintSet
+{
+  ConstraintSet result;
+  std::ranges::copy(
+    tasks |
+      std::views::filter([](const auto & task) { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
+    std::inserter(result, result.end()));
+  return result;
+}
+
+auto filter_equality_constraints(const ConstraintSet & tasks) -> ConstraintSet
+{
+  ConstraintSet result;
+  std::ranges::copy(
+    tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
+    std::inserter(result, result.end()));
+  return result;
 }
 
 }  // namespace
@@ -32,55 +57,39 @@ auto TaskHierarchy::clear() -> void { constraints_.clear(); }
 
 auto TaskHierarchy::set_constraints() const -> ConstraintSet
 {
-  ConstraintSet set_constraints;
-  for (const auto & constraint : constraints_) {
-    if (std::dynamic_pointer_cast<SetConstraint>(constraint)) {
-      set_constraints.insert(constraint);
-    }
-  }
-  return set_constraints;
+  return filter_set_constraints(active_tasks(constraints_));
 }
 
 auto TaskHierarchy::equality_constraints() const -> ConstraintSet
 {
-  ConstraintSet equality_constraints;
-  for (const auto & constraint : constraints_) {
-    if (!std::dynamic_pointer_cast<SetConstraint>(constraint)) {
-      equality_constraints.insert(constraint);
-    }
-  }
-  return equality_constraints;
+  return filter_equality_constraints(active_tasks(constraints_));
 }
 
 auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
 {
-  // Use only the active tasks in the hierarchies
-  auto active = active_tasks(constraints_);
   const ConstraintSet equality_constraints = this->equality_constraints();
   const ConstraintSet set_constraints = this->set_constraints();
 
   // Return the equality tasks if there are no set constraints
   if (set_constraints.empty()) {
-    return {active};
+    return {equality_constraints};
   }
-
-  std::vector<ConstraintSet> result;
 
   // Generate the power set of the set constraints, excluding the empty set
   const std::vector<std::shared_ptr<Constraint>> set_constraints_vector(set_constraints.begin(), set_constraints.end());
-  const size_t n_set_constraints = set_constraints_vector.size();
+  const size_t n_subsets = (1 << set_constraints.size()) - 1;
 
-  for (size_t mask = 1; mask < (1 << n_set_constraints); ++mask) {  // start from 1 to avoid the empty set
+  std::vector<ConstraintSet> result;
+  result.reserve(n_subsets);
+
+  for (const size_t mask : std::views::iota(1U, 1U << set_constraints.size())) {
     ConstraintSet subset;
-    for (size_t i = 0; i < n_set_constraints; ++i) {
-      if ((mask & (1 << i)) != 0U) {
+    for (size_t i = 0; i < set_constraints.size(); ++i) {
+      if (((mask >> i) & 1U) != 0) {
         subset.insert(set_constraints_vector[i]);
       }
     }
-
-    // Insert equality constraints into this subset
     subset.insert(equality_constraints.begin(), equality_constraints.end());
-
     result.push_back(std::move(subset));
   }
 
@@ -126,49 +135,51 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
   return augmented;
 }
 
-/// Recursively solve the IK problem using the task hierarchy.
-auto solve_hierarchy(
-  hierarchy::ConstraintSet constraints,
-  const Eigen::VectorXd & vel,
-  std::vector<Eigen::MatrixXd> jacobians,
-  Eigen::MatrixXd nullspace) -> Eigen::VectorXd
-{
-  // Base case: no constraints left to solve
-  if (constraints.empty()) {
-    return vel;
-  }
-
-  // Calculate the velocity for the current task
-  const auto task = *constraints.begin();
-  const Eigen::MatrixXd x = (task->jacobian() * nullspace).completeOrthogonalDecomposition().pseudoInverse();
-  const Eigen::VectorXd vel_next = x * (task->gain() * task->error() - task->jacobian() * vel);
-
-  // Recursively solve the remaining tasks
-  jacobians.push_back(task->jacobian());
-  nullspace = compute_jacobian_nullspace(compute_aug_jacobian(jacobians));
-  constraints.erase(constraints.begin());
-
-  return solve_hierarchy(constraints, vel_next, jacobians, nullspace);
-}
-
-/// Inverse kinematics using the task hierarchy.
-auto solve_hierarchy(const hierarchy::ConstraintSet & task_set, const pinocchio::Model & model) -> Eigen::VectorXd
+/// Closed-loop TPIK using the damped pseudoinverse.
+auto cltpik(hierarchy::ConstraintSet task_set, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
 {
   if (task_set.empty()) {
     throw std::runtime_error("No constraints have been added to the task hierarchy.");
   }
 
   auto vel = Eigen::VectorXd::Zero(model.nv);
-  const std::vector<Eigen::MatrixXd> jacobians;
-  auto nullspace = Eigen::MatrixXd::Identity(model.nv, model.nv);
+  std::vector<Eigen::MatrixXd> jacs;
+  Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(model.nv, model.nv);
 
-  return solve_hierarchy(task_set, vel, jacobians, nullspace);
+  for (const auto & task : task_set) {
+    const Eigen::MatrixXd x = task->jacobian() * nullspace;
+    const auto eye = Eigen::MatrixXd::Identity(x.rows(), x.rows());
+
+    const Eigen::MatrixXd x_inv = x.transpose() * (x * x.transpose() + damping * eye).inverse();
+    const Eigen::VectorXd vel = x_inv * (task->gain() * task->error() - task->jacobian() * vel);
+
+    jacs.push_back(task->jacobian());
+    nullspace = compute_jacobian_nullspace(compute_aug_jacobian(jacs));
+  }
+
+  return vel;
 }
 
 }  // namespace
 
-auto TaskPriorityIKSolver::solve(const rclcpp::Duration & period) const -> trajectory_msgs::msg::JointTrajectoryPoint
+auto TaskPriorityIKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
 {
+  pinocchio::forwardKinematics(*model_, *data_, q);
+  pinocchio::updateFramePlacements(*model_, *data_);
+  pinocchio::computeJointJacobians(*model_, *data_);
+}
+
+auto TaskPriorityIKSolver::solve(
+  const rclcpp::Duration & period,
+  const Eigen::Affine3d & target_pose,
+  const Eigen::VectorXd & q) const -> trajectory_msgs::msg::JointTrajectoryPoint
+{
+  // Update pinocchio data
+  update_pinocchio(q);
+
+  // TODO(evan-palmer): update the constraints with the current state
+
+  // Get the power set of the task hierarchy
   const auto hierarchies = task_hierarchy_.hierarchies();
 
   if (hierarchies.empty()) {
@@ -179,13 +190,13 @@ auto TaskPriorityIKSolver::solve(const rclcpp::Duration & period) const -> traje
   const auto set_constraints = task_hierarchy_.set_constraints();
 
   if (set_constraints.empty()) {
-    solution = solve_hierarchy(hierarchies.front(), *model_);
+    solution = cltpik(hierarchies.front(), *model_, damping_);
   } else {
     std::vector<Eigen::VectorXd> solutions;
     solutions.reserve(hierarchies.size());
 
     for (const auto & tasks : hierarchies) {
-      const Eigen::VectorXd current_solution = solve_hierarchy(tasks, *model_);
+      const Eigen::VectorXd current_solution = cltpik(tasks, *model_, damping_);
 
       // Check if the solution violates any set constraints
       bool valid = true;
@@ -218,11 +229,12 @@ auto TaskPriorityIKSolver::solve(const rclcpp::Duration & period) const -> traje
     solution = *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
   }
 
+  // Integrate the solution to get the new joint positions
+  const Eigen::VectorXd q_next = pinocchio::integrate(*model_, q, period.seconds() * solution);
+
   // Convert the solution into a JointTrajectoryPoint
   trajectory_msgs::msg::JointTrajectoryPoint point;
-
-  // TODO(evan-palmer): Forward kinematics to get the joint positions from the solution
-
+  point.time_from_start = period;
   // TODO(evan-palmer): Fill in the joint positions and velocities
 
   return point;

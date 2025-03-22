@@ -3,9 +3,9 @@
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <rclcpp/rclcpp.hpp>
 
 #include "ik_solver.hpp"
-#include "rclcpp/rclcpp.hpp"
 
 namespace ik_solvers
 {
@@ -183,18 +183,18 @@ class TaskPriorityIKSolver : public IKSolver
 public:
   TaskPriorityIKSolver() = default;
 
-  auto add_constraint(const std::shared_ptr<hierarchy::Constraint> & constraint) -> void
-  {
-    task_hierarchy_.insert(constraint);
-  };
-
-  auto clear_constraints() -> void { task_hierarchy_.clear(); };
-
-  [[nodiscard]] auto solve(const rclcpp::Duration & period) const
-    -> trajectory_msgs::msg::JointTrajectoryPoint override;
+  [[nodiscard]] auto solve(
+    const rclcpp::Duration & period,
+    const Eigen::Affine3d & target_pose,
+    const Eigen::VectorXd & q) const -> trajectory_msgs::msg::JointTrajectoryPoint override;
 
 private:
+  auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
+
   hierarchy::TaskHierarchy task_hierarchy_;
+
+  // TODO(evan-palmer): Make this a parameter
+  double damping_{0.01};
 };
 
 }  // namespace ik_solvers
