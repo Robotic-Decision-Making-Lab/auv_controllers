@@ -2,8 +2,11 @@
 
 #include <concepts>
 #include <cstdint>
+#include <expected>
 #include <functional>
+#include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <string>
 
 #include "ik_solver.hpp"
 
@@ -174,7 +177,7 @@ public:
     double lb,
     double tol,
     double activation,
-    int joint_id,
+    const std::string & joint_name,
     double gain,
     int priority = 1);
 };
@@ -186,15 +189,14 @@ class TaskPriorityIKSolver : public IKSolver
 public:
   TaskPriorityIKSolver() = default;
 
-  [[nodiscard]] auto solve(
+protected:
+  [[nodiscard]] auto solve_ik(
     const rclcpp::Duration & period,
     const Eigen::Affine3d & target_pose,
-    const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint override;
+    const Eigen::VectorXd & q) -> std::expected<Eigen::VectorXd, SolverError> override;
 
 private:
-  auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
-
-  hierarchy::TaskHierarchy task_hierarchy_;
+  hierarchy::TaskHierarchy hierarchy_;
 
   // TODO(evan-palmer): Make this a parameter
   double damping_{0.01};

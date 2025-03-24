@@ -7,6 +7,7 @@
 #include <pinocchio/algorithm/kinematics.hpp>
 #include <pluginlib/class_list_macros.hpp>
 #include <ranges>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <vector>
 
 namespace ik_solvers
@@ -31,6 +32,7 @@ auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
   return result;
 }
 
+/// Filter the set of tasks to include only set constraints.
 auto filter_set_constraints(const ConstraintSet & tasks) -> ConstraintSet
 {
   ConstraintSet result;
@@ -41,6 +43,7 @@ auto filter_set_constraints(const ConstraintSet & tasks) -> ConstraintSet
   return result;
 }
 
+/// Filter the set of tasks to include only equality constraints.
 auto filter_equality_constraints(const ConstraintSet & tasks) -> ConstraintSet
 {
   ConstraintSet result;
@@ -48,6 +51,24 @@ auto filter_equality_constraints(const ConstraintSet & tasks) -> ConstraintSet
     tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
     std::inserter(result, result.end()));
   return result;
+}
+
+/// Compute the error between two quaternions using eq. 2.12 in Gianluca Antonelli's Underwater Robotics book.
+/// Note that we only need to minimize the scalar part of the error.
+auto quaternion_error(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & q2) -> Eigen::Vector3d
+{
+  const Eigen::Vector3d q1_vec = q1.vec();
+  const Eigen::Vector3d q2_vec = q2.vec();
+
+  const double q1_w = q1.w();
+  const double q2_w = q2.w();
+
+  const Eigen::Vector3d vec_error = q2_w * q1_vec - q1_w * q2_vec + q2_vec.cross(q1_vec);
+
+  // This is how we would compute the scalar error if we needed it
+  // const double scalar_error = q1_w * q2_w + q1_vec.dot(q2_vec);
+
+  return {vec_error.x(), vec_error.y(), vec_error.z()};
 }
 
 }  // namespace
@@ -97,6 +118,43 @@ auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
   return result;
 }
 
+PoseConstraint::PoseConstraint(
+  const std::shared_ptr<pinocchio::Model> & model,
+  const std::shared_ptr<pinocchio::Data> & data,
+  const Eigen::Affine3d & primal,
+  const Eigen::Affine3d & constraint,
+  const std::string & frame,
+  double gain,
+  int priority)
+: Constraint(primal.matrix(), constraint.matrix(), gain, priority)
+{
+  error_ = Eigen::VectorXd::Zero(6);
+  error_.head<3>() = (constraint.translation() - primal.translation()).eval();
+  error_.tail<3>() = quaternion_error(Eigen::Quaterniond(constraint.rotation()), Eigen::Quaterniond(primal.rotation()));
+
+  pinocchio::computeJointJacobians(*model, *data);
+  jacobian_ = pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED);
+}
+
+JointConstraint::JointConstraint(
+  const std::shared_ptr<pinocchio::Model> & model,
+  const std::shared_ptr<pinocchio::Data> & data,
+  double primal,
+  double ub,
+  double lb,
+  double tol,
+  double activation,
+  const std::string & joint_name,
+  double gain,
+  int priority)
+: SetConstraint(primal, ub, lb, tol, activation, gain, priority)
+{
+  error_ = constraint_ - primal_;
+
+  pinocchio::computeJointJacobians(*model, *data);
+  jacobian_ = pinocchio::getJointJacobian(*model, *data, model->getJointId(joint_name), pinocchio::LOCAL_WORLD_ALIGNED);
+}
+
 }  // namespace hierarchy
 
 namespace
@@ -137,7 +195,7 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
   return augmented;
 }
 
-/// Closed-loop TPIK using the damped pseudoinverse.
+/// Closed-loop task priority IK using the damped pseudoinverse.
 auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping) -> Eigen::VectorXd
 {
   if (tasks.empty()) {
@@ -167,7 +225,7 @@ auto search_solutions(
   const hierarchy::ConstraintSet & set_tasks,
   const std::vector<hierarchy::ConstraintSet> & hierarchies,
   size_t nv,
-  double damping) -> Eigen::VectorXd
+  double damping) -> std::expected<Eigen::VectorXd, SolverError>
 {
   Eigen::VectorXd solution;
 
@@ -204,7 +262,7 @@ auto search_solutions(
     }
 
     if (solutions.empty()) {
-      throw std::runtime_error("No valid solutions found for the task hierarchy.");
+      return std::unexpected(SolverError::NO_SOLUTION);
     }
 
     // Choose the solution with the smallest norm
@@ -214,48 +272,34 @@ auto search_solutions(
   return solution;
 }
 
-}  // namespace
-
-auto TaskPriorityIKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
+auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
 {
-  pinocchio::forwardKinematics(*model_, *data_, q);
-  pinocchio::updateFramePlacements(*model_, *data_);
-  pinocchio::computeJointJacobians(*model_, *data_);
+  Eigen::Affine3d result;
+  result.translation() = pose.translation();
+  result.linear() = pose.rotation();
+  return result;
 }
 
-auto TaskPriorityIKSolver::solve(
+}  // namespace
+
+auto TaskPriorityIKSolver::solve_ik(
   const rclcpp::Duration & period,
   const Eigen::Affine3d & target_pose,
-  const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint
+  const Eigen::VectorXd & q) -> std::expected<Eigen::VectorXd, SolverError>
 {
-  // Update pinocchio data
-  update_pinocchio(q);
+  hierarchy_.clear();
 
-  // TODO(evan-palmer): insert the constraints
-  task_hierarchy_.clear();
-  // task_hierarchy_.insert(
-  //   std::make_shared<hierarchy::PoseConstraint>(model_, data_, q, target_pose, "end_effector", 0.1));
+  // get the end effector pose as an Eigen Affine3d
+  const Eigen::Affine3d ee_pose = pinocchio_to_eigen(data_->oMf[model_->getFrameId(ee_frame_)]);
 
-  auto hierarchies = task_hierarchy_.hierarchies();
-  if (hierarchies.empty()) {
-    throw std::runtime_error("No constraints have been added to the task hierarchy.");
-  }
+  // insert the pose constraint
+  // TODO(evan-palmer): make the gain a parameter
+  hierarchy_.insert(std::make_shared<hierarchy::PoseConstraint>(model_, data_, ee_pose, target_pose, ee_frame_, 0.1));
 
-  auto set_constraints = task_hierarchy_.set_constraints();
+  // TODO(evan-palmer): insert the set constraints
 
   // Find the safe solutions and choose the one with the smallest norm
-  const Eigen::VectorXd solution =
-    search_solutions(std::move(set_constraints), std::move(hierarchies), model_->nv, damping_);
-
-  // Integrate the solution to get the new joint positions
-  const Eigen::VectorXd q_next = pinocchio::integrate(*model_, q, period.seconds() * solution);
-
-  // Convert the solution into a JointTrajectoryPoint
-  trajectory_msgs::msg::JointTrajectoryPoint point;
-  point.time_from_start = period;
-  // TODO(evan-palmer): Fill in the joint positions and velocities
-
-  return point;
+  return search_solutions(hierarchy_.set_constraints(), hierarchy_.hierarchies(), model_->nv, damping_);
 }
 
 }  // namespace ik_solvers

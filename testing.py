@@ -16,25 +16,19 @@ q = pinocchio.neutral(model)
 q[:3] = np.random.rand(3)
 q[3:7] = rot.as_quat().reshape(-1)
 
-
-print(q)
-
-joint_id = model.getJointId("base_footprint_joint")
-
 # Perform the forward kinematics over the kinematic tree
 pinocchio.forwardKinematics(model, data, q)
+pinocchio.updateFramePlacements(model, data)
 
-# Get the position of the joint
-joint_position = data.joints[joint_id - 1].joint_q
-print(joint_position)
-
-J= pinocchio.computeJointJacobians(model, data, q)
-# print(J)
-base_link_name = "base_link"
+base_link_name = "base_footprint"
 base_link_idx = model.getFrameId(base_link_name)
+base_joint_idx = model.frames[base_link_idx].parent
 
-# Compute the frame Jacobian
+print(rot.as_matrix())
+print(q)
+print(data.oMf[base_link_idx])
+
 J_base = pinocchio.getFrameJacobian(model, data, base_link_idx, pinocchio.ReferenceFrame.WORLD)
-# Print the Jacobian
-print("Jacobian of base_link:")
+
+print("Jacobian of {base_link_name}:")
 print(J_base)
