@@ -22,16 +22,18 @@ public:
   virtual ~IKSolver() = default;
 
   /// Solve the inverse kinematics problem for the given target pose, given the current joint configuration.
+  /// Note that Pinocchio floating base joints are described using the position and flattened quaternion.
+  /// The target pose should be expressed in the world frame.
   [[nodiscard]] virtual auto solve(
     const rclcpp::Duration & period,
     const Eigen::Affine3d & target_pose,
-    const Eigen::VectorXd & q) const -> trajectory_msgs::msg::JointTrajectoryPoint = 0;
+    const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint = 0;
 
 protected:
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_;
 
-  std::unique_ptr<pinocchio::Model> model_;
-  std::unique_ptr<pinocchio::Data> data_;
+  std::shared_ptr<pinocchio::Model> model_;
+  std::shared_ptr<pinocchio::Data> data_;
 };
 
 }  // namespace ik_solvers

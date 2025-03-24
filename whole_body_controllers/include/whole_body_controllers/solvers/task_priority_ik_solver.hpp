@@ -24,27 +24,14 @@ public:
     priority_(priority),
     gain_(gain){};
 
-  /// Create a new constraint given the constraint value, task priority and feedback gain.
-  Constraint(Eigen::MatrixXd constraint, int priority, double gain)
-  : primal_(Eigen::MatrixXd::Zero(constraint.rows(), constraint.cols())),
-    constraint_(constraint),
-    priority_(priority),
-    gain_(gain){};
-
   /// Destructor.
   virtual ~Constraint() = default;
 
-  /// Update the primal value for the constraint.
-  [[nodiscard]] auto update_primal(const Eigen::MatrixXd & primal) -> void { primal_ = primal; };
-
-  /// Get the primal value for the constraint.
-  [[nodiscard]] auto primal() const -> Eigen::MatrixXd { return primal_; };
-
   /// Compute the Jacobian for the constraint.
-  [[nodiscard]] virtual auto jacobian() const -> Eigen::MatrixXd = 0;
+  [[nodiscard]] auto jacobian() const -> Eigen::MatrixXd { return jacobian_; };
 
   /// Compute the error between the primal and constraint.
-  [[nodiscard]] virtual auto error() const -> Eigen::VectorXd = 0;
+  [[nodiscard]] auto error() const -> Eigen::VectorXd { return error_; };
 
   /// Get the constraint priority.
   [[nodiscard]] auto priority() const -> int { return priority_; }
@@ -55,6 +42,12 @@ public:
 protected:
   Eigen::MatrixXd primal_;
   Eigen::MatrixXd constraint_;
+
+  // The constraints are designed to be single-use objects, so the Jacobian and error can be stored as class members
+  // and computed in the constructor.
+  Eigen::MatrixXd jacobian_;
+  Eigen::VectorXd error_;
+
   int priority_;
   double gain_;
 };
@@ -72,12 +65,17 @@ public:
     upper_safety_(ub - tol),
     lower_safety_(lb + tol),
     upper_threshold_(ub - tol - activation),
-    lower_threshold_(lb + tol + activation){};
-
-  /// Create a new set constraint given the constraint value, constraint bounds, tolerance,
-  /// activation threshold, task priority,and gain.
-  SetConstraint(double ub, double lb, double tol, double activation, int priority, double gain)
-  : SetConstraint(0.0, ub, lb, tol, activation, priority, gain){};
+    lower_threshold_(lb + tol + activation)
+  {
+    // Set the constraint value based on whether or not the task is active
+    if (primal < lower_threshold_ + std::numeric_limits<double>::epsilon()) {
+      constraint_ = Eigen::MatrixXd::Constant(1, 1, lower_safety_);
+    } else if (primal > upper_threshold_ - std::numeric_limits<double>::epsilon()) {
+      constraint_ = Eigen::MatrixXd::Constant(1, 1, upper_safety_);
+    } else {
+      constraint_ = primal_;
+    }
+  };
 
   /// Check whether or not the constraint is active. Set constraints are only active when the current value is within
   /// the activation threshold for the task.
@@ -87,50 +85,7 @@ public:
     return primal < lower_threshold_ || primal > upper_threshold_;
   };
 
-  [[nodiscard]] auto update_primal(const Eigen::MatrixXd & primal) -> void override
-  {
-    primal_ = primal;
-    update_constraint();
-  };
-
-  auto update_primal(double primal) -> void { update_primal(Eigen::MatrixXd::Constant(1, 1, primal)); }
-
-  auto primal() const -> double { return primal_.value(); }
-
-  /// Get the upper limit of the constraint.
-  [[nodiscard]] auto upper_limit() const -> double { return upper_limit_; }
-
-  /// Get the lower limit of the constraint.
-  [[nodiscard]] auto lower_limit() const -> double { return lower_limit_; }
-
-  /// Get the upper safety limit for the constraint.
-  /// The safety value serves as a target point for the algorithm to target when the activation threshold is exceeded.
-  [[nodiscard]] auto upper_safety() const -> double { return upper_safety_; }
-
-  /// Get the lower safety limit for the constraint.
-  /// The safety value serves as a target point for the algorithm to target when the activation threshold is exceeded.
-  [[nodiscard]] auto lower_safety() const -> double { return lower_safety_; }
-
-  /// Get the upper activation threshold for the constraint.
-  [[nodiscard]] auto upper_threshold() const -> double { return upper_threshold_; }
-
-  /// Get the lower activation threshold for the constraint.
-  [[nodiscard]] auto lower_threshold() const -> double { return lower_threshold_; }
-
 protected:
-  auto update_constraint() -> void
-  {
-    // Set the constraint value based on whether or not the task is active
-    double primal = primal_.value();
-    if (primal < lower_threshold_ + std::numeric_limits<double>::epsilon()) {
-      constraint_ = Eigen::MatrixXd::Constant(1, 1, lower_safety_);
-    } else if (primal > upper_threshold_ - std::numeric_limits<double>::epsilon()) {
-      constraint_ = Eigen::MatrixXd::Constant(1, 1, upper_safety_);
-    } else {
-      constraint_ = primal_;
-    }
-  }
-
   double upper_limit_, lower_limit_;
   double upper_safety_, lower_safety_;
   double upper_threshold_, lower_threshold_;
@@ -176,6 +131,42 @@ private:
   ConstraintSet constraints_;
 };
 
+/// Class used to manage an end effector pose constraint.
+class PoseConstraint : public Constraint
+{
+public:
+  /// Create a new end effector pose constraint given the system model and data, the primal and constraint poses, the
+  /// name of the end effector frame, and the feedback gain. The constraint priority is set to 2 by default.
+  PoseConstraint(
+    const std::shared_ptr<pinocchio::Model> & model,
+    const std::shared_ptr<pinocchio::Data> & data,
+    const Eigen::Affine3d & primal,
+    const Eigen::Affine3d & constraint,
+    const std::string & frame,
+    double gain,
+    int priority = 2);
+};
+
+/// Class used to manage a joint constraint.
+class JointConstraint : public SetConstraint
+{
+public:
+  /// Create a new joint constraint given the system model and data, the current joint value, the upper and lower bounds
+  /// for the joint, the tolerance, the activation threshold, the joint ID, the feedback gain, and the constraint
+  /// priority.
+  JointConstraint(
+    const std::shared_ptr<pinocchio::Model> & model,
+    const std::shared_ptr<pinocchio::Data> & data,
+    double primal,
+    double ub,
+    double lb,
+    double tol,
+    double activation,
+    int joint_id,
+    double gain,
+    int priority = 1);
+};
+
 }  // namespace hierarchy
 
 class TaskPriorityIKSolver : public IKSolver
@@ -186,7 +177,7 @@ public:
   [[nodiscard]] auto solve(
     const rclcpp::Duration & period,
     const Eigen::Affine3d & target_pose,
-    const Eigen::VectorXd & q) const -> trajectory_msgs::msg::JointTrajectoryPoint override;
+    const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint override;
 
 private:
   auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
@@ -195,6 +186,11 @@ private:
 
   // TODO(evan-palmer): Make this a parameter
   double damping_{0.01};
+
+  // TODO(evan-palmer): Add ROS parameters for the task hierarchy
+  // joint safety tolerance
+  // activation threshold
+  // feedback gains
 };
 
 }  // namespace ik_solvers

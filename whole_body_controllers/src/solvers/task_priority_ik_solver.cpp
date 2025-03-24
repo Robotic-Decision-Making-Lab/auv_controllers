@@ -5,6 +5,7 @@
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/jacobian.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
+#include <pluginlib/class_list_macros.hpp>
 #include <ranges>
 #include <vector>
 
@@ -136,7 +137,7 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
 }
 
 /// Closed-loop TPIK using the damped pseudoinverse.
-auto cltpik(const hierarchy::ConstraintSet & tasks, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
+auto tpik(const hierarchy::ConstraintSet & tasks, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
 {
   if (tasks.empty()) {
     throw std::runtime_error("No constraints have been added to the task hierarchy.");
@@ -172,12 +173,15 @@ auto TaskPriorityIKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> 
 auto TaskPriorityIKSolver::solve(
   const rclcpp::Duration & period,
   const Eigen::Affine3d & target_pose,
-  const Eigen::VectorXd & q) const -> trajectory_msgs::msg::JointTrajectoryPoint
+  const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint
 {
   // Update pinocchio data
   update_pinocchio(q);
 
-  // TODO(evan-palmer): update the constraints with the current state
+  // TODO(evan-palmer): insert the constraints
+  task_hierarchy_.clear();
+  // task_hierarchy_.insert(
+  //   std::make_shared<hierarchy::PoseConstraint>(model_, data_, q, target_pose, "end_effector", 0.1));
 
   // Get the power set of the task hierarchy
   const auto hierarchies = task_hierarchy_.hierarchies();
@@ -190,13 +194,13 @@ auto TaskPriorityIKSolver::solve(
   const auto set_constraints = task_hierarchy_.set_constraints();
 
   if (set_constraints.empty()) {
-    solution = cltpik(hierarchies.front(), *model_, damping_);
+    solution = tpik(hierarchies.front(), *model_, damping_);
   } else {
     std::vector<Eigen::VectorXd> solutions;
     solutions.reserve(hierarchies.size());
 
     for (const auto & tasks : hierarchies) {
-      const Eigen::VectorXd current_solution = cltpik(tasks, *model_, damping_);
+      const Eigen::VectorXd current_solution = tpik(tasks, *model_, damping_);
 
       // Check if the solution violates any set constraints
       bool valid = true;
@@ -241,3 +245,5 @@ auto TaskPriorityIKSolver::solve(
 }
 
 }  // namespace ik_solvers
+
+PLUGINLIB_EXPORT_CLASS(ik_solver::TaskPriorityIKSolver, ik_solver::IKSolver)
