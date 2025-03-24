@@ -236,12 +236,12 @@ auto TaskPriorityIKSolver::solve(
   // task_hierarchy_.insert(
   //   std::make_shared<hierarchy::PoseConstraint>(model_, data_, q, target_pose, "end_effector", 0.1));
 
-  const auto hierarchies = task_hierarchy_.hierarchies();
+  auto hierarchies = task_hierarchy_.hierarchies();
   if (hierarchies.empty()) {
     throw std::runtime_error("No constraints have been added to the task hierarchy.");
   }
 
-  const auto set_constraints = task_hierarchy_.set_constraints();
+  auto set_constraints = task_hierarchy_.set_constraints();
 
   // Find the safe solutions and choose the one with the smallest norm
   const Eigen::VectorXd solution =
@@ -260,4 +260,4 @@ auto TaskPriorityIKSolver::solve(
 
 }  // namespace ik_solvers
 
-PLUGINLIB_EXPORT_CLASS(ik_solver::TaskPriorityIKSolver, ik_solver::IKSolver)
+PLUGINLIB_EXPORT_CLASS(ik_solvers::TaskPriorityIKSolver, ik_solvers::IKSolver)
