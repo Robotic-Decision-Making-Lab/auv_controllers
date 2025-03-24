@@ -27,6 +27,9 @@ public:
   /// Destructor.
   virtual ~Constraint() = default;
 
+  /// Get the primal value for the constraint.
+  [[nodiscard]] auto primal() const -> Eigen::MatrixXd { return primal_; };
+
   /// Compute the Jacobian for the constraint.
   [[nodiscard]] auto jacobian() const -> Eigen::MatrixXd { return jacobian_; };
 
@@ -84,6 +87,15 @@ public:
     double primal = primal_.value();
     return primal < lower_threshold_ || primal > upper_threshold_;
   };
+
+  /// Get the primal value for the constraint.
+  [[nodiscard]] auto primal() const -> double { return primal_.value(); };
+
+  /// Get the upper activation threshold for the constraint.
+  [[nodiscard]] auto upper_threshold() const -> double { return upper_threshold_; }
+
+  /// Get the lower activation threshold for the constraint.
+  [[nodiscard]] auto lower_threshold() const -> double { return lower_threshold_; }
 
 protected:
   double upper_limit_, lower_limit_;

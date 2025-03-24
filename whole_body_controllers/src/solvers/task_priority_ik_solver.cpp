@@ -105,6 +105,7 @@ namespace
 /// Compute the nullspace of the Jacobian matrix using the pseudoinverse.
 auto compute_jacobian_nullspace(const Eigen::MatrixXd & aug_jacobian) -> Eigen::MatrixXd
 {
+  // TODO(evan-palmer): do we need the damping here?
   const Eigen::MatrixXd eye = Eigen::MatrixXd::Identity(aug_jacobian.cols(), aug_jacobian.cols());
   return eye - (aug_jacobian.completeOrthogonalDecomposition().pseudoInverse() * aug_jacobian);
 }
@@ -137,15 +138,15 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
 }
 
 /// Closed-loop TPIK using the damped pseudoinverse.
-auto tpik(const hierarchy::ConstraintSet & tasks, const pinocchio::Model & model, double damping) -> Eigen::VectorXd
+auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping) -> Eigen::VectorXd
 {
   if (tasks.empty()) {
     throw std::runtime_error("No constraints have been added to the task hierarchy.");
   }
 
-  auto vel = Eigen::VectorXd::Zero(model.nv);
+  auto vel = Eigen::VectorXd::Zero(nv);
   std::vector<Eigen::MatrixXd> jacs;
-  Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(model.nv, model.nv);
+  Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(nv, nv);
 
   for (const auto & task : tasks) {
     const Eigen::MatrixXd x = task->jacobian() * nullspace;
@@ -161,50 +162,27 @@ auto tpik(const hierarchy::ConstraintSet & tasks, const pinocchio::Model & model
   return vel;
 }
 
-}  // namespace
-
-auto TaskPriorityIKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
+/// Search for the feasible solutions to the task hierarchy and return the one with the smallest norm.
+auto search_solutions(
+  const hierarchy::ConstraintSet & set_tasks,
+  const std::vector<hierarchy::ConstraintSet> & hierarchies,
+  size_t nv,
+  double damping) -> Eigen::VectorXd
 {
-  pinocchio::forwardKinematics(*model_, *data_, q);
-  pinocchio::updateFramePlacements(*model_, *data_);
-  pinocchio::computeJointJacobians(*model_, *data_);
-}
-
-auto TaskPriorityIKSolver::solve(
-  const rclcpp::Duration & period,
-  const Eigen::Affine3d & target_pose,
-  const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint
-{
-  // Update pinocchio data
-  update_pinocchio(q);
-
-  // TODO(evan-palmer): insert the constraints
-  task_hierarchy_.clear();
-  // task_hierarchy_.insert(
-  //   std::make_shared<hierarchy::PoseConstraint>(model_, data_, q, target_pose, "end_effector", 0.1));
-
-  // Get the power set of the task hierarchy
-  const auto hierarchies = task_hierarchy_.hierarchies();
-
-  if (hierarchies.empty()) {
-    throw std::runtime_error("No constraints have been added to the task hierarchy.");
-  }
-
   Eigen::VectorXd solution;
-  const auto set_constraints = task_hierarchy_.set_constraints();
 
-  if (set_constraints.empty()) {
-    solution = tpik(hierarchies.front(), *model_, damping_);
+  if (set_tasks.empty()) {
+    solution = tpik(hierarchies.front(), nv, damping);
   } else {
     std::vector<Eigen::VectorXd> solutions;
     solutions.reserve(hierarchies.size());
 
     for (const auto & tasks : hierarchies) {
-      const Eigen::VectorXd current_solution = tpik(tasks, *model_, damping_);
+      const Eigen::VectorXd current_solution = tpik(tasks, nv, damping);
 
       // Check if the solution violates any set constraints
       bool valid = true;
-      for (const auto & constraint : set_constraints) {
+      for (const auto & constraint : set_tasks) {
         auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
         const double pred = (constraint->jacobian() * current_solution).value();
         const double primal = set_task->primal();
@@ -232,6 +210,42 @@ auto TaskPriorityIKSolver::solve(
     // Choose the solution with the smallest norm
     solution = *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
   }
+
+  return solution;
+}
+
+}  // namespace
+
+auto TaskPriorityIKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
+{
+  pinocchio::forwardKinematics(*model_, *data_, q);
+  pinocchio::updateFramePlacements(*model_, *data_);
+  pinocchio::computeJointJacobians(*model_, *data_);
+}
+
+auto TaskPriorityIKSolver::solve(
+  const rclcpp::Duration & period,
+  const Eigen::Affine3d & target_pose,
+  const Eigen::VectorXd & q) -> trajectory_msgs::msg::JointTrajectoryPoint
+{
+  // Update pinocchio data
+  update_pinocchio(q);
+
+  // TODO(evan-palmer): insert the constraints
+  task_hierarchy_.clear();
+  // task_hierarchy_.insert(
+  //   std::make_shared<hierarchy::PoseConstraint>(model_, data_, q, target_pose, "end_effector", 0.1));
+
+  const auto hierarchies = task_hierarchy_.hierarchies();
+  if (hierarchies.empty()) {
+    throw std::runtime_error("No constraints have been added to the task hierarchy.");
+  }
+
+  const auto set_constraints = task_hierarchy_.set_constraints();
+
+  // Find the safe solutions and choose the one with the smallest norm
+  const Eigen::VectorXd solution =
+    search_solutions(std::move(set_constraints), std::move(hierarchies), model_->nv, damping_);
 
   // Integrate the solution to get the new joint positions
   const Eigen::VectorXd q_next = pinocchio::integrate(*model_, q, period.seconds() * solution);
