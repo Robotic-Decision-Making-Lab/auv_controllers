@@ -14,7 +14,7 @@ integral_sliding_mode_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The prefix of the reference controller to send command to. This can be used to configure command interfaces in chained mode."
+    description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
 
   tf:
     base_frame:

@@ -1,3 +1,23 @@
+// Copyright 2025, Evan Palmer
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include "whole_body_controllers/solvers/task_priority_ik_solver.hpp"
 
 #include <algorithm>
@@ -275,12 +295,12 @@ auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
 
 }  // namespace
 
-auto TaskPriorityIKSolver::init_solver(
+auto TaskPriorityIKSolver::initialize(
   const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
   const std::shared_ptr<pinocchio::Model> & model,
   const std::shared_ptr<pinocchio::Data> & data) -> void
 {
-  IKSolver::init_solver(node, model, data);
+  IKSolver::initialize(node, model, data);
   param_listener_ = std::make_shared<task_priority_ik_solver::ParamListener>(node_);
   params_ = param_listener_->get_params();
 }
@@ -302,7 +322,6 @@ auto TaskPriorityIKSolver::configure_parameters() -> void
   damping_ = params_.damping;
 
   // Update the frame names
-  base_frame_ = params_.base_frame_id;
   world_frame_ = params_.map_frame_id;
   ee_frame_ = params_.end_effector_frame_id;
 }

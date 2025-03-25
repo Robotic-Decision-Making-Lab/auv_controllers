@@ -5,12 +5,6 @@ task_priority_ik_solver:
     read_only: true
     description: "The name of the world frame ID."
 
-  base_frame_id:
-    type: string
-    default_value: "base_link"
-    read_only: true
-    description: "The name of the vehicle base link frame ID."
-
   end_effector_frame_id:
     type: string
     default_value: "tcp"

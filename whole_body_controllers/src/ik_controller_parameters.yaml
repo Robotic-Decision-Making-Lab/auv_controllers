@@ -1,0 +1,34 @@
+ik_controller:
+  ik_solver:
+    type: string
+    default_value: "task_priority_ik_solver"
+    read_only: true
+    description: "The name of the IK solver to use."
+    validation:
+      one_of<>: [["task_priority_ik_solver"]]
+
+  reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
+
+  use_external_measured_states:
+    type: bool
+    default_value: false
+    description: "Use state measurements from a topic instead of a state interface."
+
+  base_frame_id:
+    type: string
+    default_value: "base_link"
+    description: "The name of the base link of the robot."
+
+  end_effector_frame_id:
+    type: string
+    default_value: "base_link"
+    description: "The name of the base link of the robot."
+
+  manipulator_joints:
+    type: string_array
+    default_value: []
+    description: "The list of controlled manipulator joints."
