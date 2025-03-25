@@ -28,7 +28,7 @@ public:
   : primal_(primal),
     constraint_(constraint),
     priority_(priority),
-    gain_(gain){};
+    gain_(gain) {};
 
   /// Destructor.
   virtual ~Constraint() = default;
@@ -65,7 +65,7 @@ public:
   /// Create a new set constraint given the current primal value, constraint value, constraint bounds, tolerance,
   /// activation threshold, task priority,and gain.
   SetConstraint(double primal, double ub, double lb, double tol, double activation, int priority, double gain)
-  : Constraint(Eigen::MatrixXd::Constant(1, 1, primal), Eigen::MatrixXd::Zero(1), priority, gain),
+  : Constraint(Eigen::MatrixXd::Constant(1, 1, primal), Eigen::MatrixXd::Zero(1, 1), priority, gain),
     upper_limit_(ub),
     lower_limit_(lb),
     upper_safety_(ub - tol),
@@ -134,7 +134,6 @@ public:
   /// The constraint priority is set to 1 by default.
   JointConstraint(
     const std::shared_ptr<pinocchio::Model> & model,
-    const std::shared_ptr<pinocchio::Data> & data,
     double primal,
     double ub,
     double lb,

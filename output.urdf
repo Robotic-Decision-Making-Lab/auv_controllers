@@ -75,6 +75,46 @@
     <parent link="camera_mount_link" />
     <child link="camera_link" />
   </joint>
+  <link name="manipulator_base_link">
+    <inertial>
+      <mass value="0.0001" />
+      <inertia ixx="0.0001"
+               ixy="0"
+               ixz="0"
+               iyy="0.0001"
+               iyz="0"
+               izz="0.0001" />
+    </inertial>
+  </link>
+  <joint name="manipulator_base_joint"
+         type="fixed">
+    <origin rpy="0 0 0"
+            xyz="0.01 -0.01 0.01" />
+    <parent link="base_link" />
+    <child link="manipulator_base_link" />
+  </joint>
+  <link name="manipulator_link">
+    <inertial>
+      <mass value="0.0001" />
+      <inertia ixx="0.0001"
+               ixy="0"
+               ixz="0"
+               iyy="0.0001"
+               iyz="0"
+               izz="0.0001" />
+    </inertial>
+  </link>
+  <joint name="axis_d"
+         type="revolute">
+    <parent link="manipulator_base_link" />
+    <child link="manipulator_link" />
+    <origin xyz="-0.02 0 0.033" />
+    <axis xyz="0 1 0" />
+    <limit effort="9.0"
+           lower="-3.49"
+           upper="3.49"
+           velocity="0.5" />
+  </joint>
   <!-- <link name="thruster1">
     <inertial>
       <mass value="0.002" />

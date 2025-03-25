@@ -1,11 +1,11 @@
-task_priority_ik_controller:
+task_priority_ik_solver:
   map_frame_id:
     type: string
     default_value: "map"
     read_only: true
     description: "The name of the world frame ID."
 
-  base_link_frame_id:
+  base_frame_id:
     type: string
     default_value: "base_link"
     read_only: true
@@ -17,37 +17,41 @@ task_priority_ik_controller:
     read_only: true
     description: "The end effector frame ID."
 
-  revolute_joints:
+  damping:
+    type: double
+    default_value: 0.000001
+    read_only: true
+    description: "The damping factor for the pseudo-inverse calculation."
+
+  constrained_joints:
     type: string_array
     default_value: []
     read_only: true
-    description: "The list of controlled revolute joints."
+    description: "The list of constrained manipulator joints."
 
-  end_effector_task_hierarchy:
-    pose_task:
-      gain:
+  end_effector_pose_task:
+    gain:
+      type: double
+      default_value: 0.0
+      read_only: false
+      description: "The end effector pose tracking task gain."
+
+  joint_limit_task:
+    __map_constrained_joints:
+      safety_tolerance:
         type: double
         default_value: 0.0
         read_only: true
-        description: "The end effector pose tracking task gain."
+        description: "The safety tolerance for the joint limit task."
 
-  revolute_task_hierarchy:
-    __map_revolute_joints:
-      joint_angle_task:
-        safety_tolerance:
-          type: double
-          default_value: 0.1
-          read_only: true
-          description: "The safety tolerance for the joint angle limit task (rad)."
+      activation_threshold:
+        type: double
+        default_value: 0.0
+        read_only: true
+        description: "The distance from a safety limit that activates a set task when crossed (rad)."
 
-        activation_threshold:
-          type: double
-          default_value: 0.0
-          read_only: true
-          description: "The distance from a safety limit that activates a set task when crossed (rad)."
-
-        gain:
-          type: double
-          default_value: 0.0
-          read_only: true
-          description: "The gain for the joint angle limit task."
+      gain:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The gain for the manipulator joint limit task."
