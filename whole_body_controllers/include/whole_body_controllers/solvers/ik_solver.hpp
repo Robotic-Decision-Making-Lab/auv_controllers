@@ -20,8 +20,13 @@ namespace ik_solvers
 /// Error codes for the inverse kinematics solvers.
 enum class SolverError : std::uint8_t
 {
+  // No solution was found for the IK problem using the current solver.
   NO_SOLUTION,
+
+  // The target pose could not be transformed into the world frame.
   TRANSFORM_ERROR,
+
+  // The solver encountered an error while solving the IK problem.
   SOLVER_ERROR
 };
 
@@ -35,35 +40,44 @@ public:
   /// Destructor.
   virtual ~IKSolver() = default;
 
-  /// Solve the inverse kinematics problem for the given target pose, given the current joint configuration.
+  /// Initialize the solver.
+  virtual auto init_solver(
+    const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
+    const std::shared_ptr<pinocchio::Model> & model,
+    const std::shared_ptr<pinocchio::Data> & data) -> void;
+
+  /// Solve the inverse kinematics problem for a target pose, given the current integration period and joint
+  /// configuration.
   [[nodiscard]] auto solve(
     const rclcpp::Duration & period,
     const geometry_msgs::msg::PoseStamped & target_pose,
     const Eigen::VectorXd & q) -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>;
 
 protected:
-  /// Update the Pinocchio data
-  auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
-
-  /// Transform a target pose into the appropriate frame for the solver.
-  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & target_pose) const
-    -> geometry_msgs::msg::PoseStamped;
-
-  /// Private method to solve the IK problem, which is called by the public API.
-  [[nodiscard]] virtual auto solve_ik(
-    const rclcpp::Duration & period,
-    const Eigen::Affine3d & target_pose,
-    const Eigen::VectorXd & q) -> std::expected<Eigen::VectorXd, SolverError> = 0;
+  /// Solve the IK problem for the given target pose and joint configuration.
+  ///
+  /// This is wrapped by the public API to handle the transformation of the target pose into the appropriate frame.
+  /// and conversion of the result into a `JointTrajectoryPoint`.
+  [[nodiscard]] virtual auto solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+    -> std::expected<Eigen::VectorXd, SolverError> = 0;
 
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  std::string world_frame_, ee_frame_;
+  std::string world_frame_{"map"}, base_frame_{"base_link"}, ee_frame_{"tcp"};
 
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
+
+private:
+  /// Update the Pinocchio data given the current joint configuration.
+  auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
+
+  /// Transform a target end effector pose into the appropriate frame for the solver.
+  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & target_pose) const
+    -> geometry_msgs::msg::PoseStamped;
 };
 
 }  // namespace ik_solvers

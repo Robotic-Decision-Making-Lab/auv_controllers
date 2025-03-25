@@ -32,29 +32,8 @@ auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
   return result;
 }
 
-/// Filter the set of tasks to include only set constraints.
-auto filter_set_constraints(const ConstraintSet & tasks) -> ConstraintSet
-{
-  ConstraintSet result;
-  std::ranges::copy(
-    tasks |
-      std::views::filter([](const auto & task) { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
-    std::inserter(result, result.end()));
-  return result;
-}
-
-/// Filter the set of tasks to include only equality constraints.
-auto filter_equality_constraints(const ConstraintSet & tasks) -> ConstraintSet
-{
-  ConstraintSet result;
-  std::ranges::copy(
-    tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
-    std::inserter(result, result.end()));
-  return result;
-}
-
 /// Compute the error between two quaternions using eq. 2.12 in Gianluca Antonelli's Underwater Robotics book.
-/// Note that we only need to minimize the scalar part of the error.
+/// Note that we only need to minimize the vector part of the error.
 auto quaternion_error(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & q2) -> Eigen::Vector3d
 {
   const Eigen::Vector3d q1_vec = q1.vec();
@@ -77,14 +56,25 @@ auto TaskHierarchy::insert(const std::shared_ptr<Constraint> & constraint) -> vo
 
 auto TaskHierarchy::clear() -> void { constraints_.clear(); }
 
-auto TaskHierarchy::set_constraints() const -> ConstraintSet
+auto TaskHierarchy::set_constraints() const -> ConstraintSet  // NOLINT
 {
-  return filter_set_constraints(active_tasks(constraints_));
+  const ConstraintSet tasks = active_tasks(constraints_);
+  ConstraintSet result;
+  std::ranges::copy(
+    tasks |
+      std::views::filter([](const auto & task) { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
+    std::inserter(result, result.end()));
+  return result;
 }
 
-auto TaskHierarchy::equality_constraints() const -> ConstraintSet
+auto TaskHierarchy::equality_constraints() const -> ConstraintSet  // NOLINT
 {
-  return filter_equality_constraints(active_tasks(constraints_));
+  const ConstraintSet tasks = active_tasks(constraints_);
+  ConstraintSet result;
+  std::ranges::copy(
+    tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
+    std::inserter(result, result.end()));
+  return result;
 }
 
 auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
@@ -131,8 +121,6 @@ PoseConstraint::PoseConstraint(
   error_ = Eigen::VectorXd::Zero(6);
   error_.head<3>() = (constraint.translation() - primal.translation()).eval();
   error_.tail<3>() = quaternion_error(Eigen::Quaterniond(constraint.rotation()), Eigen::Quaterniond(primal.rotation()));
-
-  pinocchio::computeJointJacobians(*model, *data);
   jacobian_ = pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED);
 }
 
@@ -150,8 +138,6 @@ JointConstraint::JointConstraint(
 : SetConstraint(primal, ub, lb, tol, activation, gain, priority)
 {
   error_ = constraint_ - primal_;
-
-  pinocchio::computeJointJacobians(*model, *data);
   jacobian_ = pinocchio::getJointJacobian(*model, *data, model->getJointId(joint_name), pinocchio::LOCAL_WORLD_ALIGNED);
 }
 
@@ -176,14 +162,8 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
   }
 
   const int n_cols = jacobians.front().cols();
-  int n_rows = 0;
-
-  for (const auto & jac : jacobians) {
-    if (jac.cols() != n_cols) {
-      throw std::invalid_argument("All Jacobian matrices must have the same number of columns.");
-    }
-    n_rows += jac.rows();
-  }
+  const int n_rows = std::accumulate(
+    jacobians.begin(), jacobians.end(), 0, [](int sum, const Eigen::MatrixXd & jac) { return sum + jac.rows(); });
 
   Eigen::MatrixXd augmented(n_rows, n_cols);
   int current_row = 0;
@@ -196,14 +176,16 @@ auto compute_aug_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eig
 }
 
 /// Closed-loop task priority IK using the damped pseudoinverse.
-auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping) -> Eigen::VectorXd
+auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
+  -> std::expected<Eigen::VectorXd, SolverError>
 {
   if (tasks.empty()) {
-    throw std::runtime_error("No constraints have been added to the task hierarchy.");
+    return std::unexpected(SolverError::NO_SOLUTION);
   }
 
   auto vel = Eigen::VectorXd::Zero(nv);
   std::vector<Eigen::MatrixXd> jacs;
+  jacs.reserve(tasks.size());
   Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(nv, nv);
 
   for (const auto & task : tasks) {
@@ -227,16 +209,28 @@ auto search_solutions(
   size_t nv,
   double damping) -> std::expected<Eigen::VectorXd, SolverError>
 {
+  if (hierarchies.empty()) {
+    return std::unexpected(SolverError::NO_SOLUTION);
+  }
+
   Eigen::VectorXd solution;
 
   if (set_tasks.empty()) {
-    solution = tpik(hierarchies.front(), nv, damping);
+    const auto out = tpik(hierarchies.front(), nv, damping);
+    if (!out.has_value()) {
+      return std::unexpected(out.error());
+    }
+    solution = out.value();
   } else {
     std::vector<Eigen::VectorXd> solutions;
     solutions.reserve(hierarchies.size());
 
     for (const auto & tasks : hierarchies) {
-      const Eigen::VectorXd current_solution = tpik(tasks, nv, damping);
+      const auto out = tpik(tasks, nv, damping);
+      if (!out.has_value()) {
+        continue;
+      }
+      const Eigen::VectorXd current_solution = out.value();
 
       // Check if the solution violates any set constraints
       bool valid = true;
@@ -282,21 +276,70 @@ auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
 
 }  // namespace
 
-auto TaskPriorityIKSolver::solve_ik(
-  const rclcpp::Duration & period,
-  const Eigen::Affine3d & target_pose,
-  const Eigen::VectorXd & q) -> std::expected<Eigen::VectorXd, SolverError>
+auto TaskPriorityIKSolver::init_solver(
+  const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
+  const std::shared_ptr<pinocchio::Model> & model,
+  const std::shared_ptr<pinocchio::Data> & data) -> void
 {
+  IKSolver::init_solver(node, model, data);
+
+  try {
+    param_listener_ = std::make_shared<task_priority_ik_solver::ParamListener>(get_node());
+    params_ = param_listener_->get_params();
+  }
+  catch (const std::exception & e) {
+    RCLCPP_ERROR(node_->get_logger(), "Exception during solver initialization: %s", e.what());
+    throw;
+  }
+}
+
+auto TaskPriorityIKSolver::update_parameters() -> void
+{
+  if (!param_listener_->is_old(params_)) {
+    return;
+  }
+  param_listener_->refresh_dynamic_parameters();
+  params_ = param_listener_->get_params();
+}
+
+auto TaskPriorityIKSolver::configure_parameters() -> void
+{
+  update_parameters();
+
+  // Update the solver parameters
+  damping_ = params_.damping;
+
+  // Update the frame names
+  base_frame_ = params_.base_frame;
+  world_frame_ = params_.world_frame;
+  ee_frame_ = params_.ee_frame;
+}
+
+auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)  // NOLINT
+  -> std::expected<Eigen::VectorXd, SolverError>
+{
+  configure_parameters();
+
   hierarchy_.clear();
 
   // get the end effector pose as an Eigen Affine3d
   const Eigen::Affine3d ee_pose = pinocchio_to_eigen(data_->oMf[model_->getFrameId(ee_frame_)]);
 
   // insert the pose constraint
-  // TODO(evan-palmer): make the gain a parameter
-  hierarchy_.insert(std::make_shared<hierarchy::PoseConstraint>(model_, data_, ee_pose, target_pose, ee_frame_, 0.1));
+  const double gain = params_.end_effector_task_hierarchy.gain;
+  hierarchy_.insert(std::make_shared<hierarchy::PoseConstraint>(model_, data_, ee_pose, target_pose, ee_frame_, gain));
 
-  // TODO(evan-palmer): insert the set constraints
+  for (const auto & joint_name : params_.joint_names) {
+    const double primal = q[model_->getJointId(joint_name)];
+    const double ub = model_->upperPositionLimit[model_->getJointId(joint_name)];
+    const double lb = model_->lowerPositionLimit[model_->getJointId(joint_name)];
+    const double tol = params_.revolute_task_hierarchy[joint_name].safety_tolerance;
+    const double activation = params_.revolute_task_hierarchy[joint_name].activation_threshold;
+    const double joint_limit_gain = params_.revolute_task_hierarchy[joint_name].gain;
+
+    hierarchy_.insert(std::make_shared<hierarchy::JointConstraint>(
+      model_, data_, primal, ub, lb, tol, activation, joint_name, joint_limit_gain));
+  }
 
   // Find the safe solutions and choose the one with the smallest norm
   return search_solutions(hierarchy_.set_constraints(), hierarchy_.hierarchies(), model_->nv, damping_);

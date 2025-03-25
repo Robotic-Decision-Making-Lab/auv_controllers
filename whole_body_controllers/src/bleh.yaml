@@ -1,0 +1,39 @@
+ik_controller:
+  ros__parameters:
+    ik_solver: task_priority_ik_solver
+
+    task_priority_ik_solver:
+      world_frame_id: map
+      base_link_frame_id: base_link
+      end_effector_frame_id: tcp
+
+      revolute_joints:
+        - axis_b
+        - axis_c
+        - axis_d
+        - axis_e
+
+      end_effector_task_hierarchy:
+        pose_task:
+          gain: 0.3
+
+      revolute_task_hierarchy:
+        axis_b:
+          safety_tolerance: 0.1
+          activation_threshold: 0.05
+          gain: 0.3
+
+        axis_c:
+          safety_tolerance: 0.1
+          activation_threshold: 0.05
+          gain: 0.3
+
+        axis_d:
+          safety_tolerance: 0.1
+          activation_threshold: 0.05
+          gain: 0.3
+
+        axis_e:
+          safety_tolerance: 0.1
+          activation_threshold: 0.05
+          gain: 0.3

@@ -6,6 +6,19 @@
 namespace ik_solvers
 {
 
+auto IKSolver::init_solver(
+  const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
+  const std::shared_ptr<pinocchio::Model> & model,
+  const std::shared_ptr<pinocchio::Data> & data) -> void
+{
+  node_ = node;
+  model_ = model;
+  data_ = data;
+
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+}
+
 auto IKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
 {
   pinocchio::forwardKinematics(*model_, *data_, q);
@@ -29,6 +42,7 @@ auto IKSolver::solve(
   const geometry_msgs::msg::PoseStamped & target_pose,
   const Eigen::VectorXd & q) -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>
 {
+  // update the pinocchio data and model to use the current joint configuration
   update_pinocchio(q);
 
   // transform the target pose into the world frame
@@ -45,13 +59,10 @@ auto IKSolver::solve(
   }
 
   // convert the message into an Eigen Affine3d for easier manipulation
-  const Eigen::Affine3d target;
+  Eigen::Affine3d target;
   tf2::fromMsg(transformed_pose.pose, target);
 
-  // update pinocchio data
-  update_pinocchio(q);
-
-  const auto result = solve_ik(period, target, q);
+  const auto result = solve_ik(target, q);
 
   if (!result.has_value()) {
     return std::unexpected(result.error());
@@ -65,6 +76,10 @@ auto IKSolver::solve(
   // Convert the result into a JointTrajectoryPoint
   trajectory_msgs::msg::JointTrajectoryPoint point;
   point.time_from_start = period;
+
+  point.positions.reserve(q_next.size());
+  point.velocities.reserve(solution.size());
+
   point.positions = std::vector<double>(q_next.data(), q_next.data() + q_next.size());
   point.velocities = std::vector<double>(solution.data(), solution.data() + solution.size());
 
