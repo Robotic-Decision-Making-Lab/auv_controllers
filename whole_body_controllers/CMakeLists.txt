@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(thruster_controllers)
+project(whole_body_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -15,6 +15,12 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     realtime_tools
     std_msgs
     control_msgs
+    Eigen3
+    eigen3_cmake_module
+    pinocchio
+    geometry_msgs
+    tf2_ros
+    tf2_eigen
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
@@ -25,40 +31,41 @@ find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
 
-generate_parameter_library(polynomial_thrust_curve_controller_parameters
-  src/polynomial_thrust_curve_controller_parameters.yaml
+generate_parameter_library(task_priority_ik_solver_parameters
+  src/solvers/task_priority_ik_solver_parameters.yaml
 )
 
-add_library(thruster_controllers SHARED)
+add_library(ik_solvers SHARED)
 
 target_sources(
-    thruster_controllers
-    PRIVATE src/polynomial_thrust_curve_controller.cpp
+    ik_solvers
+    PRIVATE src/solvers/ik_solver.cpp src/solvers/task_priority_ik_solver.cpp
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/polynomial_thrust_curve_controller.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/whole_body_controllers/solvers/ik_solver.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/whole_body_controllers/solvers/task_priority_ik_solver.hpp
 )
-ament_target_dependencies(thruster_controllers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_compile_features(thruster_controllers PUBLIC cxx_std_20)
+ament_target_dependencies(ik_solvers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_compile_features(ik_solvers PUBLIC cxx_std_23)
 target_link_libraries(
-    thruster_controllers
-    PUBLIC ${rclcpp_LIBRARIES} polynomial_thrust_curve_controller_parameters
+    ik_solvers
+    PUBLIC ${rclcpp_LIBRARIES} task_priority_ik_solver_parameters
 )
 
-pluginlib_export_plugin_description_file(controller_interface thruster_controllers.xml)
+pluginlib_export_plugin_description_file(whole_body_controllers ik_solvers.xml)
 
 install(
-    TARGETS thruster_controllers polynomial_thrust_curve_controller_parameters
-    EXPORT export_thruster_controllers
+    TARGETS ik_solvers task_priority_ik_solver_parameters
+    EXPORT export_whole_body_controllers
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     FILE_SET HEADERS
 )
 
-ament_export_targets(export_thruster_controllers HAS_LIBRARY_TARGET)
+ament_export_targets(export_whole_body_controllers HAS_LIBRARY_TARGET)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 
 ament_package()

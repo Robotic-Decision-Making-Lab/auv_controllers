@@ -1,4 +1,4 @@
-#include "ik_solver.hpp"
+#include "whole_body_controllers/solvers/ik_solver.hpp"
 
 #include <pinocchio/algorithm/frames.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>

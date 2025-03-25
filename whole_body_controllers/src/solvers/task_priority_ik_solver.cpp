@@ -1,4 +1,4 @@
-#include "task_priority_ik_solver.hpp"
+#include "whole_body_controllers/solvers/task_priority_ik_solver.hpp"
 
 #include <algorithm>
 #include <memory>

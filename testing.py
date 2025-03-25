@@ -1,8 +1,5 @@
 import pinocchio
-from pinocchio.visualize import MeshcatVisualizer
-from pinocchio.robot_wrapper import RobotWrapper
 import numpy as np
-from geometry_msgs.msg import Point, Quaternion, Transform, Vector3
 from scipy.spatial.transform import Rotation as R
 
 np.set_printoptions(precision=3, suppress=True, linewidth=200)
