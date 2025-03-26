@@ -20,6 +20,9 @@
 
 #pragma once
 
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <control_msgs/msg/multi_dof_state_stamped.hpp>
 #include <controller_interface/chainable_controller_interface.hpp>
 #include <controller_interface/controller_interface.hpp>
@@ -62,6 +65,8 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
+  auto on_set_chained_mode(bool chained_mode) -> bool override;
+
 protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
@@ -74,6 +79,9 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
+  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & target_pose) const
+    -> geometry_msgs::msg::PoseStamped;
+
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
 
@@ -84,19 +92,23 @@ protected:
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::UvmsState>> system_state_sub_;
   std::vector<double> system_state_values_;
 
-  std::string robot_description_;
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
 
   std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> ik_solver_loader_;
   std::unique_ptr<ik_solvers::IKSolver> ik_solver_;
+
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
 
   bool model_initialized_{false};
 
-  static constexpr std::size_t COMMAND_DOF = 7;
-  std::array<std::string, COMMAND_DOF> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
+  std::array<std::string, 7> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
+  std::array<std::string, 6> free_flyer_vel_dofs_{"vx", "vy", "vz", "wx", "wy", "wz"};
+  std::vector<std::string> dofs_, vel_dofs_, manipulator_dofs_;
+  std::size_t n_dofs_, n_manipulator_dofs_, n_vel_dofs_;
 };
 
 }  // namespace whole_body_controllers

@@ -23,10 +23,10 @@ ik_controller:
     default_value: "base_link"
     description: "The name of the base link of the robot."
 
-  end_effector_frame_id:
+  world_frame_id:
     type: string
-    default_value: "base_link"
-    description: "The name of the base link of the robot."
+    default_value: "map"
+    description: "The name of the world frame."
 
   manipulator_joints:
     type: string_array

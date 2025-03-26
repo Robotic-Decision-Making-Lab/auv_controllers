@@ -20,9 +20,6 @@
 
 #pragma once
 
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-
 #include <Eigen/Geometry>
 #include <cstdint>
 #include <expected>
@@ -40,13 +37,7 @@ namespace ik_solvers
 /// Error codes for the inverse kinematics solvers.
 enum class SolverError : std::uint8_t
 {
-  // No solution was found for the IK problem using the current solver.
   NO_SOLUTION,
-
-  // The target pose could not be transformed into the world frame.
-  TRANSFORM_ERROR,
-
-  // The solver encountered an error while solving the IK problem.
   SOLVER_ERROR
 };
 
@@ -70,7 +61,7 @@ public:
   /// configuration.
   [[nodiscard]] auto solve(
     const rclcpp::Duration & period,
-    const geometry_msgs::msg::PoseStamped & target_pose,
+    const Eigen::Affine3d & target_pose,
     const Eigen::VectorXd & q) -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>;
 
 protected:
@@ -84,21 +75,13 @@ protected:
 
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_;
 
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
-
-  std::string world_frame_, ee_frame_;
+  std::string ee_frame_;
 
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
 
 private:
-  /// Update the Pinocchio data given the current joint configuration.
   auto update_pinocchio(const Eigen::VectorXd & q) const -> void;
-
-  /// Transform a target end effector pose into the appropriate frame for the solver.
-  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & target_pose) const
-    -> geometry_msgs::msg::PoseStamped;
 };
 
 }  // namespace ik_solvers

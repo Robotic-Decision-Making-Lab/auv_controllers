@@ -34,9 +34,6 @@ auto IKSolver::initialize(
   node_ = node;
   model_ = model;
   data_ = data;
-
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
 auto IKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
@@ -46,43 +43,13 @@ auto IKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
   pinocchio::computeJointJacobians(*model_, *data_);
 }
 
-auto IKSolver::transform_target_pose(const geometry_msgs::msg::PoseStamped & target) const
-  -> geometry_msgs::msg::PoseStamped
-{
-  geometry_msgs::msg::PoseStamped transformed_pose;
-  const auto transform = tf_buffer_->lookupTransform(world_frame_, target.header.frame_id, target.header.stamp);
-  tf2::doTransform(target.pose, transformed_pose.pose, transform);
-  transformed_pose.header.frame_id = world_frame_;
-  transformed_pose.header.stamp = target.header.stamp;
-  return transformed_pose;
-}
-
-auto IKSolver::solve(
-  const rclcpp::Duration & period,
-  const geometry_msgs::msg::PoseStamped & target_pose,
-  const Eigen::VectorXd & q) -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>
+auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+  -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>
 {
   // update the pinocchio data and model to use the current joint configuration
   update_pinocchio(q);
 
-  // transform the target pose into the world frame
-  geometry_msgs::msg::PoseStamped transformed_pose;
-  if (target_pose.header.frame_id == world_frame_) {
-    transformed_pose = target_pose;
-  } else {
-    try {
-      transformed_pose = transform_target_pose(target_pose);
-    }
-    catch (const tf2::TransformException & ex) {
-      return std::unexpected(SolverError::TRANSFORM_ERROR);
-    }
-  }
-
-  // convert the message into an Eigen Affine3d for easier manipulation
-  Eigen::Affine3d target;
-  tf2::fromMsg(transformed_pose.pose, target);
-
-  const auto result = solve_ik(target, q);
+  const auto result = solve_ik(target_pose, q);
 
   if (!result.has_value()) {
     return std::unexpected(result.error());

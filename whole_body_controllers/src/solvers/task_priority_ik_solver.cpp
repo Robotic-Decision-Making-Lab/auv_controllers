@@ -48,7 +48,7 @@ auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
       auto set_task = std::dynamic_pointer_cast<SetConstraint>(task);
       return !std::dynamic_pointer_cast<SetConstraint>(set_task) || set_task->is_active();
     }),
-    std::inserter(result, result.end()));
+    std::back_inserter(result));
   return result;
 }
 
@@ -83,7 +83,7 @@ auto TaskHierarchy::set_constraints() const -> ConstraintSet  // NOLINT
   std::ranges::copy(
     tasks |
       std::views::filter([](const auto & task) { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
-    std::inserter(result, result.end()));
+    std::back_inserter(result));
   return result;
 }
 
@@ -93,7 +93,7 @@ auto TaskHierarchy::equality_constraints() const -> ConstraintSet  // NOLINT
   ConstraintSet result;
   std::ranges::copy(
     tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
-    std::inserter(result, result.end()));
+    std::back_inserter(result));
   return result;
 }
 
