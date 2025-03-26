@@ -79,7 +79,7 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & target_pose) const
+  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & goal) const
     -> geometry_msgs::msg::PoseStamped;
 
   std::shared_ptr<pinocchio::Model> model_;

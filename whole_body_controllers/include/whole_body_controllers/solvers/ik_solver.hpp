@@ -57,12 +57,9 @@ public:
     const std::shared_ptr<pinocchio::Model> & model,
     const std::shared_ptr<pinocchio::Data> & data) -> void;
 
-  /// Solve the inverse kinematics problem for a target pose, given the current integration period and joint
-  /// configuration.
-  [[nodiscard]] auto solve(
-    const rclcpp::Duration & period,
-    const Eigen::Affine3d & target_pose,
-    const Eigen::VectorXd & q) -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>;
+  /// Solve the IK problem for a target pose given the integration period and current joint configuration.
+  [[nodiscard]] auto solve(const rclcpp::Duration & period, const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+    -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>;
 
 protected:
   /// Solve the IK problem for the given target pose and joint configuration.
@@ -70,7 +67,7 @@ protected:
   /// This is wrapped by the public API. The public API handles the transformation of the target pose into the
   /// appropriate frame and converts of the result into a `JointTrajectoryPoint`. This method only needs to compute
   /// the IK solution.
-  [[nodiscard]] virtual auto solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+  [[nodiscard]] virtual auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
     -> std::expected<Eigen::VectorXd, SolverError> = 0;
 
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_;

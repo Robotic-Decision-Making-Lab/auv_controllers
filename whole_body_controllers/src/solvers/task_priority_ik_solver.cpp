@@ -317,16 +317,12 @@ auto TaskPriorityIKSolver::update_parameters() -> void
 auto TaskPriorityIKSolver::configure_parameters() -> void
 {
   update_parameters();
-
-  // Update the solver parameters
   damping_ = params_.damping;
-
-  // Update the frame names
-  world_frame_ = params_.map_frame_id;
   ee_frame_ = params_.end_effector_frame_id;
 }
 
-auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)  // NOLINT
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
   -> std::expected<Eigen::VectorXd, SolverError>
 {
   configure_parameters();

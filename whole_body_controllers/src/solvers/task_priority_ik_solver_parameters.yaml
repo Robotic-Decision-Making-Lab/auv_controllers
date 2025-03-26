@@ -1,10 +1,4 @@
 task_priority_ik_solver:
-  map_frame_id:
-    type: string
-    default_value: "map"
-    read_only: true
-    description: "The name of the world frame ID."
-
   end_effector_frame_id:
     type: string
     default_value: "tcp"

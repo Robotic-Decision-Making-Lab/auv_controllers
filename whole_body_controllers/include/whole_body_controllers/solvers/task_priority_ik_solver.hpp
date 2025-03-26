@@ -218,7 +218,7 @@ public:
     const std::shared_ptr<pinocchio::Data> & data) -> void override;
 
 protected:
-  [[nodiscard]] auto solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+  [[nodiscard]] auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
     -> std::expected<Eigen::VectorXd, SolverError> override;
 
   /// Update the dynamic ROS 2 parameters.

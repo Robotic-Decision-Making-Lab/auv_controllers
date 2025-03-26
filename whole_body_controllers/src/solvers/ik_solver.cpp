@@ -43,13 +43,13 @@ auto IKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
   pinocchio::computeJointJacobians(*model_, *data_);
 }
 
-auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
   -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>
 {
   // update the pinocchio data and model to use the current joint configuration
   update_pinocchio(q);
 
-  const auto result = solve_ik(target_pose, q);
+  const auto result = solve_ik(goal, q);
 
   if (!result.has_value()) {
     return std::unexpected(result.error());
@@ -70,7 +70,7 @@ auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & ta
   point.positions = std::vector<double>(q_next.data(), q_next.data() + q_next.size());
   point.velocities = std::vector<double>(solution.data(), solution.data() + solution.size());
 
-  return point;
+  return point;  // NOLINT(clang-diagnostic-error)
 }
 
 }  // namespace ik_solvers
