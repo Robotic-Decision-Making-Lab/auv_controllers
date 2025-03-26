@@ -13,6 +13,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     rclcpp
     rclcpp_lifecycle
     realtime_tools
+    nav_msgs
     std_msgs
     control_msgs
     Eigen3
@@ -21,7 +22,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     geometry_msgs
     tf2_ros
     tf2_eigen
-    auv_control_msgs
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})

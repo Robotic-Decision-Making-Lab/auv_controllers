@@ -9,7 +9,6 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(auv_control_msgs
   "msg/MultiActuatorStateStamped.msg"
-  "msg/UvmsState.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 

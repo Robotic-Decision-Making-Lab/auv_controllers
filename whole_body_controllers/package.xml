@@ -25,7 +25,7 @@
   <depend>generate_parameter_library</depend>
   <depend>control_msgs</depend>
   <depend>pinocchio</depend>
-  <depend>auv_control_msgs</depend>
+  <depend>nav_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

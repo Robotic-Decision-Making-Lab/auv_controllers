@@ -13,11 +13,6 @@ ik_controller:
     read_only: true
     description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
 
-  use_external_measured_states:
-    type: bool
-    default_value: false
-    description: "Use state measurements from a topic instead of a state interface."
-
   base_frame_id:
     type: string
     default_value: "base_link"

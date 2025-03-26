@@ -22,6 +22,7 @@
 
 #include <Eigen/Dense>
 #include <format>
+#include <geometry_msgs/msg/pose.hpp>
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 #include <pluginlib/class_list_macros.hpp>
@@ -50,37 +51,6 @@ auto reset_pose_msg(geometry_msgs::msg::PoseStamped * msg) -> void
   reset_pose_msg(&msg->pose);
   msg->header.frame_id.clear();
   msg->header.stamp = rclcpp::Time();
-}
-
-auto reset_twist_msg(geometry_msgs::msg::Twist * msg) -> void
-{
-  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-auto reset_wrench_msg(geometry_msgs::msg::Wrench * msg) -> void
-{
-  msg->force.x = std::numeric_limits<double>::quiet_NaN();
-  msg->force.y = std::numeric_limits<double>::quiet_NaN();
-  msg->force.z = std::numeric_limits<double>::quiet_NaN();
-  msg->torque.x = std::numeric_limits<double>::quiet_NaN();
-  msg->torque.y = std::numeric_limits<double>::quiet_NaN();
-  msg->torque.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-auto reset_uvms_state_msg(auv_control_msgs::msg::UvmsState * msg, const std::vector<std::string> & joint_names) -> void
-{
-  reset_pose_msg(&msg->base_pose);
-  reset_twist_msg(&msg->base_twist);
-  reset_wrench_msg(&msg->base_wrench);
-  msg->manipulator_joints = joint_names;
-  msg->manipulator_efforts.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
-  msg->manipulator_positions.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
-  msg->manipulator_velocities.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
 }
 
 auto pose_msg_to_vector(const geometry_msgs::msg::Pose & pose) -> std::vector<double>
@@ -148,7 +118,6 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   update_parameters();
 
   reference_.writeFromNonRT(geometry_msgs::msg::PoseStamped());
-  system_state_.writeFromNonRT(auv_control_msgs::msg::UvmsState());
 
   command_interfaces_.reserve(n_dofs_ + n_vel_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
@@ -160,13 +129,6 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::PoseStamped> msg) {
       reference_.writeFromNonRT(*msg);
     });
-
-  if (params_.use_external_measured_states) {
-    system_state_sub_ = get_node()->create_subscription<auv_control_msgs::msg::UvmsState>(
-      "~/system_state",
-      rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<auv_control_msgs::msg::UvmsState> msg) { system_state_.writeFromNonRT(*msg); });
-  }
 
   robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
     "~/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
@@ -199,7 +161,6 @@ auto IKController::on_activate(const rclcpp_lifecycle::State & /*previous_state*
   -> controller_interface::CallbackReturn
 {
   reset_pose_msg(reference_.readFromNonRT());
-  reset_uvms_state_msg(system_state_.readFromNonRT(), manipulator_dofs_);
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
@@ -235,8 +196,7 @@ auto IKController::command_interface_configuration() const -> controller_interfa
 auto IKController::state_interface_configuration() const -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
-  config.type = params_.use_external_measured_states ? controller_interface::interface_configuration_type::NONE
-                                                     : controller_interface::interface_configuration_type::INDIVIDUAL;
+  config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
   for (const auto & dof : dofs_) {
@@ -264,7 +224,6 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-
 auto IKController::transform_goal(const geometry_msgs::msg::PoseStamped & goal, const std::string & target_frame) const
   -> geometry_msgs::msg::PoseStamped
 {
@@ -315,28 +274,13 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::update_system_state_values() -> controller_interface::return_type
 {
-  if (params_.use_external_measured_states) {
-    auto * current_system_state = system_state_.readFromRT();
-
-    std::vector<double> state = pose_msg_to_vector(current_system_state->base_pose);
-    std::ranges::copy(current_system_state->manipulator_positions, std::back_inserter(state));
-
-    for (std::size_t i = 0; i < state.size(); ++i) {
-      if (!std::isnan(state[i])) {
-        system_state_values_[i] = state[i];
-      }
+  for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
+    const auto out = state_interfaces_[i].get_optional();
+    if (!out.has_value()) {
+      RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());
+      return controller_interface::return_type::ERROR;
     }
-
-    reset_uvms_state_msg(current_system_state, manipulator_dofs_);
-  } else {
-    for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
-      const auto out = state_interfaces_[i].get_optional();
-      if (!out.has_value()) {
-        RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());
-        return controller_interface::return_type::ERROR;
-      }
-      system_state_values_[i] = out.value();
-    }
+    system_state_values_[i] = out.value();
   }
 
   return controller_interface::return_type::OK;
