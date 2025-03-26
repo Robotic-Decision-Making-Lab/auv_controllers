@@ -72,7 +72,8 @@ auto reset_wrench_msg(geometry_msgs::msg::Wrench * msg) -> void
       .z = std::numeric_limits<double>::quiet_NaN()}};
 }
 
-auto reset_uvms_state_msg(auv_control_msgs::msg::UvmsState * msg, const std::vector<std::string> & joint_names) -> void
+auto reset_uvms_state_msg(const auv_control_msgs::msg::UvmsState * msg, const std::vector<std::string> & joint_names)
+  -> void
 {
   reset_pose_msg(&msg->pose);
   reset_twist_msg(&msg->twist);
@@ -237,6 +238,7 @@ auto IKController::state_interface_configuration() const -> controller_interface
   return config;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(free_flyer_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -252,6 +254,7 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
   return interfaces;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::transform_target_pose(
   const geometry_msgs::msg::PoseStamped & target,
   const std::string & target_frame) const -> geometry_msgs::msg::PoseStamped
@@ -264,7 +267,7 @@ auto IKController::transform_target_pose(
   return transformed_pose;
 }
 
-auto IKController::update_reference_from_subscribers(const rclcpp::Time & time, const rclcpp::Duration & period)
+auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromRT();
@@ -300,6 +303,7 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & time, 
   return controller_interface::return_type::OK;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
