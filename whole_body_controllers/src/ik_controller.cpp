@@ -18,12 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "ik_controller.hpp"
+#include "whole_body_controllers/ik_controller.hpp"
 
 #include <Eigen/Dense>
 #include <format>
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <pinocchio/parsers/urdf.hpp>
+#include <pluginlib/class_list_macros.hpp>
+#include <ranges>
 #include <string>
 
 namespace whole_body_controllers
@@ -34,52 +36,49 @@ namespace
 
 auto reset_pose_msg(geometry_msgs::msg::Pose * msg) -> void
 {
-  *msg = {
-    .position =
-      {.x = std::numeric_limits<double>::quiet_NaN(),
-       .y = std::numeric_limits<double>::quiet_NaN(),
-       .z = std::numeric_limits<double>::quiet_NaN()},
-    .orientation = {
-      .x = std::numeric_limits<double>::quiet_NaN(),
-      .y = std::numeric_limits<double>::quiet_NaN(),
-      .z = std::numeric_limits<double>::quiet_NaN(),
-      .w = std::numeric_limits<double>::quiet_NaN()}};
+  msg->position.x = std::numeric_limits<double>::quiet_NaN();
+  msg->position.y = std::numeric_limits<double>::quiet_NaN();
+  msg->position.z = std::numeric_limits<double>::quiet_NaN();
+  msg->orientation.x = std::numeric_limits<double>::quiet_NaN();
+  msg->orientation.y = std::numeric_limits<double>::quiet_NaN();
+  msg->orientation.z = std::numeric_limits<double>::quiet_NaN();
+  msg->orientation.w = std::numeric_limits<double>::quiet_NaN();
+}
+
+auto reset_pose_msg(geometry_msgs::msg::PoseStamped * msg) -> void
+{
+  reset_pose_msg(&msg->pose);
+  msg->header.frame_id.clear();
+  msg->header.stamp = rclcpp::Time();
 }
 
 auto reset_twist_msg(geometry_msgs::msg::Twist * msg) -> void
 {
-  *msg = {
-    .linear =
-      {.x = std::numeric_limits<double>::quiet_NaN(),
-       .y = std::numeric_limits<double>::quiet_NaN(),
-       .z = std::numeric_limits<double>::quiet_NaN()},
-    .angular = {
-      .x = std::numeric_limits<double>::quiet_NaN(),
-      .y = std::numeric_limits<double>::quiet_NaN(),
-      .z = std::numeric_limits<double>::quiet_NaN()}};
+  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
 }
 
 auto reset_wrench_msg(geometry_msgs::msg::Wrench * msg) -> void
 {
-  *msg = {
-    .force =
-      {.x = std::numeric_limits<double>::quiet_NaN(),
-       .y = std::numeric_limits<double>::quiet_NaN(),
-       .z = std::numeric_limits<double>::quiet_NaN()},
-    .torque = {
-      .x = std::numeric_limits<double>::quiet_NaN(),
-      .y = std::numeric_limits<double>::quiet_NaN(),
-      .z = std::numeric_limits<double>::quiet_NaN()}};
+  msg->force.x = std::numeric_limits<double>::quiet_NaN();
+  msg->force.y = std::numeric_limits<double>::quiet_NaN();
+  msg->force.z = std::numeric_limits<double>::quiet_NaN();
+  msg->torque.x = std::numeric_limits<double>::quiet_NaN();
+  msg->torque.y = std::numeric_limits<double>::quiet_NaN();
+  msg->torque.z = std::numeric_limits<double>::quiet_NaN();
 }
 
-auto reset_uvms_state_msg(const auv_control_msgs::msg::UvmsState * msg, const std::vector<std::string> & joint_names)
-  -> void
+auto reset_uvms_state_msg(auv_control_msgs::msg::UvmsState * msg, const std::vector<std::string> & joint_names) -> void
 {
-  reset_pose_msg(&msg->pose);
-  reset_twist_msg(&msg->twist);
-  reset_wrench_msg(&msg->wrench);
+  reset_pose_msg(&msg->base_pose);
+  reset_twist_msg(&msg->base_twist);
+  reset_wrench_msg(&msg->base_wrench);
   msg->manipulator_joints = joint_names;
-  msg->manipulator_torques.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
+  msg->manipulator_efforts.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
   msg->manipulator_positions.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
   msg->manipulator_velocities.assign(joint_names.size(), std::numeric_limits<double>::quiet_NaN());
 }
@@ -108,7 +107,7 @@ auto vector_to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
 
 auto IKController::on_init() -> controller_interface::CallbackReturn
 {
-  param_listener_ = std::make_unique<ik_controller::ParamListener>(node_);
+  param_listener_ = std::make_unique<ik_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -126,12 +125,20 @@ auto IKController::update_parameters() -> void
 auto IKController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
+
   manipulator_dofs_ = params_.manipulator_joints;
-  dofs_ = std::views::concat(free_flyer_dofs_, manipulator_dofs_);
   n_manipulator_dofs_ = manipulator_dofs_.size();
+
+  dofs_.reserve(free_flyer_dofs_.size() + manipulator_dofs_.size());
+  std::ranges::copy(free_flyer_dofs_, std::back_inserter(dofs_));
+  std::ranges::copy(manipulator_dofs_, std::back_inserter(dofs_));
   n_dofs_ = dofs_.size();
-  vel_dofs_ = std::views::concat(free_flyer_velocity_dofs_, manipulator_dofs_);
+
+  vel_dofs_.reserve(free_flyer_vel_dofs_.size() + manipulator_dofs_.size());
+  std::ranges::copy(free_flyer_vel_dofs_, std::back_inserter(vel_dofs_));
+  std::ranges::copy(manipulator_dofs_, std::back_inserter(vel_dofs_));
   n_vel_dofs_ = vel_dofs_.size();
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -143,40 +150,41 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   reference_.writeFromNonRT(geometry_msgs::msg::PoseStamped());
   system_state_.writeFromNonRT(auv_control_msgs::msg::UvmsState());
 
-  command_interfaces_.reserve(free_flyer_dofs_.size());
+  command_interfaces_.reserve(n_dofs_ + n_vel_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
 
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
-  reference_sub_ = node_->create_subscription<geometry_msgs::msg::PoseStamped>(
+  reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::PoseStamped>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::PoseStamped> msg) {
       reference_.writeFromNonRT(*msg);
     });
 
   if (params_.use_external_measured_states) {
-    system_state_sub_ = node_->create_subscription<auv_control_msgs::msg::UvmsState>(
+    system_state_sub_ = get_node()->create_subscription<auv_control_msgs::msg::UvmsState>(
       "~/system_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<auv_control_msgs::msg::UvmsState> msg) { system_state_.writeFromNonRT(*msg); });
   }
 
-  robot_description_sub_ = node_->create_subscription<std_msgs::msg::String>(
+  robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
     "~/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
 
       // initialize pinocchio
+      // we need to specify that the base is a free flyer joint
       model_ = std::make_shared<pinocchio::Model>();
-      pinocchio::urdf::buildModelFromXML(msg->data, *model_, pinocchio::JointModelFreeFlyer());
+      pinocchio::urdf::buildModelFromXML(msg->data, pinocchio::JointModelFreeFlyer(), *model_);
       data_ = std::make_shared<pinocchio::Data>(*model_);
       model_initialized_ = true;
 
       // initialize the ik solver
       ik_solver_loader_ = std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>(
         "whole_body_controllers", "ik_solvers::IKSolver");
-      ik_solver_ = ik_solver_loader_->createUniqueInstance(params_.ik_solver);
+      ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
       ik_solver_->initialize(get_node(), model_, data_);
 
       RCLCPP_INFO(get_node()->get_logger(), "Initialized IK controller with solver %s", params_.ik_solver.c_str());
@@ -246,7 +254,8 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(free_flyer_dofs_.size());
 
-  for (const auto & dof : free_flyer_dofs_) {
+  for (size_t i = 0; i < free_flyer_dofs_.size(); ++i) {
+    const auto & dof = free_flyer_dofs_[i];
     interfaces.emplace_back(
       get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
   }
@@ -255,15 +264,15 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IKController::transform_target_pose(
-  const geometry_msgs::msg::PoseStamped & target,
-  const std::string & target_frame) const -> geometry_msgs::msg::PoseStamped
+
+auto IKController::transform_goal(const geometry_msgs::msg::PoseStamped & goal, const std::string & target_frame) const
+  -> geometry_msgs::msg::PoseStamped
 {
   geometry_msgs::msg::PoseStamped transformed_pose;
-  const auto transform = tf_buffer_->lookupTransform(target_frame, target.header.frame_id, target.header.stamp);
-  tf2::doTransform(target.pose, transformed_pose.pose, transform);
+  const auto transform = tf_buffer_->lookupTransform(target_frame, goal.header.frame_id, goal.header.stamp);
+  tf2::doTransform(goal.pose, transformed_pose.pose, transform);
   transformed_pose.header.frame_id = target_frame;
-  transformed_pose.header.stamp = target.header.stamp;
+  transformed_pose.header.stamp = goal.header.stamp;
   return transformed_pose;
 }
 
@@ -284,10 +293,10 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
       target_frame.c_str());
 
     try {
-      transformed_pose = transform_target_pose(*current_reference, target_frame);
+      transformed_pose = transform_goal(*current_reference, target_frame);
     }
     catch (const tf2::TransformException & ex) {
-      controller_interface::return_type::ERROR;
+      return controller_interface::return_type::ERROR;
     }
   }
 
@@ -310,7 +319,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     auto * current_system_state = system_state_.readFromRT();
 
     std::vector<double> state = pose_msg_to_vector(current_system_state->base_pose);
-    std::ranges::copy(current_system_state->positions, std::back_inserter(state));
+    std::ranges::copy(current_system_state->manipulator_positions, std::back_inserter(state));
 
     for (std::size_t i = 0; i < state.size(); ++i) {
       if (!std::isnan(state[i])) {
@@ -321,7 +330,12 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     reset_uvms_state_msg(current_system_state, manipulator_dofs_);
   } else {
     for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
-      system_state_values_[i] = state_interfaces_[i].get_value();
+      const auto out = state_interfaces_[i].get_optional();
+      if (!out.has_value()) {
+        RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());
+        return controller_interface::return_type::ERROR;
+      }
+      system_state_values_[i] = out.value();
     }
   }
 
@@ -333,7 +347,12 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 {
   update_system_state_values();
 
-  const Eigen::VectorXd q(system_state_values_.data());
+  if (!model_initialized_) {
+    RCLCPP_WARN(get_node()->get_logger(), "Waiting for the robot description to be published...");
+    return controller_interface::return_type::OK;
+  }
+
+  const Eigen::VectorXd q = Eigen::VectorXd::Map(system_state_values_.data(), system_state_values_.size());
   const Eigen::Affine3d target_pose = vector_to_eigen(reference_interfaces_);
 
   const auto result = ik_solver_->solve(period, target_pose, q);
@@ -351,11 +370,17 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   const trajectory_msgs::msg::JointTrajectoryPoint point = result.value();
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
-    command_interfaces_[i].set_value(point.positions[i]);
+    if (!command_interfaces_[i].set_value(point.positions[i])) {
+      RCLCPP_WARN(get_node()->get_logger(), "Failed to set position command value for joint %s", dofs_[i].c_str());
+      return controller_interface::return_type::ERROR;
+    }
   }
 
   for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
-    command_interfaces_[n_dofs_ + i].set_value(point.velocities[i]);
+    if (!command_interfaces_[n_dofs_ + i].set_value(point.velocities[i])) {
+      RCLCPP_WARN(get_node()->get_logger(), "Failed to set velocity command value for joint %s", vel_dofs_[i].c_str());
+      return controller_interface::return_type::ERROR;
+    }
   }
 
   // TODO(evan-palmer): publish controller state
@@ -364,3 +389,5 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 }
 
 }  // namespace whole_body_controllers
+
+PLUGINLIB_EXPORT_CLASS(whole_body_controllers::IKController, controller_interface::ChainableControllerInterface)

@@ -79,8 +79,8 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  [[nodiscard]] auto transform_target_pose(const geometry_msgs::msg::PoseStamped & goal) const
-    -> geometry_msgs::msg::PoseStamped;
+  [[nodiscard]] auto transform_goal(const geometry_msgs::msg::PoseStamped & goal, const std::string & target_frame)
+    const -> geometry_msgs::msg::PoseStamped;
 
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
@@ -95,7 +95,7 @@ protected:
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
 
   std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> ik_solver_loader_;
-  std::unique_ptr<ik_solvers::IKSolver> ik_solver_;
+  std::shared_ptr<ik_solvers::IKSolver> ik_solver_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;

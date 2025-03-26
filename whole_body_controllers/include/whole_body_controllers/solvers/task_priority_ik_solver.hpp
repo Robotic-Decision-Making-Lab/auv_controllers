@@ -48,7 +48,7 @@ public:
   : primal_(primal),
     constraint_(constraint),
     priority_(priority),
-    gain_(gain){};
+    gain_(gain) {};
 
   /// Destructor.
   virtual ~Constraint() = default;

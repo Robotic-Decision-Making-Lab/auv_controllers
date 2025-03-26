@@ -15,12 +15,12 @@
 # efforts should be stored using the same order that the names are declared in. All arrays in this
 # message should have the same size, or be empty.
 
-Header header
+std_msgs/Header header
 string child_frame_id
 
 geometry_msgs/Pose base_pose
 geometry_msgs/Twist base_twist
-geometry_msgs/Wrench base_effort
+geometry_msgs/Wrench base_wrench
 
 string[] manipulator_joints
 float64[] manipulator_positions

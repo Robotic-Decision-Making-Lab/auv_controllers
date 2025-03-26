@@ -64,9 +64,8 @@ public:
 protected:
   /// Solve the IK problem for the given target pose and joint configuration.
   ///
-  /// This is wrapped by the public API. The public API handles the transformation of the target pose into the
-  /// appropriate frame and converts of the result into a `JointTrajectoryPoint`. This method only needs to compute
-  /// the IK solution.
+  /// This is wrapped by the public API. The public API handles updating pinocchio for Jacobian calculation and converts
+  /// of the result into a `JointTrajectoryPoint`. This method only needs to compute the IK solution.
   [[nodiscard]] virtual auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
     -> std::expected<Eigen::VectorXd, SolverError> = 0;
 
