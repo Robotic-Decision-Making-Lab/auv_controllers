@@ -315,14 +315,17 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
     if (!command_interfaces_[i].set_value(point.positions[i])) {
-      RCLCPP_WARN(get_node()->get_logger(), "Failed to set position command value for joint %s", dofs_[i].c_str());
+      RCLCPP_WARN(
+        get_node()->get_logger(), std::format("Failed to set position command value for joint {}", dofs_[i]).c_str());
       return controller_interface::return_type::ERROR;
     }
   }
 
   for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
     if (!command_interfaces_[n_dofs_ + i].set_value(point.velocities[i])) {
-      RCLCPP_WARN(get_node()->get_logger(), "Failed to set velocity command value for joint %s", vel_dofs_[i].c_str());
+      RCLCPP_WARN(
+        get_node()->get_logger(),
+        std::format("Failed to set velocity command value for joint {}", vel_dofs_[i]).c_str());
       return controller_interface::return_type::ERROR;
     }
   }

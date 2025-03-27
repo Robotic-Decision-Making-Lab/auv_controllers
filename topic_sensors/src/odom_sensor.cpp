@@ -29,6 +29,7 @@ namespace odom_sensor
 namespace
 {
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 auto reset_odom_msg(nav_msgs::msg::Odometry * msg) -> void
 {
   msg->pose.pose.position.x = std::numeric_limits<double>::quiet_NaN();
@@ -99,8 +100,10 @@ auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/
   reset_odom_msg(state_.readFromNonRT());
   state_values_.reserve(pose_dofs_.size() + twist_dofs_.size());
 
+  // TODO(evan-palmer): check whether or not this can be remapped. if it can, then just use the default and require
+  // the user to remap it
   const std::string topic = params_.topic.empty() ? "~/odom" : params_.topic;
-  RCLCPP_INFO(node_->get_logger(), "OdomSensor subscribing to topic: %s", topic.c_str());
+  RCLCPP_INFO(node_->get_logger(), std::format("Subscribing to topic: {}", topic).c_str());
 
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     topic, rclcpp::SensorDataQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT

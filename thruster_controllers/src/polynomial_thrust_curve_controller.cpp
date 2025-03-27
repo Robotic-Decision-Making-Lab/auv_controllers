@@ -25,6 +25,7 @@
 #include <cstddef>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "pluginlib/class_list_macros.hpp"
 
 namespace thruster_controllers
 {
@@ -45,15 +46,8 @@ namespace
 
 auto PolynomialThrustCurveController::on_init() -> controller_interface::CallbackReturn
 {
-  try {
-    param_listener_ = std::make_shared<polynomial_thrust_curve_controller::ParamListener>(get_node());
-    params_ = param_listener_->get_params();
-  }
-  catch (const std::exception & e) {
-    fprintf(stderr, "An exception occurred while initializing the controller: %s\n", e.what());
-    return controller_interface::CallbackReturn::ERROR;
-  }
-
+  param_listener_ = std::make_shared<polynomial_thrust_curve_controller::ParamListener>(get_node());
+  params_ = param_listener_->get_params();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -92,6 +86,7 @@ auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State
 
   controller_state_pub_ =
     get_node()->create_publisher<control_msgs::msg::SingleDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
+
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::SingleDOFStateStamped>>(
       controller_state_pub_);
@@ -118,10 +113,8 @@ auto PolynomialThrustCurveController::command_interface_configuration() const
 {
   controller_interface::InterfaceConfiguration command_interface_config;
   command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-
   command_interface_config.names.reserve(1);
   command_interface_config.names.emplace_back(thruster_name_ + "/" + "pwm");
-
   return command_interface_config;
 }
 
@@ -138,15 +131,15 @@ auto PolynomialThrustCurveController::on_export_reference_interfaces()
 {
   reference_interfaces_.resize(1, std::numeric_limits<double>::quiet_NaN());
 
-  std::vector<hardware_interface::CommandInterface> reference_interfaces;
-  reference_interfaces.reserve(reference_interfaces_.size());
+  std::vector<hardware_interface::CommandInterface> interfaces;
+  interfaces.reserve(reference_interfaces_.size());
 
-  reference_interfaces.emplace_back(
+  interfaces.emplace_back(
     get_node()->get_name(),
-    thruster_name_ + "/" + hardware_interface::HW_IF_EFFORT,
-    &reference_interfaces_[0]);  // NOLINT
+    std::format("{}/{}", thruster_name_, hardware_interface::HW_IF_EFFORT),
+    &reference_interfaces_[0]);
 
-  return reference_interfaces;
+  return interfaces;
 }
 
 auto PolynomialThrustCurveController::update_reference_from_subscribers(
@@ -156,7 +149,6 @@ auto PolynomialThrustCurveController::update_reference_from_subscribers(
   auto * current_reference = reference_.readFromNonRT();
   reference_interfaces_[0] = current_reference->data;
   current_reference->data = std::numeric_limits<double>::quiet_NaN();
-
   return controller_interface::return_type::OK;
 }
 
@@ -164,12 +156,13 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   const rclcpp::Time & time,
   const rclcpp::Duration & period) -> controller_interface::return_type
 {
-  // Just for readability
   const auto reference = reference_interfaces_[0];
 
-  // If the reference is NaN, just apply the NaN to the output
   if (std::isnan(reference)) {
-    command_interfaces_[0].set_value(reference);
+    if (!command_interfaces_[0].set_value(reference)) {
+      RCLCPP_WARN(
+        get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+    }
   } else {
     const double clamped_reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
     int pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
@@ -179,14 +172,21 @@ auto PolynomialThrustCurveController::update_and_write_commands(
       pwm = params_.neutral_pwm;
     }
 
-    command_interfaces_[0].set_value(pwm);
+    if (!command_interfaces_[0].set_value(pwm)) {
+      RCLCPP_WARN(
+        get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+    }
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
+    const auto output = command_interfaces_[0].get_optional();
+    if (output.has_value()) {
+      rt_controller_state_pub_->msg_.dof_state.output = output.value();
+    }
     rt_controller_state_pub_->msg_.header.stamp = time;
     rt_controller_state_pub_->msg_.dof_state.reference = reference_interfaces_[0];
     rt_controller_state_pub_->msg_.dof_state.time_step = period.seconds();
-    rt_controller_state_pub_->msg_.dof_state.output = command_interfaces_[0].get_value();
+    rt_controller_state_pub_->msg_.dof_state.output = output.value();
     rt_controller_state_pub_->unlockAndPublish();
   }
 
@@ -194,8 +194,6 @@ auto PolynomialThrustCurveController::update_and_write_commands(
 }
 
 }  // namespace thruster_controllers
-
-#include "pluginlib/class_list_macros.hpp"
 
 PLUGINLIB_EXPORT_CLASS(
   thruster_controllers::PolynomialThrustCurveController,
