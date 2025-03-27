@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.23)
 project(thruster_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
@@ -41,7 +41,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/polynomial_thrust_curve_controller.hpp
 )
 ament_target_dependencies(thruster_controllers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_compile_features(thruster_controllers PUBLIC cxx_std_20)
+target_compile_features(thruster_controllers PUBLIC cxx_std_23)
 target_link_libraries(
     thruster_controllers
     PUBLIC ${rclcpp_LIBRARIES} polynomial_thrust_curve_controller_parameters

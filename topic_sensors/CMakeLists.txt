@@ -35,8 +35,7 @@ target_sources(
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/topic_sensors/odom_sensor.hpp
+        FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/topic_sensors/odom_sensor.hpp
 )
 ament_target_dependencies(topic_sensors PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(topic_sensors PUBLIC cxx_std_23)

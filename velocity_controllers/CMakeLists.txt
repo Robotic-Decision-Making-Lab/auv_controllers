@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.23)
 project(velocity_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
@@ -55,7 +55,7 @@ target_link_libraries(
     velocity_controllers
     PRIVATE integral_sliding_mode_controller_parameters
 )
-target_compile_features(velocity_controllers PUBLIC cxx_std_20)
+target_compile_features(velocity_controllers PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface velocity_controllers.xml)
 

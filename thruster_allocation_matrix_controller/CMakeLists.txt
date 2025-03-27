@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.23)
 project(thruster_allocation_matrix_controller)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
@@ -49,7 +49,7 @@ target_link_libraries(
     PRIVATE thruster_allocation_matrix_controller_parameters
 )
 ament_target_dependencies(thruster_allocation_matrix_controller PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_20)
+target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface thruster_allocation_matrix_controller.xml)
 
