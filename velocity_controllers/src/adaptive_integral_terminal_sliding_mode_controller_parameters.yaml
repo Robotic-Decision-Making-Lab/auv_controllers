@@ -1,14 +1,11 @@
-integral_sliding_mode_controller:
-  use_external_measured_states:
-    type: bool
+adaptive_integral_terminal_sliding_mode_controller:
+  joints:
+    type: string_array
+    default_value: ["x", "y", "z", "rx", "ry", "rz"]
     read_only: true
-    default_value: false
-    description: "Use velocity measurements obtained from a topic instead of from state interfaces."
-
-  enable_parameter_update_without_reactivation:
-    type: bool
-    default_value: true
-    description: "If enabled, the parameters will be dynamically updated while the controller is running."
+    description: "The controlled force/torque joints."
+    validation:
+      fixed_size<>: 6
 
   reference_controller:
     type: string
@@ -16,40 +13,49 @@ integral_sliding_mode_controller:
     read_only: true
     description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
 
-  tf:
-    base_frame:
-      type: string
-      default_value: "base_link_fsd"
-      read_only: true
-      description: "The name of the vehicle base frame."
-      validation:
-        not_empty<>: null
+  vehicle_frame_id:
+    type: string
+    default_value: "base_link_fsd"
+    read_only: true
+    description: "The name of the vehicle base frame."
 
-    odom_frame:
-      type: string
-      default_value: "odom_ned"
-      read_only: true
-      description: "The name of the inertial frame."
-      validation:
-        not_empty<>: null
+  odom_frame_id:
+    type: string
+    default_value: "odom_ned"
+    read_only: true
+    description: "The name of the inertial frame."
 
   gains:
-    rho:
-      type: double
-      default_value: 0.0
-      description: "The sliding mode gain. This adjusts how quickly the controller drives the system to the sliding surface."
+    __map_joints:
+      p_gain:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The proportional feedback gain for the computed torque control."
 
-    lambda:
-      type: double
-      default_value: 0.0
-      description: "The boundary thickness of the tanh function used to attenuate ISMC chatter."
+      k1_gain:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The adaptation rate gain for the disturbance rejection control."
 
-    Kp:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      description: "The proportional gains for the controller provided in the order: x, y, z, rx, ry, rz."
-      validation:
-        fixed_size<>: 6
+      k1_min:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The minimum adaptation rate."
+
+      k2_gain:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The sliding variable gain used in the disturbance rejection control."
+
+      s_min:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: "The minimum value of the sliding variable - used to detect loss of sliding mode."
 
   hydrodynamics:
     mass:
