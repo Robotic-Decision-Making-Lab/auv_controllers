@@ -10,4 +10,5 @@
 !thruster_controllers
 !auv_control_msgs
 !auv_control_demos
+!whole_body_controllers
 !ros2.repos
