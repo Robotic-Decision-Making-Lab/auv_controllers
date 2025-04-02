@@ -63,8 +63,6 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
-  auto on_set_chained_mode(bool chained_mode) -> bool override;
-
 protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
@@ -89,9 +87,8 @@ protected:
   std::size_t n_thrusters_;
   Eigen::MatrixXd tam_;
 
-private:
-  static constexpr std::size_t DOF = 6;
-  std::array<std::string, DOF> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  std::vector<std::string> dofs_;
+  std::size_t n_dofs_;
 };
 
 }  // namespace thruster_allocation_matrix_controller

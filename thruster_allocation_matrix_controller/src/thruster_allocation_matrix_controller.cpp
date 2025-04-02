@@ -44,6 +44,11 @@ auto reset_wrench_msg(geometry_msgs::msg::Wrench * wrench_msg) -> void  // NOLIN
   wrench_msg->torque.z = std::numeric_limits<double>::quiet_NaN();
 }
 
+auto wrench_to_vector(const geometry_msgs::msg::Wrench & wrench) -> std::vector<double>
+{
+  return {wrench.force.x, wrench.force.y, wrench.force.z, wrench.torque.x, wrench.torque.y, wrench.torque.z};
+}
+
 }  // namespace
 
 auto ThrusterAllocationMatrixController::on_init() -> controller_interface::CallbackReturn
@@ -65,6 +70,9 @@ auto ThrusterAllocationMatrixController::update_parameters() -> void  // NOLINT
 auto ThrusterAllocationMatrixController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
+
+  dofs_ = params_.joints;
+  n_dofs_ = dofs_.size();
 
   thruster_names_ = params_.thrusters;
   n_thrusters_ = thruster_names_.size();
@@ -94,7 +102,7 @@ auto ThrusterAllocationMatrixController::configure_parameters() -> controller_in
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  tam_ = Eigen::MatrixXd::Zero(DOF, n_thrusters_);
+  tam_ = Eigen::MatrixXd::Zero(n_dofs_, n_thrusters_);
   tam_ << Eigen::RowVectorXd::Map(params_.tam.x.data(), n_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.y.data(), n_thrusters_),
     Eigen::RowVectorXd::Map(params_.tam.z.data(), n_thrusters_),
@@ -132,8 +140,8 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
 
   rt_controller_state_pub_->lock();
   rt_controller_state_pub_->msg_.output_names = thruster_names_;
-  rt_controller_state_pub_->msg_.reference_names.assign(dof_names_.begin(), dof_names_.end());
-  rt_controller_state_pub_->msg_.reference.resize(DOF, std::numeric_limits<double>::quiet_NaN());
+  rt_controller_state_pub_->msg_.reference_names.assign(dofs_.begin(), dofs_.end());
+  rt_controller_state_pub_->msg_.reference.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->msg_.output.resize(n_thrusters_, std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->unlock();
 
@@ -147,8 +155,6 @@ auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::Sta
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
-
-auto ThrusterAllocationMatrixController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
 
 auto ThrusterAllocationMatrixController::command_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
@@ -180,14 +186,15 @@ auto ThrusterAllocationMatrixController::state_interface_configuration() const
 auto ThrusterAllocationMatrixController::on_export_reference_interfaces()
   -> std::vector<hardware_interface::CommandInterface>
 {
-  reference_interfaces_.resize(DOF, std::numeric_limits<double>::quiet_NaN());
-
+  reference_interfaces_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(reference_interfaces_.size());
 
-  for (const auto & dof : dof_names_) {
+  for (const auto & dof : dofs_) {
     interfaces.emplace_back(
-      get_node()->get_name(), dof + "/" + hardware_interface::HW_IF_EFFORT, &reference_interfaces_[interfaces.size()]);
+      get_node()->get_name(),
+      std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT),
+      &reference_interfaces_[interfaces.size()]);
   }
 
   return interfaces;
@@ -198,23 +205,13 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
-
-  const std::vector<double> wrench = {
-    current_reference->force.x,
-    current_reference->force.y,
-    current_reference->force.z,
-    current_reference->torque.x,
-    current_reference->torque.y,
-    current_reference->torque.z};
-
-  for (std::size_t i = 0; i < wrench.size(); ++i) {
-    if (!std::isnan(wrench[i])) {
-      reference_interfaces_[i] = wrench[i];
+  const std::vector<double> wrench = wrench_to_vector(*current_reference);
+  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
+    if (!std::isnan(ref)) {
+      interface = ref;
     }
   }
-
   reset_wrench_msg(current_reference);
-
   return controller_interface::return_type::OK;
 }
 
@@ -225,9 +222,10 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
   const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
   const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);
 
-  for (std::size_t i = 0; i < n_thrusters_; i++) {
-    if (!command_interfaces_[i].set_value(thrust[i])) {
-      RCLCPP_INFO(get_node()->get_logger(), std::format("Failed to set command for thruster {}", i).c_str());
+  for (auto && [interface, value] : std::views::zip(command_interfaces_, thrust)) {
+    if (!interface.set_value(value)) {
+      RCLCPP_INFO(
+        get_node()->get_logger(), std::format("Failed to set command for thruster {}", interface.get_name()).c_str());
       return controller_interface::return_type::ERROR;
     }
   }

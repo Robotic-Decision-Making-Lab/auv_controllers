@@ -66,8 +66,6 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
-  auto on_set_chained_mode(bool chained_mode) -> bool override;
-
 protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
@@ -91,8 +89,6 @@ protected:
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  std::string vehicle_frame_id_;
-  std::string inertial_frame_id_;
   realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
 
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;

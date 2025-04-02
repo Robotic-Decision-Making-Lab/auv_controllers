@@ -167,8 +167,6 @@ auto IKController::on_activate(const rclcpp_lifecycle::State & /*previous_state*
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto IKController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
-
 auto IKController::command_interface_configuration() const -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;

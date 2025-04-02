@@ -1,4 +1,12 @@
 thruster_allocation_matrix_controller:
+  joints:
+    type: string_array
+    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    read_only: true
+    description: "The reference force/torque joints."
+    validation:
+      fixed_size<>: 6
+
   thrusters:
     type: string_array
     default_value: []

@@ -242,8 +242,6 @@ auto IntegralSlidingModeController::on_export_reference_interfaces()
   return interfaces;
 }
 
-auto IntegralSlidingModeController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
-
 auto IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type

@@ -23,6 +23,7 @@
 #include <ranges>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "pluginlib/class_list_macros.hpp"
 
 namespace velocity_controllers
 {
@@ -59,7 +60,8 @@ auto sign(const Eigen::Vector6d & x, double thickness) -> Eigen::Vector6d
 /// Calculate the element-wise error between two vectors, returning NaN if either element is NaN.
 auto calculate_error(const std::vector<double> & ref, const std::vector<double> & state) -> std::vector<double>
 {
-  std::vector<double> error(ref.size());
+  std::vector<double> error;
+  error.reserve(ref.size());
   std::ranges::transform(ref, state, std::back_inserter(error), [](double ref, double state) {
     return !std::isnan(ref) && !std::isnan(state) ? ref - state : std::numeric_limits<double>::quiet_NaN();
   });
@@ -317,3 +319,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 }
 
 }  // namespace velocity_controllers
+
+PLUGINLIB_EXPORT_CLASS(
+  velocity_controllers::AdaptiveIntegralTerminalSlidingModeController,
+  controller_interface::ChainableControllerInterface)

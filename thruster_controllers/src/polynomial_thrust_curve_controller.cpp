@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <ranges>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
@@ -36,8 +37,8 @@ namespace
 [[nodiscard]] auto calculate_pwm_from_thrust_curve(double force, const std::vector<double> & coefficients) -> int
 {
   double pwm = 0.0;
-  for (std::size_t i = 0; i < coefficients.size(); ++i) {
-    pwm += coefficients[i] * std::pow(force, i);
+  for (auto [i, coeff] : std::views::enumerate(coefficients)) {
+    pwm += coeff * std::pow(force, i);
   }
   return static_cast<int>(std::round(pwm));
 }
@@ -70,13 +71,9 @@ auto PolynomialThrustCurveController::configure_parameters() -> controller_inter
 auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  auto ret = configure_parameters();
-  if (ret != controller_interface::CallbackReturn::SUCCESS) {
-    return ret;
-  }
+  configure_parameters();
 
   reference_.writeFromNonRT(std_msgs::msg::Float64());
-
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
@@ -106,15 +103,13 @@ auto PolynomialThrustCurveController::on_activate(const rclcpp_lifecycle::State 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto PolynomialThrustCurveController::on_set_chained_mode(bool /*chained_mode*/) -> bool { return true; }
-
 auto PolynomialThrustCurveController::command_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration command_interface_config;
   command_interface_config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   command_interface_config.names.reserve(1);
-  command_interface_config.names.emplace_back(thruster_name_ + "/" + "pwm");
+  command_interface_config.names.emplace_back(std::format("{}/pwm", thruster_name_));
   return command_interface_config;
 }
 

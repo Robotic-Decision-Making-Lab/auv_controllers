@@ -59,8 +59,6 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
-  auto on_set_chained_mode(bool chained_mode) -> bool override;
-
 protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
