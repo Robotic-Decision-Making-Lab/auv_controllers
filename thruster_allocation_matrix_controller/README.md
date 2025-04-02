@@ -30,6 +30,7 @@ represent the thrust associated with each thruster defined in the TAM.
 
 ## Parameters
 
+- joints: List of reference force/torque interfaces. [6-sized string array]
 - thrusters: List of thruster names. Should be provided in the same order as
   the TAM [N-sized string array]
 - reference_controllers: List of the reference controllers. Used when setting
