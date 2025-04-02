@@ -6,7 +6,7 @@ signal.
 
 ## Adaptive Integral Terminal Sliding Mode Controller
 
-A chainable controller designed by Ganzalez-Garcia and Castaneda [^1] that
+A chainable controller designed by Gonzalez-Garcia and Castaneda [^1] that
 provides robustness to disturbances using a dynamically adapted disturbance
 rejection torques.
 
