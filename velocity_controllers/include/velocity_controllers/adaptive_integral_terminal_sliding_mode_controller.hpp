@@ -60,8 +60,6 @@ public:
   auto update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
 
-  auto on_set_chained_mode(bool chained_mode) -> bool override;
-
 protected:
   auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
 
@@ -77,6 +75,8 @@ protected:
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
+  bool first_update_{true};
+  Eigen::Vector6d integral_error_;
   std::vector<double> system_state_values_;
 
   // We need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model.
@@ -93,12 +93,12 @@ protected:
   adaptive_integral_terminal_sliding_mode_controller::Params params_;
 
   std::vector<std::string> dofs_;
-  Eigen::Matrix6d p_, k1_, k2_, k1_min_, s_min_;
+  Eigen::Matrix6d p_, k1_, k2_, k1_min_, s_min_, k_theta_;
 
   std::unique_ptr<hydrodynamics::Inertia> inertia_;
   std::unique_ptr<hydrodynamics::Coriolis> coriolis_;
   std::unique_ptr<hydrodynamics::Damping> damping_;
-  std::unique_ptr<hydrodynamics::RestoringForces> restoring_forces_;
+  std::unique_ptr<hydrodynamics::RestoringForces> rf_;
 };
 
 }  // namespace velocity_controllers

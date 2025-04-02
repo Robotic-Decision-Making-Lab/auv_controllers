@@ -70,36 +70,40 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
 {
   update_parameters();
 
-  // Store the controller gains
   dofs_ = params_.joints;
-  std::vector<double> k1, k2, k1_min, s_min, p;
-  for (const auto & dof : dofs_) {
-    k1.push_back(params_.gains.joints_map[dof].k1);
-    k1_min.push_back(params_.gains.joints_map[dof].k1_min);
-    k2.push_back(params_.gains.joints_map[dof].k2);
-    s_min.push_back(params_.gains.joints_map[dof].s_min);
-    p.push_back(params_.gains.joints_map[dof].p);
-  }
+
+  auto get_gain = [&](auto field) {
+    return dofs_ | std::views::transform([&](const auto & dof) { return params_.gains.joints_map[dof].*field; }) |
+           std::ranges::to<std::vector<double>>();
+  };
+
+  // Store the controller gains as matrices
+  auto k1 = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::k1);
+  auto k2 = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::k2);
+  auto k1_min = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::k1_min);
+  auto s_min = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::s_min);
+  auto p = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::p);
+  auto k_theta = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Gains::k_theta);
+
   k1_ = Eigen::Vector6d(k1.data()).asDiagonal().toDenseMatrix();
   k2_ = Eigen::Vector6d(k2.data()).asDiagonal().toDenseMatrix();
   k1_min_ = Eigen::Vector6d(k1_min.data()).asDiagonal().toDenseMatrix();
   s_min_ = Eigen::Vector6d(s_min.data()).asDiagonal().toDenseMatrix();
   p_ = Eigen::Vector6d(p.data()).asDiagonal().toDenseMatrix();
+  k_theta_ = Eigen::Vector6d(params_.gains.k_theta.data()).asDiagonal().toDenseMatrix();
 
-  // Update the hydrodynamic parameters
-  // TODO(evan-palmer): Read these from the robot_description instead of a parameters file
-  const Eigen::Vector3d moments_of_inertia(params_.hydrodynamics.moments_of_inertia.data());
+  const Eigen::Vector3d moments(params_.hydrodynamics.moments_of_inertia.data());
   const Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
   Eigen::Vector6d linear_damping(params_.hydrodynamics.linear_damping.data());
   Eigen::Vector6d quadratic_damping(params_.hydrodynamics.quadratic_damping.data());
   Eigen::Vector3d cob(params_.hydrodynamics.center_of_buoyancy.data());
   Eigen::Vector3d cog(params_.hydrodynamics.center_of_gravity.data());
 
-  inertia_ = std::make_unique<hydrodynamics::Inertia>(params_.hydrodynamics.mass, moments_of_inertia, added_mass);
-  coriolis_ = std::make_unique<hydrodynamics::Coriolis>(params_.hydrodynamics.mass, moments_of_inertia, added_mass);
+  const auto & dyn = params_.hydrodynamics;
+  inertia_ = std::make_unique<hydrodynamics::Inertia>(dyn.mass, moments, added_mass);
+  coriolis_ = std::make_unique<hydrodynamics::Coriolis>(dyn.mass, moments, added_mass);
   damping_ = std::make_unique<hydrodynamics::Damping>(std::move(linear_damping), std::move(quadratic_damping));
-  restoring_forces_ = std::make_unique<hydrodynamics::RestoringForces>(
-    params_.hydrodynamics.weight, params_.hydrodynamics.buoyancy, std::move(cob), std::move(cog));
+  rf_ = std::make_unique<hydrodynamics::RestoringForces>(dyn.weight, dyn.buoyancy, std::move(cob), std::move(cog));
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -187,11 +191,6 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_export_reference_interfac
   return interfaces;
 }
 
-auto AdaptiveIntegralTerminalSlidingModeController::on_set_chained_mode(bool chained_mode) -> bool override
-{
-  return true;
-}
-
 auto AdaptiveIntegralTerminalSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
@@ -226,26 +225,25 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   configure_parameters();
 
   update_system_state_values();
-  const Eigen::Vector6d velocity_state(system_state_values_.data());
+
+  const Eigen::Vector6d vel(system_state_values_.data());
 
   // Calculate the velocity error
-  std::vector<double> velocity_error_values;
-  velocity_error_values.reserve(DOF);
+  std::vector<double> error_values;
+  error_values.reserve(DOF);
+
   std::ranges::transform(
-    reference_interfaces_,
-    system_state_values_,
-    std::back_inserter(velocity_error_values),
-    [](double reference, double state) {
+    reference_interfaces_, system_state_values_, std::back_inserter(error_values), [](double reference, double state) {
       return !std::isnan(reference) && !std::isnan(state) ? reference - state
                                                           : std::numeric_limits<double>::quiet_NaN();
     });
 
-  if (std::ranges::all_of(velocity_error_values, [](double i) { return std::isnan(i); })) {
+  if (std::ranges::all_of(error_values, [](double i) { return std::isnan(i); })) {
     RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Skipping control update.");
     return controller_interface::return_type::OK;
   }
 
-  const Eigen::Vector6d velocity_error(velocity_error_values.data());
+  const Eigen::Vector6d error(error_values.data());
 
   // Try getting the latest orientation of the vehicle in the inertial frame. If the transform is not available, use the
   // last known orientation.
@@ -265,20 +263,44 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
         .c_str());
   }
 
+  if (first_update_) {
+    // TODO(evan-palmer): Add initial state scaling parameter
+    integral_error_ = -error / 1.0;
+    first_update_ = false;
+  }
+
+  const Eigen::Vector6d s = error + p_ * integral_error_;
+
   // TODO(evan-palmer): Add sign boundary thickness parameter
-  // TODO(evan-palmer): add root
-  const Eigen::Vector6d e_i_dot = velocity_error.unaryExpr([this](double x) { return std::tanh(x / 0.01) });
-  e_i_dot *= velocity_error.unaryExpr([this](double x) { return std::abs(x) });
+  const Eigen::Vector6d e_i_dot =
+    error.unaryExpr([](double x) { return std::tanh(x / 0.01) * std::pow(std::abs(x), (3.0 / 5.0)); });
 
   // calculate the computed torque control
-  const Eigen::Vector6d t0 =
-    inertia_->mass_matrix * (p_ * e_i_dot) + coriolis_->calculate_coriolis_matrix(velocity_state) * velocity_state +
-    damping_->calculate_damping_matrix(velocity_state) * velocity_state +
-    restoring_forces_->calculate_restoring_forces_vector(system_rotation_.readFromRT()->toRotationMatrix());
+  const Eigen::Vector6d t0 = inertia_->mass_matrix * (p_ * e_i_dot) + coriolis_->calculate_coriolis_matrix(vel) * vel +
+                             damping_->calculate_damping_matrix(vel) * vel +
+                             rf_->calculate_restoring_forces_vector(system_rotation_.readFromRT()->toRotationMatrix());
 
   // calculate the adaptive disturbance rejection control
-  // TODO(evan-palmer): discretize dynamics
-  const Eigen::Vector6d t1 = -k1_ *
+  const Eigen::Vector6d rho = k1_ * s.cwiseAbs().cwiseSqrt();
+  const Eigen::Vector6d t1 = rho * s.unaryExpr([](double x) { return std::tanh(x / 0.01); }) + k2_ * s;
+
+  // calculate & apply the control input
+  const Eigen::Vector6d tau = t0 + t1;
+  for (std::size_t i = 0; i < dofs_.size(); ++i) {
+    command_interfaces_[i].set_value(tau[i]);
+  }
+
+  // update the control dynamics
+  integral_error_ = e_i_dot;
+
+  // update the adaptive gain
+  for (std::size_t i = 0; i < error.size(); ++i) {
+    if (k1_(i) > k1_min_(i)) {
+      k1_(i) = k_theta_(i) * std::tanh((std::abs(s(i)) - s_min(i)) / 0.01);
+    } else {
+      k1_(i) = k1_min_(i);
+    }
+  }
 }
 
 }  // namespace velocity_controllers
