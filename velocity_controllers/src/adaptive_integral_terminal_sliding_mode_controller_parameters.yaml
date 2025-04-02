@@ -26,30 +26,22 @@ adaptive_integral_terminal_sliding_mode_controller:
     description: "The name of the inertial frame."
 
   gains:
-    sign_thickness:
+    lambda:
       type: double
       default_value: 0.0
       read_only: false
-      description: "The thickness of the sign in the sliding mode control."
-      validation:
-        gt<>: [0.0]
-
-    init_state_scale:
-      type: double
-      default_value: 0.0
-      read_only: false
-      description: "The scale factor for the initial state in the sliding mode control."
+      description: "The sign boundary thickness used to alleviate sliding mode chatter."
       validation:
         gt<>: [0.0]
 
     __map_joints:
-      p_gain:
+      alpha:
         type: double
-        default_value: 0.0
+        default_value: 1.0
         read_only: false
         description: "The proportional feedback gain for the computed torque control."
 
-      k1_gain:
+      k1:
         type: double
         default_value: 0.0
         read_only: false
@@ -61,19 +53,19 @@ adaptive_integral_terminal_sliding_mode_controller:
         read_only: false
         description: "The minimum adaptation rate."
 
-      k2_gain:
+      k2:
         type: double
         default_value: 0.0
         read_only: false
         description: "The sliding variable gain used in the disturbance rejection control."
 
-      ktheta_gain:
+      k_theta:
         type: double
         default_value: 0.0
         read_only: false
         description: "The gain for the adaptation rate dynamics."
 
-      s_min:
+      mu:
         type: double
         default_value: 0.0
         read_only: false

@@ -93,12 +93,16 @@ protected:
   adaptive_integral_terminal_sliding_mode_controller::Params params_;
 
   std::vector<std::string> dofs_;
-  Eigen::Matrix6d p_, k1_, k2_, k1_min_, s_min_, k_theta_;
+  std::size_t n_dofs_;
 
-  std::unique_ptr<hydrodynamics::Inertia> inertia_;
-  std::unique_ptr<hydrodynamics::Coriolis> coriolis_;
-  std::unique_ptr<hydrodynamics::Damping> damping_;
-  std::unique_ptr<hydrodynamics::RestoringForces> rf_;
+  double lambda_;
+  Eigen::Vector6d mu_, k1_min_, k_theta_;
+  Eigen::Matrix6d alpha_, k1_, k2_;
+
+  std::unique_ptr<hydrodynamics::Inertia> M_;
+  std::unique_ptr<hydrodynamics::Coriolis> C_;
+  std::unique_ptr<hydrodynamics::Damping> D_;
+  std::unique_ptr<hydrodynamics::RestoringForces> g_;
 };
 
 }  // namespace velocity_controllers

@@ -52,14 +52,7 @@ void reset_twist_msg(geometry_msgs::msg::Twist * msg)  // NOLINT
 
 auto twist_to_vector(const geometry_msgs::msg::Twist & twist) -> std::vector<double>
 {
-  return {
-    twist.linear.x,
-    twist.linear.y,
-    twist.linear.z,
-    twist.angular.x,
-    twist.angular.y,
-    twist.angular.z,
-  };
+  return {twist.linear.x, twist.linear.y, twist.linear.z, twist.angular.x, twist.angular.y, twist.angular.z};
 }
 
 }  // namespace

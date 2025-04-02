@@ -35,16 +35,23 @@ generate_parameter_library(integral_sliding_mode_controller_parameters
   src/integral_sliding_mode_controller_parameters.yaml
 )
 
+generate_parameter_library(adaptive_integral_terminal_sliding_mode_controller_parameters
+  src/adaptive_integral_terminal_sliding_mode_controller_parameters.yaml
+)
+
 add_library(velocity_controllers SHARED)
 
 target_sources(
     velocity_controllers
-    PRIVATE src/integral_sliding_mode_controller.cpp
+    PRIVATE
+        src/integral_sliding_mode_controller.cpp
+        src/adaptive_integral_terminal_sliding_mode_controller.cpp
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/integral_sliding_mode_controller.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
 )
 
 ament_target_dependencies(velocity_controllers
@@ -53,24 +60,19 @@ ament_target_dependencies(velocity_controllers
 )
 target_link_libraries(
     velocity_controllers
-    PRIVATE integral_sliding_mode_controller_parameters
+    PRIVATE
+        integral_sliding_mode_controller_parameters
+        adaptive_integral_terminal_sliding_mode_controller_parameters
 )
 target_compile_features(velocity_controllers PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface velocity_controllers.xml)
 
-if(BUILD_TESTING)
-    find_package(ament_lint_auto REQUIRED)
-
-    set(ament_cmake_copyright_FOUND TRUE)
-    set(ament_cmake_uncrustify_FOUND TRUE)
-    set(ament_cmake_cpplint_FOUND TRUE)
-
-    ament_lint_auto_find_test_dependencies()
-endif()
-
 install(
-    TARGETS velocity_controllers integral_sliding_mode_controller_parameters
+    TARGETS
+        velocity_controllers
+        integral_sliding_mode_controller_parameters
+        adaptive_integral_terminal_sliding_mode_controller_parameters
     EXPORT export_velocity_controllers
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
