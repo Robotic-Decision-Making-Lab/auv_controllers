@@ -97,6 +97,8 @@ protected:
   std::shared_ptr<integral_sliding_mode_controller::ParamListener> param_listener_;
   integral_sliding_mode_controller::Params params_;
 
+  std::string inertial_frame_id_, vehicle_frame_id_;
+
   Eigen::Matrix6d proportional_gain_;
   double sliding_gain_;
   double boundary_thickness_;
