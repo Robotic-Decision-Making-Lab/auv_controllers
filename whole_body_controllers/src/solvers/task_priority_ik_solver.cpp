@@ -142,7 +142,8 @@ PoseConstraint::PoseConstraint(
   error_ = Eigen::VectorXd::Zero(6);
   error_.head<3>() = (constraint.translation() - primal.translation()).eval();
   error_.tail<3>() = quaternion_error(Eigen::Quaterniond(constraint.rotation()), Eigen::Quaterniond(primal.rotation()));
-  jacobian_ = pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED);
+  jacobian_ = Eigen::MatrixXd::Zero(6, model->nv);
+  pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED, jacobian_);
 }
 
 JointConstraint::JointConstraint(
