@@ -9,6 +9,7 @@
   </class>
 
   <class name="velocity_controllers/AdaptiveIntegralTerminalSlidingModeController"
+         type="velocity_controllers::AdaptiveIntegralTerminalSlidingModeController"
          base_class_type="controller_interface::ChainableControllerInterface">
     <description>
       Adaptive integral terminal sliding mode controller for AUV velocity control
