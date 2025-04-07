@@ -72,6 +72,8 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
+  // provide an interface for providing reference commands from a topic
+  // this allows us to use tools like the keyboard teleop node
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
@@ -79,7 +81,6 @@ protected:
   Eigen::Vector6d integral_error_;
   std::vector<double> system_state_values_;
 
-  // We need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model.
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
@@ -92,17 +93,22 @@ protected:
   std::shared_ptr<adaptive_integral_terminal_sliding_mode_controller::ParamListener> param_listener_;
   adaptive_integral_terminal_sliding_mode_controller::Params params_;
 
+  // the dofs are passed as a parameter to the controller
+  // we could make these static, but there may be scenarios where users want to rename the interfaces
   std::vector<std::string> dofs_;
   std::size_t n_dofs_;
 
+  // controller gains/parameters
+  // these are named to match the notation in the paper
   double lambda_;
   Eigen::Vector6d mu_, k1_min_, k_theta_;
   Eigen::Matrix6d alpha_, k1_, k2_;
 
-  std::unique_ptr<hydrodynamics::Inertia> M_;
-  std::unique_ptr<hydrodynamics::Coriolis> C_;
-  std::unique_ptr<hydrodynamics::Damping> D_;
-  std::unique_ptr<hydrodynamics::RestoringForces> g_;
+  // std::unique_ptr<hydrodynamics::Inertia> M_;
+  // std::unique_ptr<hydrodynamics::Coriolis> C_;
+  // std::unique_ptr<hydrodynamics::Damping> D_;
+  // std::unique_ptr<hydrodynamics::RestoringForces> g_;
+  std::unique_ptr<hydrodynamics::Parameters> model_;
 };
 
 }  // namespace velocity_controllers

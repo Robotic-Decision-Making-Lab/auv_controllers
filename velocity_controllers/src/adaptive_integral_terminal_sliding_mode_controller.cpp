@@ -23,7 +23,6 @@
 #include <ranges>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include "pluginlib/class_list_macros.hpp"
 
 namespace velocity_controllers
 {
@@ -124,10 +123,8 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   Eigen::Vector3d cog(params_.hydrodynamics.center_of_gravity.data());
 
   const auto & dyn = params_.hydrodynamics;
-  M_ = std::make_unique<hydrodynamics::Inertia>(dyn.mass, moments, added_mass);
-  C_ = std::make_unique<hydrodynamics::Coriolis>(dyn.mass, moments, added_mass);
-  D_ = std::make_unique<hydrodynamics::Damping>(std::move(linear_damping), std::move(quadratic_damping));
-  g_ = std::make_unique<hydrodynamics::RestoringForces>(dyn.weight, dyn.buoyancy, std::move(cob), std::move(cog));
+  model_ = std::make_unique<hydrodynamics::Parameters>(
+    dyn.mass, moments, added_mass, linear_damping, quadratic_damping, cog, cob, dyn.weight, dyn.buoyancy);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -291,8 +288,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
   // calculate the computed torque control
   // assume that the feedforward acceleration is zero
-  const auto g = (*g_)(system_rotation_.readFromRT()->toRotationMatrix());
-  const Eigen::Vector6d t0 = (*M_) * (alpha_ * integral_error_) + (*C_)(vel)*vel + (*D_)(vel)*vel + g;
+  const Eigen::Vector6d u = alpha_ * integral_error_;
+  const auto & rot = system_rotation_.readFromRT()->toRotationMatrix();
+  const Eigen::Vector6d t0 = hydrodynamics::inverse_dynamics(*model_, u, vel, rot);
 
   // calculate the adaptive disturbance rejection control
   const Eigen::Vector6d t1 = (k1_ * s.cwiseAbs().cwiseSqrt()).asDiagonal() * sign(s, lambda_) + k2_ * s;
@@ -320,6 +318,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
 }  // namespace velocity_controllers
 
+#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
   velocity_controllers::AdaptiveIntegralTerminalSlidingModeController,
   controller_interface::ChainableControllerInterface)
