@@ -31,7 +31,7 @@
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
-#include "hydrodynamics/eigen.hpp"
+#include "hydrodynamics/hydrodynamics.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"

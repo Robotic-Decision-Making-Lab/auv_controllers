@@ -31,14 +31,15 @@ namespace
 {
 
 /// Set the `Twist` message values to NaN.
-void reset_twist_msg(geometry_msgs::msg::Twist * msg)
+void reset_twist_msg(geometry_msgs::msg::Twist * msg)  // NOLINT
 {
-  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
+  const auto nan = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.x = nan;
+  msg->linear.y = nan;
+  msg->linear.z = nan;
+  msg->angular.x = nan;
+  msg->angular.y = nan;
+  msg->angular.z = nan;
 }
 
 /// Convert a `Twist` message to a vector of doubles.
@@ -92,7 +93,6 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
 
   dofs_ = params_.joints;
   n_dofs_ = dofs_.size();
-
   lambda_ = params_.gains.lambda;
 
   auto get_gain = [this](auto field) {
@@ -123,7 +123,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   Eigen::Vector3d cog(params_.hydrodynamics.center_of_gravity.data());
 
   const auto & dyn = params_.hydrodynamics;
-  model_ = std::make_unique<hydrodynamics::Parameters>(
+  model_ = std::make_unique<hydrodynamics::Params>(
     dyn.mass, moments, added_mass, linear_damping, quadratic_damping, cog, cob, dyn.weight, dyn.buoyancy);
 
   return controller_interface::CallbackReturn::SUCCESS;

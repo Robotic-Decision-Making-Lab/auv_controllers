@@ -26,7 +26,6 @@
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
-#include "hydrodynamics/eigen.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
@@ -104,11 +103,7 @@ protected:
   Eigen::Vector6d mu_, k1_min_, k_theta_;
   Eigen::Matrix6d alpha_, k1_, k2_;
 
-  // std::unique_ptr<hydrodynamics::Inertia> M_;
-  // std::unique_ptr<hydrodynamics::Coriolis> C_;
-  // std::unique_ptr<hydrodynamics::Damping> D_;
-  // std::unique_ptr<hydrodynamics::RestoringForces> g_;
-  std::unique_ptr<hydrodynamics::Parameters> model_;
+  std::unique_ptr<hydrodynamics::Params> model_;
 };
 
 }  // namespace velocity_controllers
