@@ -20,15 +20,9 @@ foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 endforeach()
 
 find_package(ament_cmake REQUIRED)
-find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
 
-generate_parameter_library(odom_sensor_parameters
-  src/odom_sensor_parameters.yaml
-)
-
 add_library(topic_sensors SHARED)
-
 target_sources(
     topic_sensors
     PRIVATE src/odom_sensor.cpp
@@ -39,15 +33,11 @@ target_sources(
 )
 ament_target_dependencies(topic_sensors PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(topic_sensors PUBLIC cxx_std_23)
-target_link_libraries(
-    topic_sensors
-    PUBLIC ${rclcpp_LIBRARIES} odom_sensor_parameters
-)
-
+target_link_libraries(topic_sensors PUBLIC ${rclcpp_LIBRARIES})
 pluginlib_export_plugin_description_file(hardware_interface topic_sensors.xml)
 
 install(
-    TARGETS topic_sensors odom_sensor_parameters
+    TARGETS topic_sensors
     EXPORT export_topic_sensors
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

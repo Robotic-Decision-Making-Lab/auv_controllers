@@ -1,6 +1,6 @@
-<library path="odom_sensor">
-  <class name="odom_sensor/OdomSensor"
-         type="odom_sensor::OdomSensor"
+<library path="topic_sensors">
+  <class name="topic_sensors/OdomSensor"
+         type="topic_sensors::OdomSensor"
          base_class_type="hardware_interface::SensorInterface">
     <description>
       Sensor plugin to create state interfaces from an Odometry topic.

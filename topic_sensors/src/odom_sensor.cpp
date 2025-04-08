@@ -23,7 +23,7 @@
 #include <format>
 #include <ranges>
 
-namespace odom_sensor
+namespace topic_sensors
 {
 
 namespace
@@ -69,40 +69,24 @@ auto odom_to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>
 
 auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> hardware_interface::CallbackReturn
 {
+  RCLCPP_INFO(logger_, "Initializing the OdomSensor interface.");  // NOLINT
+  prefix_ = info_.hardware_parameters.at("prefix");
   rclcpp::NodeOptions options;
-  options.arguments({"--ros-args", "-r", "__node:=odom_sensor_" + info_.name});
+  options.arguments({std::format("--ros-args -r __ns:={} -r __node:=odom_sensor_{}", prefix_, info_.name)});
   node_ = rclcpp::Node::make_shared("_", options);
-
-  param_listener_ = std::make_unique<odom_sensor::ParamListener>(node_);
-  params_ = param_listener_->get_params();
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto OdomSensor::update_parameters() -> void
-{
-  if (!param_listener_->is_old(params_)) {
-    return;
-  }
-  param_listener_->refresh_dynamic_parameters();
-  params_ = param_listener_->get_params();
-}
-
-auto OdomSensor::configure_parameters() -> hardware_interface::CallbackReturn
-{
-  update_parameters();
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) -> hardware_interface::CallbackReturn
 {
-  configure_parameters();
   reset_odom_msg(state_.readFromNonRT());
   state_values_.reserve(pose_dofs_.size() + twist_dofs_.size());
 
-  // TODO(evan-palmer): check whether or not this can be remapped. if it can, then just use the default and require
-  // the user to remap it
-  const std::string topic = params_.topic.empty() ? "~/odom" : params_.topic;
+  const std::string topic = info_.hardware_parameters.at("topic");
+  if (topic.empty()) {
+    RCLCPP_ERROR(logger_, "Topic name is empty. Please provide a valid topic name.");
+    return hardware_interface::CallbackReturn::ERROR;
+  }
   RCLCPP_INFO(node_->get_logger(), std::format("Subscribing to topic: {}", topic).c_str());
 
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
@@ -119,14 +103,14 @@ auto OdomSensor::export_state_interfaces() -> std::vector<hardware_interface::St
 
   for (const auto & dof : pose_dofs_) {
     interfaces.emplace_back(
-      params_.prefix.empty() ? dof : std::format("{}/{}", params_.prefix, dof),
+      prefix_.empty() ? dof : std::format("{}/{}", prefix_, dof),
       hardware_interface::HW_IF_POSITION,
       &state_values_[interfaces.size()]);
   }
 
   for (const auto & dof : twist_dofs_) {
     interfaces.emplace_back(
-      params_.prefix.empty() ? dof : std::format("{}/{}", params_.prefix, dof),
+      prefix_.empty() ? dof : std::format("{}/{}", prefix_, dof),
       hardware_interface::HW_IF_VELOCITY,
       &state_values_[interfaces.size()]);
   }
@@ -140,11 +124,12 @@ auto OdomSensor::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*
   if (rclcpp::ok()) {
     rclcpp::spin_some(node_);
   }
-
   const auto * current_state = state_.readFromRT();
   std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
-
   return hardware_interface::return_type::OK;
 }
 
-}  // namespace odom_sensor
+}  // namespace topic_sensors
+
+#include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(topic_sensors::OdomSensor, hardware_interface::SensorInterface)
