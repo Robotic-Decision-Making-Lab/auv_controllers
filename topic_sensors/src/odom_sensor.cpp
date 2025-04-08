@@ -69,7 +69,6 @@ auto odom_to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>
 
 auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> hardware_interface::CallbackReturn
 {
-  RCLCPP_INFO(logger_, "Initializing the OdomSensor interface.");  // NOLINT
   prefix_ = info_.hardware_parameters.at("prefix");
   rclcpp::NodeOptions options;
   options.arguments({std::format("--ros-args -r __ns:={} -r __node:=odom_sensor_{}", prefix_, info_.name)});
@@ -80,7 +79,7 @@ auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> h
 auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) -> hardware_interface::CallbackReturn
 {
   reset_odom_msg(state_.readFromNonRT());
-  state_values_.reserve(pose_dofs_.size() + twist_dofs_.size());
+  state_values_.resize(pose_dofs_.size() + twist_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
 
   const std::string topic = info_.hardware_parameters.at("topic");
   if (topic.empty()) {
@@ -100,19 +99,20 @@ auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/
 auto OdomSensor::export_state_interfaces() -> std::vector<hardware_interface::StateInterface>
 {
   std::vector<hardware_interface::StateInterface> interfaces;
+  interfaces.reserve(pose_dofs_.size() + twist_dofs_.size());
 
-  for (const auto & dof : pose_dofs_) {
+  for (const auto [i, dof] : std::views::enumerate(pose_dofs_)) {
     interfaces.emplace_back(
       prefix_.empty() ? dof : std::format("{}/{}", prefix_, dof),
       hardware_interface::HW_IF_POSITION,
-      &state_values_[interfaces.size()]);
+      &state_values_[i]);
   }
 
-  for (const auto & dof : twist_dofs_) {
+  for (const auto [j, dof] : std::views::enumerate(twist_dofs_)) {
     interfaces.emplace_back(
       prefix_.empty() ? dof : std::format("{}/{}", prefix_, dof),
       hardware_interface::HW_IF_VELOCITY,
-      &state_values_[interfaces.size()]);
+      &state_values_[pose_dofs_.size() + j]);
   }
 
   return interfaces;
