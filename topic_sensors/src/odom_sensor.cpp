@@ -125,7 +125,8 @@ auto OdomSensor::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*
     rclcpp::spin_some(node_);
   }
   const auto * current_state = state_.readFromRT();
-  std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
+  RCLCPP_INFO(logger_, "this is a test");
+  // std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
   return hardware_interface::return_type::OK;
 }
 
