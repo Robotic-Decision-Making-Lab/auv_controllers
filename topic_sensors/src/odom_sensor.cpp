@@ -79,14 +79,14 @@ auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> h
 auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) -> hardware_interface::CallbackReturn
 {
   reset_odom_msg(state_.readFromNonRT());
-  state_values_.resize(pose_dofs_.size() + twist_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
+  state_values_.fill(std::numeric_limits<double>::quiet_NaN());
 
   const std::string topic = info_.hardware_parameters.at("topic");
   if (topic.empty()) {
     RCLCPP_ERROR(logger_, "Topic name is empty. Please provide a valid topic name.");
     return hardware_interface::CallbackReturn::ERROR;
   }
-  RCLCPP_INFO(node_->get_logger(), std::format("Subscribing to topic: {}", topic).c_str());
+  RCLCPP_INFO(logger_, std::format("Subscribing to topic: {}", topic).c_str());
 
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     topic, rclcpp::SensorDataQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
@@ -123,10 +123,9 @@ auto OdomSensor::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*
 {
   if (rclcpp::ok()) {
     rclcpp::spin_some(node_);
+    const auto * current_state = state_.readFromRT();
+    std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
   }
-  const auto * current_state = state_.readFromRT();
-  RCLCPP_INFO(logger_, "this is a test");
-  // std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
   return hardware_interface::return_type::OK;
 }
 

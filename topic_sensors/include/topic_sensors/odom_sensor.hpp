@@ -51,10 +51,10 @@ public:
 private:
   realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> state_;
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> state_sub_;
-  std::vector<double> state_values_;
 
   std::array<std::string, 7> pose_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
   std::array<std::string, 6> twist_dofs_{"vx", "vy", "vz", "wx", "wy", "wz"};
+  std::array<double, 13> state_values_;  // we can't use an object with dynamic memory allocation for the state values
 
   std::shared_ptr<rclcpp::Node> node_;
   rclcpp::Logger logger_{rclcpp::get_logger("odom_sensor")};
