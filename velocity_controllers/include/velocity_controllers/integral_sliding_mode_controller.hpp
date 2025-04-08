@@ -114,7 +114,7 @@ protected:
 private:
   // Can't mark an array of strings with constexpr, so we just keep it private
   static constexpr std::size_t DOF = 6;
-  std::array<std::string, DOF> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  std::array<std::string, DOF> dof_names_{"vx", "vy", "vz", "wx", "wy", "wz"};
 };
 
 }  // namespace velocity_controllers
