@@ -216,7 +216,8 @@ auto IntegralSlidingModeController::state_interface_configuration() const
   } else {
     state_interface_configuration.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-    for (const auto & name : dof_names_) {
+    const std::array<std::string, 6> bleh = {"vx", "vy", "vz", "wx", "wy", "wz"};
+    for (const auto & name : bleh) {
       state_interface_configuration.names.emplace_back(name + "/" + hardware_interface::HW_IF_VELOCITY);
     }
   }
