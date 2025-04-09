@@ -41,12 +41,6 @@ adaptive_integral_terminal_sliding_mode_controller:
         read_only: false
         description: "The proportional feedback gain for the computed torque control."
 
-      k1:
-        type: double
-        default_value: 0.0
-        read_only: false
-        description: "The adaptation rate gain for the disturbance rejection control."
-
       k1_min:
         type: double
         default_value: 0.0

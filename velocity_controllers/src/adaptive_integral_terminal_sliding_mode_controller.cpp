@@ -101,14 +101,12 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   };
 
   // store the controller gains as matrices
-  auto k1 = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::k1);
   auto k2 = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::k2);
   auto k1_min = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::k1_min);
   auto mu = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::mu);
   auto alpha = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::alpha);
   auto k_theta = get_gain(&adaptive_integral_terminal_sliding_mode_controller::Params::Gains::MapJoints::k_theta);
 
-  k1_ = Eigen::Vector6d(k1.data()).asDiagonal();
   k2_ = Eigen::Vector6d(k2.data()).asDiagonal();
   alpha_ = Eigen::Vector6d(alpha.data()).asDiagonal();
   k1_min_ = Eigen::Vector6d(k1_min.data());
@@ -126,6 +124,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   reference_.writeFromNonRT(geometry_msgs::msg::Twist());
   command_interfaces_.reserve(n_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
+
+  // reset the adaptive gain
+  k1_ = Eigen::Matrix6d::Identity();
 
   RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot_description to be received");  // NOLINT
 
