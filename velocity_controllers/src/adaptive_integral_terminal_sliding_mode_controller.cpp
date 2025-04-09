@@ -136,8 +136,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
       reference_.writeFromNonRT(*msg);
     });
 
+  const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).transient_local().reliable();
   robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
-    "robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
+    "robot_description", qos, [this](const std::shared_ptr<std_msgs::msg::String> msg) {
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
