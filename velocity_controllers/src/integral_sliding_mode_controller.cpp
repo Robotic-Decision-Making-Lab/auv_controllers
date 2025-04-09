@@ -73,7 +73,6 @@ auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackR
 {
   param_listener_ = std::make_shared<integral_sliding_mode_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
-  RCLCPP_INFO(get_node()->get_logger(), "Commands won't be sent until both reference and state messages are received.");
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -123,6 +122,11 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
   command_interfaces_.reserve(n_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
 
+  // NOLINTBEGIN
+  RCLCPP_INFO(get_node()->get_logger(), "Commands won't be sent until both reference and state messages are received.");
+  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot_description to be received");
+  // NOLINTEND
+
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
       reference_.writeFromNonRT(*msg);
@@ -134,6 +138,7 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
+      RCLCPP_INFO(get_node()->get_logger(), "Parsing hydrodynamic model from robot description");  // NOLINT
       const auto out = hydrodynamics::parse_model_from_xml(msg->data);
       if (!out.has_value()) {
         RCLCPP_ERROR(
@@ -142,6 +147,7 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
         return;
       }
       model_ = std::make_unique<hydrodynamics::Params>(out.value());
+      model_initialized_ = true;
     });
 
   // configure the TF buffer and listener

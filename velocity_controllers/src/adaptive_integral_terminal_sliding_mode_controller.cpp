@@ -127,6 +127,8 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   command_interfaces_.reserve(n_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
 
+  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot_description to be received");  // NOLINT
+
   // NOLINTNEXTLINE(performance-unnecessary-value-param)
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
@@ -138,6 +140,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
+      RCLCPP_INFO(get_node()->get_logger(), "Parsing hydrodynamic model from robot description");  // NOLINT
       const auto out = hydrodynamics::parse_model_from_xml(msg->data);
       if (!out.has_value()) {
         RCLCPP_ERROR(
@@ -146,6 +149,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
         return;
       }
       model_ = std::make_unique<hydrodynamics::Params>(out.value());
+      model_initialized_ = true;
     });
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
