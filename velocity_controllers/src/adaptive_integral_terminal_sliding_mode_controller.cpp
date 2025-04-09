@@ -302,12 +302,13 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
   // calculate the computed torque control
   // assume that the feedforward acceleration is zero
-  const Eigen::Vector6d u = alpha_ * integral_error_;
+  const Eigen::Vector6d u1 = alpha_ * integral_error_;
   const auto & rot = system_rotation_.readFromRT()->toRotationMatrix();
-  const Eigen::Vector6d t0 = hydrodynamics::inverse_dynamics(*model_, u, vel, rot);
+  const Eigen::Vector6d t0 = hydrodynamics::inverse_dynamics(*model_, u1, vel, rot);
 
   // calculate the adaptive disturbance rejection control
-  const Eigen::Vector6d t1 = (k1_ * s.cwiseAbs().cwiseSqrt()).asDiagonal() * sign(s, lambda_) + k2_ * s;
+  const Eigen::Vector6d u2 = (k1_ * s.cwiseAbs().cwiseSqrt()).asDiagonal() * sign(s, lambda_) + k2_ * s;
+  const Eigen::Vector6d t1 = model_->M.mass_matrix * u2;
 
   // the total control is the sum of the nominal control and disturbance rejection control
   const Eigen::Vector6d t = t0 + t1;
