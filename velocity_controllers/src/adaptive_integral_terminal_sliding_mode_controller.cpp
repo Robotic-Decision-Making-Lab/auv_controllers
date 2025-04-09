@@ -115,17 +115,6 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   mu_ = Eigen::Vector6d(mu.data());
   k_theta_ = Eigen::Vector6d(k_theta_.data());
 
-  const Eigen::Vector3d moments(params_.hydrodynamics.moments_of_inertia.data());
-  const Eigen::Vector6d added_mass(params_.hydrodynamics.added_mass.data());
-  Eigen::Vector6d linear_damping(params_.hydrodynamics.linear_damping.data());
-  Eigen::Vector6d quadratic_damping(params_.hydrodynamics.quadratic_damping.data());
-  Eigen::Vector3d cob(params_.hydrodynamics.center_of_buoyancy.data());
-  Eigen::Vector3d cog(params_.hydrodynamics.center_of_gravity.data());
-
-  const auto & dyn = params_.hydrodynamics;
-  model_ = std::make_unique<hydrodynamics::Params>(
-    dyn.mass, moments, added_mass, linear_damping, quadratic_damping, cog, cob, dyn.weight, dyn.buoyancy);
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -142,6 +131,21 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
       reference_.writeFromNonRT(*msg);
+    });
+
+  robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
+    "~/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
+      if (model_initialized_ || msg->data.empty()) {
+        return;
+      }
+      const auto out = hydrodynamics::parse_model_from_xml(msg->data);
+      if (!out.has_value()) {
+        RCLCPP_ERROR(
+          get_node()->get_logger(),
+          std::format("Failed to parse hydrodynamic model from robot description: {}", out.error()).c_str());
+        return;
+      }
+      model_ = std::make_unique<hydrodynamics::Params>(out.value());
     });
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
@@ -199,11 +203,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_export_reference_interfac
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(reference_interfaces_.size());
 
-  for (const auto & dof : dofs_) {
+  for (const auto [i, dof] : std::views::enumerate(dofs_)) {
     interfaces.emplace_back(
-      get_node()->get_name(),
-      std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT),
-      &reference_interfaces_[interfaces.size()]);
+      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT), &reference_interfaces_[i]);
   }
 
   return interfaces;
@@ -242,6 +244,10 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
+  if (!model_initialized_) {
+    return controller_interface::return_type::OK;
+  }
+
   configure_parameters();
   update_system_state_values();
 

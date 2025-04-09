@@ -37,6 +37,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
@@ -46,7 +47,6 @@
 namespace velocity_controllers
 {
 
-/// Integral sliding mode controller (ISMC) for velocity control of an autonomous underwater vehicle.
 class IntegralSlidingModeController : public controller_interface::ChainableControllerInterface
 {
 public:
@@ -84,10 +84,14 @@ protected:
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::TwistStamped>> system_state_sub_;
   std::vector<double> system_state_values_;
 
-  // We need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model.
+  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
+  bool model_initialized_{false};
+
+  // we need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
+  std::string inertial_frame_id_, vehicle_frame_id_;
   realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
 
   std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;
@@ -96,25 +100,19 @@ protected:
   std::shared_ptr<integral_sliding_mode_controller::ParamListener> param_listener_;
   integral_sliding_mode_controller::Params params_;
 
-  std::string inertial_frame_id_, vehicle_frame_id_;
+  // the dofs will always be of order six, but we make it configurable to allow for renaming
+  std::vector<std::string> dofs_;
+  std::size_t n_dofs_;
 
-  Eigen::Matrix6d proportional_gain_;
-  double sliding_gain_;
+  // controller gains/parameters
+  Eigen::Matrix6d kp_, rho_;
   double boundary_thickness_;
 
+  // controller state
   bool first_update_{true};
-  Eigen::Vector6d initial_velocity_error_;
-  Eigen::Vector6d total_velocity_error_;
+  Eigen::Vector6d init_error_, total_error_;
 
-  std::unique_ptr<hydrodynamics::Inertia> inertia_;
-  std::unique_ptr<hydrodynamics::Coriolis> coriolis_;
-  std::unique_ptr<hydrodynamics::Damping> damping_;
-  std::unique_ptr<hydrodynamics::RestoringForces> restoring_forces_;
-
-private:
-  // Can't mark an array of strings with constexpr, so we just keep it private
-  static constexpr std::size_t DOF = 6;
-  std::array<std::string, DOF> dof_names_{"x", "y", "z", "rx", "ry", "rz"};
+  std::unique_ptr<hydrodynamics::Params> model_;
 };
 
 }  // namespace velocity_controllers

@@ -32,6 +32,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
@@ -79,6 +80,9 @@ protected:
   bool first_update_{true};
   Eigen::Vector6d integral_error_;
   std::vector<double> system_state_values_;
+
+  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
+  bool model_initialized_{false};
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

@@ -131,6 +131,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       reference_.writeFromNonRT(*msg);
     });
 
+  // TODO(evan-palmer): use transient local qos
   robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
     "~/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
       if (model_initialized_ || msg->data.empty()) {
@@ -227,7 +228,7 @@ auto IKController::transform_goal(const geometry_msgs::msg::PoseStamped & goal, 
   -> geometry_msgs::msg::PoseStamped
 {
   geometry_msgs::msg::PoseStamped transformed_pose;
-  const auto transform = tf_buffer_->lookupTransform(target_frame, goal.header.frame_id, goal.header.stamp);
+  const auto transform = tf_buffer_->lookupTransform(target_frame, goal.header.frame_id, tf2::TimePointZero);
   tf2::doTransform(goal.pose, transformed_pose.pose, transform);
   transformed_pose.header.frame_id = target_frame;
   transformed_pose.header.stamp = goal.header.stamp;
