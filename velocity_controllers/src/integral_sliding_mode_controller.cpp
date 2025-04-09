@@ -77,6 +77,7 @@ auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackR
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IntegralSlidingModeController::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
@@ -127,9 +128,9 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
       reference_.writeFromNonRT(*msg);
     });
 
-  // TODO(evan-palmer): use transient local qos
+  const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).transient_local().reliable();
   robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
-    "~/robot_description", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::String> msg) {
+    "~/robot_description", qos, [this](const std::shared_ptr<std_msgs::msg::String> msg) {
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
@@ -211,6 +212,7 @@ auto IntegralSlidingModeController::state_interface_configuration() const
   return config;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IntegralSlidingModeController::on_export_reference_interfaces()
   -> std::vector<hardware_interface::CommandInterface>
 {
@@ -243,6 +245,7 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   return controller_interface::return_type::OK;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IntegralSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
   for (auto && [interface, dof, value] : std::views::zip(state_interfaces_, dofs_, system_state_values_)) {
@@ -293,7 +296,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
     tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
   }
   catch (const tf2::TransformException & e) {
-    RCLCPP_DEBUG(
+    RCLCPP_DEBUG(  // NOLINT
       get_node()->get_logger(),
       std::format(
         "Could not transform {} to {} using latest available transform, {}",
@@ -319,6 +322,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
     if (!command_interfaces_[i].set_value(tau[i])) {
+      // NOLINTNEXTLINE
       RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to set command for DOF {}", dofs_[i]).c_str());
       return controller_interface::return_type::ERROR;
     }
@@ -326,18 +330,19 @@ auto IntegralSlidingModeController::update_and_write_commands(
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (std::size_t i = 0; i < n_dofs_; ++i) {
+    for (const auto && [i, state] : std::views::enumerate(rt_controller_state_pub_->msg_.dof_states)) {
       const auto output = command_interfaces_[i].get_optional();
       if (!output.has_value()) {
+        // NOLINTNEXTLINE
         RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to get command for DOF {}", dofs_[i]).c_str());
-        rt_controller_state_pub_->unlock();
+        rt_controller_state_pub_->unlockAndPublish();
         return controller_interface::return_type::ERROR;
       }
-      rt_controller_state_pub_->msg_.dof_states[i].reference = reference_interfaces_[i];
-      rt_controller_state_pub_->msg_.dof_states[i].feedback = system_state_values_[i];
-      rt_controller_state_pub_->msg_.dof_states[i].error = error_values[i];
-      rt_controller_state_pub_->msg_.dof_states[i].time_step = period.seconds();
-      rt_controller_state_pub_->msg_.dof_states[i].output = output.value();
+      state.reference = reference_interfaces_[i];
+      state.feedback = system_state_values_[i];
+      state.error = error_values[i];
+      state.time_step = period.seconds();
+      state.output = tau[i];
     }
     rt_controller_state_pub_->unlockAndPublish();
   }

@@ -42,8 +42,6 @@ integral_sliding_mode_controller:
         description: "The sliding mode gain. This adjusts how quickly the controller drives the system to the sliding surface."
 
       kp:
-        type: double_array
-        default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        description: "The proportional gains."
-        validation:
-          fixed_size<>: 6
+        type: double
+        default_value: 0.0
+        description: "The proportional gain."
