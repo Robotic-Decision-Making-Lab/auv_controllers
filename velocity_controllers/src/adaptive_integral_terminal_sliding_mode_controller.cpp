@@ -196,6 +196,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::state_interface_configuratio
   return config;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto AdaptiveIntegralTerminalSlidingModeController::on_export_reference_interfaces()
   -> std::vector<hardware_interface::CommandInterface>
 {
@@ -226,6 +227,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_reference_from_subscr
   return controller_interface::return_type::OK;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto AdaptiveIntegralTerminalSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
   for (auto && [interface, dof, value] : std::views::zip(state_interfaces_, dofs_, system_state_values_)) {

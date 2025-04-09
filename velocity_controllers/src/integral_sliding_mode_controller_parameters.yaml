@@ -1,11 +1,11 @@
 integral_sliding_mode_controller:
   joints:
-      type: string_array
-      default_value: ["x", "y", "z", "rx", "ry", "rz"]
-      read_only: true
-      description: "The controlled joints."
-      validation:
-        fixed_size<>: 6
+    type: string_array
+    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    read_only: true
+    description: "The controlled joints."
+    validation:
+      fixed_size<>: 6
 
   reference_controller:
     type: string
