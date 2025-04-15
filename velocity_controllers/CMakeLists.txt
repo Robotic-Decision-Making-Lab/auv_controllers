@@ -21,6 +21,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     tf2_eigen
     tf2
     tf2_ros
+    nav_msgs
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})

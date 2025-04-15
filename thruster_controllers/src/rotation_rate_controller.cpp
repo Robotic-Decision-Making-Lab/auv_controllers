@@ -147,7 +147,6 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
   -> controller_interface::return_type
 {
   double reference = reference_interfaces_[0];
-
   if (std::isnan(reference)) {
     if (!command_interfaces_[0].set_value(0.0)) {
       RCLCPP_WARN(  // NOLINT

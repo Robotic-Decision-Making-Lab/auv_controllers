@@ -7,6 +7,12 @@ integral_sliding_mode_controller:
     validation:
       fixed_size<>: 6
 
+  use_external_measured_states:
+    type: bool
+    read_only: true
+    default_value: false
+    description: "Use state measurements obtained from a topic instead of state interfaces."
+
   reference_controller:
     type: string
     default_value: ""

@@ -22,7 +22,9 @@
 
 #include <ranges>
 
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "tf2_eigen/tf2_eigen.hpp"
 
 namespace velocity_controllers
 {
@@ -33,13 +35,21 @@ namespace
 /// Set the `Twist` message values to NaN.
 void reset_twist_msg(geometry_msgs::msg::Twist * msg)  // NOLINT
 {
-  const auto nan = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.x = nan;
-  msg->linear.y = nan;
-  msg->linear.z = nan;
-  msg->angular.x = nan;
-  msg->angular.y = nan;
-  msg->angular.z = nan;
+  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
+  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
+  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
+}
+
+void reset_odom_msg(nav_msgs::msg::Odometry * msg)  // NOLINT
+{
+  msg->pose.pose.position.x = std::numeric_limits<double>::quiet_NaN();
+  msg->pose.pose.position.y = std::numeric_limits<double>::quiet_NaN();
+  msg->pose.pose.position.z = std::numeric_limits<double>::quiet_NaN();
+  msg->pose.pose.orientation = tf2::toMsg(Eigen::Quaterniond::Identity());
+  reset_twist_msg(&msg->twist.twist);
 }
 
 /// Convert a `Twist` message to a vector of doubles.
@@ -122,6 +132,8 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   configure_parameters();
 
   reference_.writeFromNonRT(geometry_msgs::msg::Twist());
+  system_state_.writeFromNonRT(nav_msgs::msg::Odometry());
+
   command_interfaces_.reserve(n_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
 
@@ -154,8 +166,17 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
       model_initialized_ = true;
     });
 
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  // use the tf interface when we aren't getting the state from a topic
+  if (params_.use_external_measured_states) {
+    RCLCPP_INFO(get_node()->get_logger(), "Using external measured states");  // NOLINT
+    system_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
+      "~/system_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+        system_state_.writeFromNonRT(*msg);
+      });
+  } else {
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -164,10 +185,14 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_activate(const rclcpp_lif
   -> controller_interface::CallbackReturn
 {
   first_update_ = true;
+
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
   reset_twist_msg(reference_.readFromNonRT());
+  reset_odom_msg(system_state_.readFromNonRT());
+
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -192,7 +217,8 @@ auto AdaptiveIntegralTerminalSlidingModeController::state_interface_configuratio
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
-  config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+  config.type = params_.use_external_measured_states ? controller_interface::interface_configuration_type::NONE
+                                                     : controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
   for (const auto & dof : dofs_) {
@@ -236,15 +262,43 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_reference_from_subscr
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto AdaptiveIntegralTerminalSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
-  for (auto && [interface, dof, value] : std::views::zip(state_interfaces_, dofs_, system_state_values_)) {
-    const auto val = interface.get_optional();
-    if (!val.has_value()) {
-      // NOLINTNEXTLINE
-      RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to get state value for joint {}", dof).c_str());
-      return controller_interface::return_type::ERROR;
+  if (params_.use_external_measured_states) {
+    auto * current_state = system_state_.readFromNonRT();
+    const std::vector<double> state = twist_to_vector(current_state->twist.twist);
+    system_state_values_.assign(state.begin(), state.end());
+    tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
+  } else {
+    // read the velocity values from the state interfaces
+    for (auto && [interface, dof, value] : std::views::zip(state_interfaces_, dofs_, system_state_values_)) {
+      const auto val = interface.get_optional();
+      if (!val.has_value()) {
+        // NOLINTNEXTLINE
+        RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to get state value for joint {}", dof).c_str());
+        return controller_interface::return_type::ERROR;
+      }
+      value = val.value();
     }
-    value = val.value();
+
+    // try getting the latest orientation of the vehicle in the inertial frame
+    // if the transform is not available, use the last known orientation.
+    try {
+      const geometry_msgs::msg::TransformStamped t =
+        tf_buffer_->lookupTransform(params_.odom_frame_id, params_.vehicle_frame_id, tf2::TimePointZero);
+      tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
+    }
+    catch (const tf2::TransformException & e) {
+      // NOLINTNEXTLINE
+      RCLCPP_DEBUG(
+        get_node()->get_logger(),
+        std::format(
+          "Could not transform {} to {} using latest available transform. {}",
+          params_.odom_frame_id,
+          params_.vehicle_frame_id,
+          e.what())
+          .c_str());
+    }
   }
+
   return controller_interface::return_type::OK;
 }
 
@@ -269,25 +323,6 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
   const Eigen::Vector6d vel(system_state_values_.data());
   const Eigen::Vector6d error(error_values.data());
-
-  // try getting the latest orientation of the vehicle in the inertial frame
-  // if the transform is not available, use the last known orientation.
-  try {
-    const geometry_msgs::msg::TransformStamped t =
-      tf_buffer_->lookupTransform(params_.odom_frame_id, params_.vehicle_frame_id, tf2::TimePointZero);
-    tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
-  }
-  catch (const tf2::TransformException & e) {
-    // NOLINTNEXTLINE
-    RCLCPP_DEBUG(
-      get_node()->get_logger(),
-      std::format(
-        "Could not transform {} to {} using latest available transform. {}",
-        params_.odom_frame_id,
-        params_.vehicle_frame_id,
-        e.what())
-        .c_str());
-  }
 
   if (first_update_) {
     integral_error_ = -error.array() / alpha_.diagonal().array();

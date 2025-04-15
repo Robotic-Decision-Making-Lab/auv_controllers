@@ -32,6 +32,7 @@
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
@@ -80,8 +81,8 @@ protected:
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
-  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> system_state_;
-  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::TwistStamped>> system_state_sub_;
+  realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> system_state_;
+  std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> system_state_sub_;
   std::vector<double> system_state_values_;
 
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;

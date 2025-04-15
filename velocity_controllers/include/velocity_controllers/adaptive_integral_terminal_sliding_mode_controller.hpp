@@ -27,6 +27,7 @@
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
@@ -72,14 +73,19 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  // provide an interface for providing reference commands from a topic
+  // provide an interface for setting reference commands from a topic
   // this allows us to use tools like the keyboard teleop node
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
+  // provide an interface for setting state values from a topic
+  // this is mostly useful when we don't want to or can't use a topic sensor
+  realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> system_state_;
+  std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> system_state_sub_;
+  std::vector<double> system_state_values_;
+
   bool first_update_{true};
   Eigen::Vector6d integral_error_;
-  std::vector<double> system_state_values_;
 
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
   bool model_initialized_{false};
