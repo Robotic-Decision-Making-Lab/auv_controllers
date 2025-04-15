@@ -150,7 +150,7 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
   double reference = reference_interfaces_[0];
 
   if (std::isnan(reference)) {
-    if (!command_interfaces_[0].set_value(reference)) {
+    if (!command_interfaces_[0].set_value(0.0)) {
       RCLCPP_WARN(  // NOLINT
         get_node()->get_logger(),
         std::format("Failed to set command for thruster {}", thruster_name_).c_str());

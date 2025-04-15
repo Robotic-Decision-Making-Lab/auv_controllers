@@ -154,7 +154,7 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   const auto reference = reference_interfaces_[0];
 
   if (std::isnan(reference)) {
-    if (!command_interfaces_[0].set_value(reference)) {
+    if (!command_interfaces_[0].set_value(params_.neutral_pwm)) {
       RCLCPP_WARN(  // NOLINT
         get_node()->get_logger(),
         std::format("Failed to set command for thruster {}", thruster_name_).c_str());
