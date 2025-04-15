@@ -132,7 +132,7 @@ auto PolynomialThrustCurveController::on_export_reference_interfaces()
   interfaces.emplace_back(
     get_node()->get_name(),
     std::format("{}/{}", thruster_name_, hardware_interface::HW_IF_EFFORT),
-    &reference_interfaces_[0]);
+    &reference_interfaces_[0]);  // NOLINT(readability-container-data-pointer)
 
   return interfaces;
 }
@@ -173,17 +173,11 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    const auto output = command_interfaces_[0].get_optional();
-    if (!output.has_value()) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to get command for thruster {}", thruster_name_).c_str());
-      rt_controller_state_pub_->unlock();
-    }
+    const auto out = command_interfaces_[0].get_optional();
     rt_controller_state_pub_->msg_.header.stamp = time;
     rt_controller_state_pub_->msg_.dof_state.reference = reference_interfaces_[0];
     rt_controller_state_pub_->msg_.dof_state.time_step = period.seconds();
-    rt_controller_state_pub_->msg_.dof_state.output = output.value();
+    rt_controller_state_pub_->msg_.dof_state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
     rt_controller_state_pub_->unlockAndPublish();
   }
 

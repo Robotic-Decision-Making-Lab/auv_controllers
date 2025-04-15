@@ -237,12 +237,7 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
 
     for (std::size_t i = 0; i < n_thrusters_; i++) {
       const auto out = command_interfaces_[i].get_optional();
-      if (!out.has_value()) {
-        RCLCPP_INFO(get_node()->get_logger(), std::format("Failed to get command for thruster {}", i).c_str());
-        rt_controller_state_pub_->unlock();
-        return controller_interface::return_type::ERROR;
-      }
-      rt_controller_state_pub_->msg_.output[i] = out.value();
+      rt_controller_state_pub_->msg_.output[i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
     }
 
     rt_controller_state_pub_->unlockAndPublish();

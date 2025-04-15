@@ -337,18 +337,12 @@ auto IntegralSlidingModeController::update_and_write_commands(
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
     for (const auto && [i, state] : std::views::enumerate(rt_controller_state_pub_->msg_.dof_states)) {
-      const auto output = command_interfaces_[i].get_optional();
-      if (!output.has_value()) {
-        // NOLINTNEXTLINE
-        RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to get command for DOF {}", dofs_[i]).c_str());
-        rt_controller_state_pub_->unlockAndPublish();
-        return controller_interface::return_type::ERROR;
-      }
+      const auto out = command_interfaces_[i].get_optional();
       state.reference = reference_interfaces_[i];
       state.feedback = system_state_values_[i];
       state.error = error_values[i];
       state.time_step = period.seconds();
-      state.output = tau[i];
+      state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
     }
     rt_controller_state_pub_->unlockAndPublish();
   }
