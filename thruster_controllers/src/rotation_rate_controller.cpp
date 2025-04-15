@@ -156,7 +156,6 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
     }
   } else {
     reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
-    reference = reference < params_.max_deadband && reference > params_.min_deadband ? 0.0 : reference;
     const double ang_vel = calculate_angular_velocity_from_thrust(
       reference, params_.fluid_density, params_.propeller_diameter, params_.thrust_coefficient);
 
