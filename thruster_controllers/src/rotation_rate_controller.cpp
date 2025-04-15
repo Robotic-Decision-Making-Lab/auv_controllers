@@ -151,8 +151,9 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
 
   if (std::isnan(reference)) {
     if (!command_interfaces_[0].set_value(reference)) {
-      RCLCPP_WARN(
-        get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+      RCLCPP_WARN(  // NOLINT
+        get_node()->get_logger(),
+        std::format("Failed to set command for thruster {}", thruster_name_).c_str());
     }
   } else {
     reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);

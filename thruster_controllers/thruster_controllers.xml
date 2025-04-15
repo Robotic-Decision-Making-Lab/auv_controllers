@@ -8,4 +8,12 @@
     </description>
   </class>
 
+  <class name="thruster_controllers/RotationRateController"
+         type="thruster_controllers::RotationRateController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Controller used to convert thrust values into rotation rates
+    </description>
+  </class>
+
 </library>
