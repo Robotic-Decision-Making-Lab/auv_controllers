@@ -27,19 +27,3 @@ represent the thrust associated with each thruster defined in the TAM.
 ## Publishers
 
 - thruster_allocation_matrix_controller/status [auv_control_msgs::msg::MultiActuatorStateStamped]
-
-## Parameters
-
-- joints: List of reference force/torque interfaces. [6-sized string array]
-- thrusters: List of thruster names. Should be provided in the same order as
-  the TAM [N-sized string array]
-- reference_controllers: List of the reference controllers. Used when setting
-  up command interfaces for chained mode. Should be provided in the same order
-  as the thrusters. [N-sized string array]
-- TAM:
-  - TAM<sub>x</sub>: [N-sized double array]
-  - TAM<sub>y</sub>: [N-sized double array]
-  - TAM<sub>z</sub>: [N-sized double array]
-  - TAM<sub>rx</sub>: [N-sized double array]
-  - TAM<sub>ry</sub>: [N-sized double array]
-  - TAM<sub>rz</sub>: [N-sized double array]

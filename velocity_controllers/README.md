@@ -10,6 +10,12 @@ A chainable controller designed by Gonzalez-Garcia and Castaneda [^1] that
 provides robustness to disturbances using a dynamically adapted disturbance
 rejection torques.
 
+> [!NOTE]
+> The integral sliding mode controller requires that the AUV hydrodynamic
+> parameters be included in the robot description file using the format defined
+> by the [hydrodynamics](https://github.com/Robotic-Decision-Making-Lab/hydrodynamics/blob/main/examples/description/bluerov2.model.urdf)
+> library.
+
 [^1]: A. Gonzalez-Garcia and H. Castaneda, "Adaptive Integral Terminal Sliding
 Mode Control for an Unmanned Surface Vehicle Against External Disturbances", in
 *IFAC-PapersOnline*, 2021.
@@ -24,9 +30,6 @@ velocity_controllers/adaptive_integral_terminal_sliding_mode_controller
   v<sub>y<sub>ref</sub></sub>, v<sub>z<sub>ref</sub></sub>,
   w<sub>rx<sub>ref</sub></sub>, w<sub>ry<sub>ref</sub></sub>,
   w<sub>rz<sub>ref</sub></sub> [m/s and rad/s]
-- Target velocity $V_\text{ref}$: $v_x_\text{ref}$, $v_y_\text{ref}$,
-  $v_z_\text{ref}, $\omega_{rx}_\text{ref}$, $\omega_{ry}_\text{ref}$,
-  $\omega_{rz}_\text{ref}$.
 
 ### State Feedback
 
@@ -57,6 +60,12 @@ TODO(evan-palmer): write this
 
 A chainable dynamic controller designed by Palmer et al. [^2] that provides
 robustness to matched uncertainties and attenuates chatter.
+
+> [!NOTE]
+> The integral sliding mode controller requires that the AUV hydrodynamic
+> parameters be included in the robot description file using the format defined
+> by the [hydrodynamics](https://github.com/Robotic-Decision-Making-Lab/hydrodynamics/blob/main/examples/description/bluerov2.model.urdf)
+> library.
 
 [^2]: E. Palmer, C. Holm, and G. Hollinger, "Angler: An Autonomy Framework for
 Intervention Tasks with Lightweight Underwater Vehicle Manipulator Systems," in
@@ -90,6 +99,7 @@ T<sub>ry</sub>, T<sub>rz</sub> in N and Nm, respectively.
 
 - integral_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
 - integral_sliding_mode_controller/system_state [geometry_msgs::msg::Twist]
+- robot_description [std_msgs::msg::String]
 
 ### Publishers
 
