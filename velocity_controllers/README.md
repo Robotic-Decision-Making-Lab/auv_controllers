@@ -60,9 +60,9 @@ A chainable dynamic controller designed by Palmer et al. [^2] that provides
 robustness to matched uncertainties and attenuates chatter.
 
 > [!NOTE]
-> The integral sliding mode controller requires that the AUV hydrodynamic
-> parameters be included in the robot description file using the format
-> described by the [hydrodynamics](https://github.com/Robotic-Decision-Making-Lab/hydrodynamics/blob/main/examples/description/bluerov2.model.urdf)
+> The adaptive integral terminal sliding mode controller requires that the AUV
+> hydrodynamic parameters be included in the robot description file using the
+> format described by the [hydrodynamics](https://github.com/Robotic-Decision-Making-Lab/hydrodynamics/blob/main/examples/description/bluerov2.model.urdf)
 > library.
 
 [^2]: E. Palmer, C. Holm, and G. Hollinger, "Angler: An Autonomy Framework for
