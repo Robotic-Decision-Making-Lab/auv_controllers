@@ -24,6 +24,9 @@ velocity_controllers/adaptive_integral_terminal_sliding_mode_controller
   v<sub>y<sub>ref</sub></sub>, v<sub>z<sub>ref</sub></sub>,
   w<sub>rx<sub>ref</sub></sub>, w<sub>ry<sub>ref</sub></sub>,
   w<sub>rz<sub>ref</sub></sub> [m/s and rad/s]
+- Target velocity $V_\text{ref}$: $v_x_\text{ref}$, $v_y_\text{ref}$,
+  $v_z_\text{ref}, $\omega_{rx}_\text{ref}$, $\omega_{ry}_\text{ref}$,
+  $\omega_{rz}_\text{ref}$.
 
 ### State Feedback
 
