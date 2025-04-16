@@ -157,7 +157,7 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
     reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
     double ang_vel = calculate_angular_velocity_from_thrust(
       reference, params_.fluid_density, params_.propeller_diameter, params_.thrust_coefficient);
-    ang_vel = ang_vel > params_.min_thrust_deadband && ang_vel < params_.max_thrust_deadband ? 0.0 : ang_vel;
+    ang_vel = ang_vel > params_.min_deadband && ang_vel < params_.max_deadband ? 0.0 : ang_vel;
 
     if (!command_interfaces_[0].set_value(ang_vel)) {
       RCLCPP_WARN(  // NOLINT
