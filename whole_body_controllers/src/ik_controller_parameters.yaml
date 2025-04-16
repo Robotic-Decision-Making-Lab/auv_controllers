@@ -27,3 +27,8 @@ ik_controller:
     type: string_array
     default_value: []
     description: "The list of controlled manipulator joints."
+
+  locked_joints:
+    type: string_array
+    default_value: []
+    description: "The list of locked joints. These joints will not be controlled by the IK solver."

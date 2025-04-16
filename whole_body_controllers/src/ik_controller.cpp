@@ -27,6 +27,7 @@
 
 #include "geometry_msgs/msg/pose.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "pinocchio/algorithm/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
@@ -97,6 +98,8 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
 {
   update_parameters();
 
+  // TODO(evan-palmer): simplify this by using all joints except the locked joints??
+
   manipulator_dofs_ = params_.manipulator_joints;
   n_manipulator_dofs_ = manipulator_dofs_.size();
 
@@ -116,7 +119,7 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
 auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  update_parameters();
+  configure_parameters();
 
   reference_.writeFromNonRT(geometry_msgs::msg::PoseStamped());
 
@@ -142,6 +145,19 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       // we need to specify that the base is a free flyer joint
       model_ = std::make_shared<pinocchio::Model>();
       pinocchio::urdf::buildModelFromXML(msg->data, pinocchio::JointModelFreeFlyer(), *model_);
+
+      // extract the locked joints from the parameters
+      std::vector<std::string> locked_joints;
+      std::vector<pinocchio::JointIndex> locked_joint_ids;
+      std::ranges::transform(params_.locked_joints, std::back_inserter(locked_joint_ids), [this](const auto & joint) {
+        return model_->getJointId(joint);
+      });
+
+      // build the reduced model
+      pinocchio::Model reduced_model;
+      pinocchio::buildReducedModel(*model_, locked_joint_ids, pinocchio::neutral(*model_), reduced_model);
+      *model_ = reduced_model;
+
       data_ = std::make_shared<pinocchio::Data>(*model_);
       model_initialized_ = true;
 
