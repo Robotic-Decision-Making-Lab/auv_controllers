@@ -59,6 +59,9 @@ auto GazeboPassthroughController::on_configure(const rclcpp_lifecycle::State & /
   configure_parameters();
   reference_.writeFromNonRT(std_msgs::msg::Float64());
 
+  // publisher used to write commands to the thruster
+  // the topic name should be the same as the one used by the gazebo thruster plugin and the
+  // topic should be bridged
   passthrough_pub_ = get_node()->create_publisher<std_msgs::msg::Float64>(params_.topic, rclcpp::SystemDefaultsQoS());
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(

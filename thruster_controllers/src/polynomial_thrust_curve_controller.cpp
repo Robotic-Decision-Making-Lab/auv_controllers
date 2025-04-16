@@ -124,7 +124,6 @@ auto PolynomialThrustCurveController::on_export_reference_interfaces()
   -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(1, std::numeric_limits<double>::quiet_NaN());
-
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(reference_interfaces_.size());
 
@@ -151,24 +150,18 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   const rclcpp::Duration & period) -> controller_interface::return_type
 {
   const auto reference = reference_interfaces_[0];
+  int pwm = params_.neutral_pwm;
 
-  if (std::isnan(reference)) {
-    if (!command_interfaces_[0].set_value(params_.neutral_pwm)) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set command for thruster {}", thruster_name_).c_str());
-    }
-  } else {
+  if (!std::isnan(reference)) {
     const double clamped_reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
-    int pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
+    pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
     pwm = pwm > params_.min_deadband_pwm && pwm < params_.max_deadband_pwm ? params_.neutral_pwm : pwm;
+  }
 
-    if (!command_interfaces_[0].set_value(pwm)) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set command for thruster {}", thruster_name_).c_str());
-      return controller_interface::return_type::ERROR;
-    }
+  if (!command_interfaces_[0].set_value(pwm)) {
+    // NOLINTNEXTLINE
+    RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+    return controller_interface::return_type::ERROR;
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {

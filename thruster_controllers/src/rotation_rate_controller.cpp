@@ -39,7 +39,8 @@ namespace
   double propeller_diameter,
   double thrust_coefficient) -> double
 {
-  const double ang_vel = sqrt(abs(thrust / (fluid_density * thrust_coefficient * pow(propeller_diameter, 4))));
+  const double ang_vel =
+    std::sqrt(std::abs(thrust / (fluid_density * thrust_coefficient * std::pow(propeller_diameter, 4))));
   return thrust < 0 ? -ang_vel : ang_vel;
 }
 
@@ -146,24 +147,19 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
   -> controller_interface::return_type
 {
   double reference = reference_interfaces_[0];
-  if (std::isnan(reference)) {
-    if (!command_interfaces_[0].set_value(0.0)) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set command for thruster {}", thruster_name_).c_str());
-    }
-  } else {
+  double ang_vel = 0.0;
+
+  if (!std::isnan(reference)) {
     reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
-    double ang_vel = calculate_angular_velocity_from_thrust(
+    ang_vel = calculate_angular_velocity_from_thrust(
       reference, params_.fluid_density, params_.propeller_diameter, params_.thrust_coefficient);
     ang_vel = ang_vel > params_.min_deadband && ang_vel < params_.max_deadband ? 0.0 : ang_vel;
+  }
 
-    if (!command_interfaces_[0].set_value(ang_vel)) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set command for thruster {}", thruster_name_).c_str());
-      return controller_interface::return_type::ERROR;
-    }
+  if (!command_interfaces_[0].set_value(ang_vel)) {
+    // NOLINTNEXTLINE
+    RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+    return controller_interface::return_type::ERROR;
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
