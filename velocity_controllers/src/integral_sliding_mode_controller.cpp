@@ -245,7 +245,7 @@ auto IntegralSlidingModeController::on_export_reference_interfaces()
 
   for (const auto [i, dof] : std::views::enumerate(dofs_)) {
     interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT), &reference_interfaces_[i]);
+      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY), &reference_interfaces_[i]);
   }
 
   return interfaces;

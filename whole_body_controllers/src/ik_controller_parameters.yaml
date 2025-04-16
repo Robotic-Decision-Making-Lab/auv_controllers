@@ -7,11 +7,17 @@ ik_controller:
     validation:
       one_of<>: [["task_priority_ik_solver"]]
 
-  reference_controller:
+  vehicle_reference_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
+    description: "The prefix of the reference controller to send vehicle commands to."
+
+  manipulator_reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: "The prefix of the reference controller to send manipulator commands to."
 
   base_frame_id:
     type: string

@@ -194,18 +194,34 @@ auto IKController::command_interface_configuration() const -> controller_interfa
   // the ik controller produces both the velocity solution and integrated positions
   config.names.reserve(n_dofs_ + n_vel_dofs_);
 
-  for (const auto & dof : dofs_) {
+  // position interfaces
+  for (const auto & dof : free_flyer_dofs_) {
     config.names.push_back(
-      params_.reference_controller.empty()
+      params_.vehicle_reference_controller.empty()
         ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
-        : std::format("{}/{}/{}", params_.reference_controller, dof, hardware_interface::HW_IF_POSITION));
+        : std::format("{}/{}/{}", params_.vehicle_reference_controller, dof, hardware_interface::HW_IF_POSITION));
   }
 
-  for (const auto & dof : vel_dofs_) {
+  for (const auto & dof : manipulator_dofs_) {
     config.names.push_back(
-      params_.reference_controller.empty()
+      params_.manipulator_reference_controller.empty()
+        ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
+        : std::format("{}/{}/{}", params_.manipulator_reference_controller, dof, hardware_interface::HW_IF_POSITION));
+  }
+
+  // velocity interfaces
+  for (const auto & dof : free_flyer_vel_dofs_) {
+    config.names.push_back(
+      params_.vehicle_reference_controller.empty()
         ? std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY)
-        : std::format("{}/{}/{}", params_.reference_controller, dof, hardware_interface::HW_IF_VELOCITY));
+        : std::format("{}/{}/{}", params_.vehicle_reference_controller, dof, hardware_interface::HW_IF_VELOCITY));
+  }
+
+  for (const auto & dof : manipulator_dofs_) {
+    config.names.push_back(
+      params_.manipulator_reference_controller.empty()
+        ? std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY)
+        : std::format("{}/{}/{}", params_.manipulator_reference_controller, dof, hardware_interface::HW_IF_VELOCITY));
   }
 
   return config;
@@ -297,8 +313,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
     const auto out = state_interfaces_[i].get_optional();
     if (!out.has_value()) {
-      // NOLINTNEXTLINE
-      RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());
+      RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());  // NOLINT
       return controller_interface::return_type::ERROR;
     }
     system_state_values_[i] = out.value();
