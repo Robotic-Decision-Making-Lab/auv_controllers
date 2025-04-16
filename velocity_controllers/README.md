@@ -46,15 +46,13 @@ T<sub>ry</sub>, T<sub>rz</sub> in N and Nm, respectively.
 
 ### Subscribers
 
-TODO(evan-palmer): write this
+- adaptive_integral_terminal_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
+- adaptive_integral_terminal_sliding_mode_controller/system_state [nav_msgs::msg::Odometry]
+- robot_description [std_msgs::msg::String]
 
 ### Publishers
 
-TODO(evan-palmer): write this
-
-### Parameters
-
-TODO(evan-palmer): write this
+- adaptive_integral_terminal_sliding_mode_controller/status [control_msgs::msg::MultiDOFStateStamped]
 
 ## Integral Sliding Mode Controller
 
@@ -98,7 +96,7 @@ T<sub>ry</sub>, T<sub>rz</sub> in N and Nm, respectively.
 ### Subscribers
 
 - integral_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
-- integral_sliding_mode_controller/system_state [geometry_msgs::msg::Twist]
+- integral_sliding_mode_controller/system_state [nav_msgs::msg::Odometry]
 - robot_description [std_msgs::msg::String]
 
 ### Publishers
