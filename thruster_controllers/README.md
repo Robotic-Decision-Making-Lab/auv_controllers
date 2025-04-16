@@ -83,6 +83,7 @@ gz_passthrough_controller/reference [std_msgs::msg::Float64]
 ### Publishers
 
 gz_passthrough_controller/status [control_msgs::msg::SingleDOFStateStamped]
+<passthrough_topic> [std_msgs::msg::Float64]
 
 ## Rotation Rate Controller
 
@@ -90,12 +91,16 @@ A chainable controller that calculates the angular velocity required to achieve
 a reference thrust value. The control law is given as follows
 
 ```math
-\omega = \sqrt{\frac{T}{K_T \cdot \rho \cdot D^4}}
+\omega = \sqrt{\frac{T_{\text{ref}}}{K_T \cdot \rho \cdot D^4}},
 ```
+
+where $\omega$ is the thruster angular velocity, $T_\text{ref}$  is the
+is the reference thrust, $K_T$ is the thrust coefficient, $\rho$ is the water
+density, and $D$ is the propeller diameter.
 
 ### Plugin Library
 
-thruster_controllers/polynomial_thrust_curve_controller
+thruster_controllers/rotation_rate_controller
 
 ### References
 
@@ -103,13 +108,13 @@ The input to this controller is thrust [double].
 
 ### Commands
 
-The output of this controller is the PWM value required by the thruster to
-perform the action [double].
+The output of this controller is the thruster angular velocity [double] needed
+to achieve the thrust reference.
 
 ### Subscribers
 
-polynomial_thrust_curve_controller/reference [std_msgs::msg::Float64]
+rotation_rate_controller/reference [std_msgs::msg::Float64]
 
 ### Publishers
 
-polynomial_thrust_curve_controller/status [control_msgs::msg::SingleDOFStateStamped]
+rotation_rate_controller/status [control_msgs::msg::SingleDOFStateStamped]
