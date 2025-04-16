@@ -72,7 +72,7 @@ target_compile_features(whole_body_controllers PUBLIC cxx_std_23)
 target_link_libraries(whole_body_controllers PUBLIC ik_controller_parameters)
 
 pluginlib_export_plugin_description_file(whole_body_controllers ik_solvers.xml)
-pluginlib_export_plugin_description_file(whole_body_controllers whole_body_controllers.xml)
+pluginlib_export_plugin_description_file(controller_interface whole_body_controllers.xml)
 
 install(
     TARGETS

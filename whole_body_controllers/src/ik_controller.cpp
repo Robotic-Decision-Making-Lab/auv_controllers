@@ -29,7 +29,6 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pinocchio/algorithm/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
-#include "pluginlib/class_list_macros.hpp"
 
 namespace whole_body_controllers
 {
@@ -37,6 +36,7 @@ namespace whole_body_controllers
 namespace
 {
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 auto reset_pose_msg(geometry_msgs::msg::Pose * msg) -> void
 {
   msg->position.x = std::numeric_limits<double>::quiet_NaN();
@@ -48,6 +48,7 @@ auto reset_pose_msg(geometry_msgs::msg::Pose * msg) -> void
   msg->orientation.w = std::numeric_limits<double>::quiet_NaN();
 }
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 auto reset_pose_msg(geometry_msgs::msg::PoseStamped * msg) -> void
 {
   reset_pose_msg(&msg->pose);
@@ -116,6 +117,7 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
@@ -251,6 +253,7 @@ auto IKController::transform_goal(const geometry_msgs::msg::PoseStamped & goal, 
   return transformed_pose;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   -> controller_interface::return_type
 {
@@ -270,7 +273,8 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
     try {
       transformed_pose = transform_goal(*current_reference, target_frame);
     }
-    catch (const tf2::TransformException & ex) {
+    catch (const tf2::TransformException & ex) {  // NOLINT
+      RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to transform reference pose: {}", ex.what()).c_str());
       return controller_interface::return_type::ERROR;
     }
   }
@@ -293,6 +297,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
     const auto out = state_interfaces_[i].get_optional();
     if (!out.has_value()) {
+      // NOLINTNEXTLINE
       RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());
       return controller_interface::return_type::ERROR;
     }
@@ -302,6 +307,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   return controller_interface::return_type::OK;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
@@ -331,15 +337,16 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
     if (!command_interfaces_[i].set_value(point.positions[i])) {
-      RCLCPP_WARN(
-        get_node()->get_logger(), std::format("Failed to set position command value for joint {}", dofs_[i]).c_str());
+      RCLCPP_WARN(  // NOLINT
+        get_node()->get_logger(),
+        std::format("Failed to set position command value for joint {}", dofs_[i]).c_str());
       return controller_interface::return_type::ERROR;
     }
   }
 
   for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
     if (!command_interfaces_[n_dofs_ + i].set_value(point.velocities[i])) {
-      RCLCPP_WARN(
+      RCLCPP_WARN(  // NOLINT
         get_node()->get_logger(),
         std::format("Failed to set velocity command value for joint {}", vel_dofs_[i]).c_str());
       return controller_interface::return_type::ERROR;
@@ -353,4 +360,5 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 
 }  // namespace whole_body_controllers
 
+#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(whole_body_controllers::IKController, controller_interface::ChainableControllerInterface)

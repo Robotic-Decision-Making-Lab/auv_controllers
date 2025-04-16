@@ -28,11 +28,9 @@ find_package(pluginlib REQUIRED)
 generate_parameter_library(polynomial_thrust_curve_controller_parameters
   src/polynomial_thrust_curve_controller_parameters.yaml
 )
-
 generate_parameter_library(rotation_rate_controller_parameters
   src/rotation_rate_controller_parameters.yaml
 )
-
 generate_parameter_library(gz_passthrough_controller_parameters
   src/gz_passthrough_controller_parameters.yaml
 )

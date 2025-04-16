@@ -63,7 +63,7 @@ auto quaternion_error(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & 
   const double q1_w = q1.w();
   const double q2_w = q2.w();
 
-  const Eigen::Vector3d vec_error = q2_w * q1_vec - q1_w * q2_vec + q2_vec.cross(q1_vec);
+  const Eigen::Vector3d vec_error = (q2_w * q1_vec) - (q1_w * q2_vec) + q2_vec.cross(q1_vec);
 
   // This is how we would compute the scalar error if we needed it
   // const double scalar_error = q1_w * q2_w + q1_vec.dot(q2_vec);
