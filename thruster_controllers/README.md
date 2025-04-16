@@ -33,7 +33,7 @@ polynomial_thrust_curve_controller/status [control_msgs::msg::SingleDOFStateStam
 ## Gazebo Passthrough Controller
 
 A Chainable controller that publishes a reference thrust value to a topic. To
-use with Gazebo, set the published topic to be the `<thruster_model>/cmd_thrust`
+use with Gazebo, set the published topic to be the `<prefix>/cmd_thrust`
 topic subscribed to by Gazebo and launch a ROS-Gazebo bridge to proxy messages
 between the two interfaces.
 
@@ -83,3 +83,33 @@ gz_passthrough_controller/reference [std_msgs::msg::Float64]
 ### Publishers
 
 gz_passthrough_controller/status [control_msgs::msg::SingleDOFStateStamped]
+
+## Rotation Rate Controller
+
+A chainable controller that calculates the angular velocity required to achieve
+a reference thrust value. The control law is given as follows
+
+```math
+\omega = \sqrt{\frac{T}{K_T \cdot \rho \cdot D^4}}
+```
+
+### Plugin Library
+
+thruster_controllers/polynomial_thrust_curve_controller
+
+### References
+
+The input to this controller is thrust [double].
+
+### Commands
+
+The output of this controller is the PWM value required by the thruster to
+perform the action [double].
+
+### Subscribers
+
+polynomial_thrust_curve_controller/reference [std_msgs::msg::Float64]
+
+### Publishers
+
+polynomial_thrust_curve_controller/status [control_msgs::msg::SingleDOFStateStamped]
