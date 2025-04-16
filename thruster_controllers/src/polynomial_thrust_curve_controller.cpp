@@ -26,7 +26,6 @@
 #include <ranges>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include "pluginlib/class_list_macros.hpp"
 
 namespace thruster_controllers
 {
@@ -186,6 +185,7 @@ auto PolynomialThrustCurveController::update_and_write_commands(
 
 }  // namespace thruster_controllers
 
+#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
   thruster_controllers::PolynomialThrustCurveController,
   controller_interface::ChainableControllerInterface)

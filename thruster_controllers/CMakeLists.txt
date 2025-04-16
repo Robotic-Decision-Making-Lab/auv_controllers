@@ -33,18 +33,24 @@ generate_parameter_library(rotation_rate_controller_parameters
   src/rotation_rate_controller_parameters.yaml
 )
 
+generate_parameter_library(gz_passthrough_controller_parameters
+  src/gz_passthrough_controller_parameters.yaml
+)
+
 add_library(thruster_controllers SHARED)
 target_sources(
     thruster_controllers
     PRIVATE
         src/polynomial_thrust_curve_controller.cpp
         src/rotation_rate_controller.cpp
+        src/gz_passthrough_controller.cpp
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/polynomial_thrust_curve_controller.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/rotation_rate_controller.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/gz_passthrough_controller.hpp
 )
 ament_target_dependencies(thruster_controllers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(thruster_controllers PUBLIC cxx_std_23)
@@ -54,6 +60,7 @@ target_link_libraries(
         ${rclcpp_LIBRARIES}
         polynomial_thrust_curve_controller_parameters
         rotation_rate_controller_parameters
+        gz_passthrough_controller_parameters
 )
 
 pluginlib_export_plugin_description_file(controller_interface thruster_controllers.xml)
@@ -63,6 +70,7 @@ install(
         thruster_controllers
         polynomial_thrust_curve_controller_parameters
         rotation_rate_controller_parameters
+        gz_passthrough_controller_parameters
     EXPORT export_thruster_controllers
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

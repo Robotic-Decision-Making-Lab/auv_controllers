@@ -16,4 +16,12 @@
     </description>
   </class>
 
+  <class name="thruster_controllers/GazeboPassthroughController"
+         type="thruster_controllers::GazeboPassthroughController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Controller used to pass through thrust values to a Gazebo thruster plugin
+    </description>
+  </class>
+
 </library>
