@@ -159,7 +159,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       // initialize the ik solver
       ik_solver_loader_ =
         std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
-      ik_solver_ = ik_solver_loader_->createSharedInstance("ik_solvers::TaskPriorityIKSolver");  // TODO: testing
+      ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
       ik_solver_->initialize(get_node(), model_, data_);
 
       RCLCPP_INFO(  // NOLINT
