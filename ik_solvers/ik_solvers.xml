@@ -4,7 +4,7 @@
          type="ik_solvers::TaskPriorityIKSolver"
          base_class_type="ik_solvers::IKSolver">
     <description>
-      A closed-loop task priority solver
+      A closed-loop task priority IK solver
     </description>
   </class>
 
