@@ -157,8 +157,8 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       model_initialized_ = true;
 
       // initialize the ik solver
-      ik_solver_loader_ = std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>(
-        "whole_body_controllers", "ik_solvers::IKSolver");
+      ik_solver_loader_ =
+        std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
       ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
       ik_solver_->initialize(get_node(), model_, data_);
 
