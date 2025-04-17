@@ -43,7 +43,7 @@ target_sources(
 )
 ament_target_dependencies(ik_solvers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(ik_solvers PUBLIC cxx_std_23)
-target_compile_definitions(ik_solvers PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
+# target_compile_definitions(ik_solvers PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 target_link_libraries(ik_solvers PUBLIC task_priority_ik_solver_parameters)
 pluginlib_export_plugin_description_file(ik_solvers ik_solvers.xml)
 
