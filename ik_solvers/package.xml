@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>whole_body_controllers</name>
+  <name>ik_solvers</name>
   <version>0.0.1</version>
-  <description>Whole-body controllers for underwater vehicle manipulator systems</description>
+  <description>Inverse kinematics solvers used for whole-body control</description>
 
   <maintainer email="evanp922@gmail.com">ros</maintainer>
   <license>MIT</license>
@@ -16,19 +16,11 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>ros2_control</depend>
-  <depend>ros2_controllers</depend>
   <depend>pluginlib</depend>
-  <depend>controller_interface</depend>
-  <depend>hardware_interface</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
   <depend>control_msgs</depend>
   <depend>pinocchio</depend>
-  <depend>nav_msgs</depend>
-  <depend>message_transforms</depend>
-  <depend>controller_common</depend>
-  <depend>ik_solvers</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

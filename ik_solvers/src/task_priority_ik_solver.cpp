@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "whole_body_controllers/solvers/task_priority_ik_solver.hpp"
+#include "ik_solvers/task_priority_ik_solver.hpp"
 
 #include <algorithm>
 #include <memory>

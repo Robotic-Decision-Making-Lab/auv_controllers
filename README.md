@@ -1,21 +1,15 @@
 # auv_controllers
 
-auv_controllers is a collection of chainable controllers for autonomous
-underwater vehicles (AUVs) implemented using ros2_control. The controllers have
+auv_controllers is a collection of controllers for autonomous underwater
+vehicles (AUVs) implemented using ros2_control. The controllers have
 been designed to support the complete AUV control hierarchy and to enable
 benchmarking against other commonly-used control algorithms.
-
-> [!NOTE]
-> If you are interested in adding your own controller to this project, please
-> consider submitting a [pull request](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/pulls)!
 
 ## Installation
 
 auv_controllers is currently supported on Linux and is available for the ROS 2
-Rolling and Jazzy distributions. auv_controllers previously supported the ROS 2
-Iron and Humble distributions; however, development for these versions is no
-longer active. To install auv_controllers, first clone this project to the `src`
-directory of your ROS workspace:
+Rolling and Jazzy distributions. To install auv_controllers, first clone this
+project to the `src` directory of your ROS workspace:
 
 ```bash
 git clone git@github.com:Robotic-Decision-Making-Lab/auv_controllers.git
