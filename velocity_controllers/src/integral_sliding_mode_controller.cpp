@@ -185,14 +185,15 @@ auto IntegralSlidingModeController::state_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
-  config.type = params_.use_external_measured_states ? controller_interface::interface_configuration_type::NONE
-                                                     : controller_interface::interface_configuration_type::INDIVIDUAL;
-  config.names.reserve(n_dofs_);
-
-  for (const auto & dof : dofs_) {
-    config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY));
+  if (params_.use_external_measured_states) {
+    config.type = controller_interface::interface_configuration_type::NONE;
+  } else {
+    config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+    config.names.reserve(n_dofs_);
+    for (const auto & dof : dofs_) {
+      config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY));
+    }
   }
-
   return config;
 }
 

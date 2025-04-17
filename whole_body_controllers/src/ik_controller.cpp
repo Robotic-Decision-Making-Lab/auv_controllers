@@ -211,13 +211,15 @@ auto IKController::command_interface_configuration() const -> controller_interfa
 auto IKController::state_interface_configuration() const -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
-  config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-  config.names.reserve(n_dofs_);
-
-  for (const auto & dof : dofs_) {
-    config.names.push_back(std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION));
+  if (params_.use_external_measured_vehicle_states) {
+    config.type = controller_interface::interface_configuration_type::NONE;
+  } else {
+    config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+    config.names.reserve(n_dofs_);
+    for (const auto & dof : dofs_) {
+      config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY));
+    }
   }
-
   return config;
 }
 
