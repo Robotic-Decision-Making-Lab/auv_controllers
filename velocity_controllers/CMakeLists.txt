@@ -22,6 +22,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     tf2
     tf2_ros
     nav_msgs
+    controller_common
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})

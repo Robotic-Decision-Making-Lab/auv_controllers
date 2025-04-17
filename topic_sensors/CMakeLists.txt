@@ -13,6 +13,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     realtime_tools
     std_msgs
     nav_msgs
+    controller_common
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})

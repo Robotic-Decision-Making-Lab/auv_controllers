@@ -30,6 +30,7 @@
 #include <ranges>
 #include <string>
 
+#include "controller_common/common.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
@@ -37,46 +38,6 @@
 
 namespace velocity_controllers
 {
-
-namespace
-{
-
-void reset_twist_msg(geometry_msgs::msg::Twist * msg)  // NOLINT
-{
-  msg->linear.x = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.y = std::numeric_limits<double>::quiet_NaN();
-  msg->linear.z = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.x = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.y = std::numeric_limits<double>::quiet_NaN();
-  msg->angular.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-void reset_odom_msg(nav_msgs::msg::Odometry * msg)  // NOLINT
-{
-  msg->pose.pose.position.x = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.position.y = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.position.z = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.orientation = tf2::toMsg(Eigen::Quaterniond::Identity());
-  reset_twist_msg(&msg->twist.twist);
-}
-
-auto twist_to_vector(const geometry_msgs::msg::Twist & twist) -> std::vector<double>
-{
-  return {twist.linear.x, twist.linear.y, twist.linear.z, twist.angular.x, twist.angular.y, twist.angular.z};
-}
-
-/// Calculate the element-wise error between two vectors, returning NaN if either element is NaN.
-auto calculate_error(const std::vector<double> & ref, const std::vector<double> & state) -> std::vector<double>
-{
-  std::vector<double> error;
-  error.reserve(ref.size());
-  std::ranges::transform(ref, state, std::back_inserter(error), [](double ref, double state) {
-    return !std::isnan(ref) && !std::isnan(state) ? ref - state : std::numeric_limits<double>::quiet_NaN();
-  });
-  return error;
-}
-
-}  // namespace
 
 auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackReturn
 {
@@ -194,8 +155,8 @@ auto IntegralSlidingModeController::on_activate(const rclcpp_lifecycle::State & 
   init_error_ = Eigen::Vector6d::Zero();
 
   system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
-  reset_twist_msg(reference_.readFromNonRT());
-  reset_odom_msg(system_state_.readFromNonRT());
+  common::messages::reset_message(reference_.readFromNonRT());
+  common::messages::reset_message(system_state_.readFromNonRT());
 
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -256,7 +217,7 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
-  const std::vector<double> reference = twist_to_vector(*current_reference);
+  const std::vector<double> reference = common::messages::to_vector(*current_reference);
 
   for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
     if (!std::isnan(ref)) {
@@ -264,7 +225,7 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
     }
   }
 
-  reset_twist_msg(current_reference);
+  common::messages::reset_message(current_reference);
   return controller_interface::return_type::OK;
 }
 
@@ -273,7 +234,7 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
 {
   if (params_.use_external_measured_states) {
     auto * current_state = system_state_.readFromNonRT();
-    const std::vector<double> state = twist_to_vector(current_state->twist.twist);
+    const std::vector<double> state = common::messages::to_vector(current_state->twist.twist);
     system_state_values_.assign(state.begin(), state.end());
     tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
   } else {
@@ -324,7 +285,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
   const Eigen::Vector6d velocity_state(system_state_values_.data());
 
   // Calculate the velocity error
-  const std::vector<double> error_values = calculate_error(reference_interfaces_, system_state_values_);
+  const std::vector<double> error_values = common::math::calculate_error(reference_interfaces_, system_state_values_);
   if (std::ranges::all_of(error_values, [](double x) { return std::isnan(x); })) {
     RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Skipping control update.");  // NOLINT
     return controller_interface::return_type::OK;

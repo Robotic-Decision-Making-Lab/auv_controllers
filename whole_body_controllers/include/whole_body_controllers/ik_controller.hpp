@@ -22,7 +22,9 @@
 
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
 #include "pluginlib/class_loader.hpp"
@@ -72,15 +74,14 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
-  [[nodiscard]] auto transform_goal(const geometry_msgs::msg::PoseStamped & goal, const std::string & target_frame)
-    const -> geometry_msgs::msg::PoseStamped;
-
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
 
-  realtime_tools::RealtimeBuffer<geometry_msgs::msg::PoseStamped> reference_;
-  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::PoseStamped>> reference_sub_;
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> reference_;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> reference_sub_;
 
+  std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> vehicle_state_sub_;
+  realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> vehicle_state_;
   std::vector<double> system_state_values_;
 
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
@@ -88,16 +89,13 @@ protected:
   std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> ik_solver_loader_;
   std::shared_ptr<ik_solvers::IKSolver> ik_solver_;
 
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
-
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
 
   bool model_initialized_{false};
 
-  std::array<std::string, 7> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
-  std::array<std::string, 6> free_flyer_vel_dofs_{"vx", "vy", "vz", "wx", "wy", "wz"};
+  std::vector<std::string> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
+  std::vector<std::string> free_flyer_vel_dofs_{"vx", "vy", "vz", "wx", "wy", "wz"};
   std::vector<std::string> dofs_, vel_dofs_, manipulator_dofs_;
   std::size_t n_dofs_, n_manipulator_dofs_, n_vel_dofs_;
 };

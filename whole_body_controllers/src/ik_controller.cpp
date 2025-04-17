@@ -25,8 +25,9 @@
 #include <ranges>
 #include <string>
 
-#include "geometry_msgs/msg/pose.hpp"
+#include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "message_transforms/transforms.hpp"
 #include "pinocchio/algorithm/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 
@@ -36,36 +37,17 @@ namespace whole_body_controllers
 namespace
 {
 
-// NOLINTNEXTLINE(readability-non-const-parameter)
-auto reset_pose_msg(geometry_msgs::msg::Pose * msg) -> void
+auto vector_to_pose(const std::vector<double> & vec) -> geometry_msgs::msg::Pose
 {
-  msg->position.x = std::numeric_limits<double>::quiet_NaN();
-  msg->position.y = std::numeric_limits<double>::quiet_NaN();
-  msg->position.z = std::numeric_limits<double>::quiet_NaN();
-  msg->orientation.x = std::numeric_limits<double>::quiet_NaN();
-  msg->orientation.y = std::numeric_limits<double>::quiet_NaN();
-  msg->orientation.z = std::numeric_limits<double>::quiet_NaN();
-  msg->orientation.w = std::numeric_limits<double>::quiet_NaN();
-}
-
-// NOLINTNEXTLINE(readability-non-const-parameter)
-auto reset_pose_msg(geometry_msgs::msg::PoseStamped * msg) -> void
-{
-  reset_pose_msg(&msg->pose);
-  msg->header.frame_id.clear();
-  msg->header.stamp = rclcpp::Time();
-}
-
-auto pose_msg_to_vector(const geometry_msgs::msg::Pose & pose) -> std::vector<double>
-{
-  return {
-    pose.position.x,
-    pose.position.y,
-    pose.position.z,
-    pose.orientation.x,
-    pose.orientation.y,
-    pose.orientation.z,
-    pose.orientation.w};
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = vec[0];
+  pose.position.y = vec[1];
+  pose.position.z = vec[2];
+  pose.orientation.x = vec[3];
+  pose.orientation.y = vec[4];
+  pose.orientation.z = vec[5];
+  pose.orientation.w = vec[6];
+  return pose;
 }
 
 auto vector_to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
@@ -99,7 +81,7 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
 {
   update_parameters();
 
-  // TODO(evan-palmer): simplify this by using all joints except the locked joints??
+  // TODO(evan-palmer): can we simplify this by using all joints except the locked joints??
 
   manipulator_dofs_ = params_.manipulator_joints;
   n_manipulator_dofs_ = manipulator_dofs_.size();
@@ -123,22 +105,33 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 {
   configure_parameters();
 
-  reference_.writeFromNonRT(geometry_msgs::msg::PoseStamped());
+  reference_.writeFromNonRT(geometry_msgs::msg::Pose());
+  vehicle_state_.writeFromNonRT(nav_msgs::msg::Odometry());
 
   command_interfaces_.reserve(n_dofs_ + n_vel_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
 
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
-
-  reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::PoseStamped>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::PoseStamped> msg) {
+  reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {
+      // auv_controllers uses the maritime standard for all controllers, but pinocchio uses the ROS standard
+      // convert to the ROS standard for *internal usage only*
+      m2m::transforms::transform_message(*msg);
       reference_.writeFromNonRT(*msg);
     });
 
+  if (params_.use_external_measured_vehicle_states) {
+    RCLCPP_INFO(get_node()->get_logger(), "Using external measured vehicle states");  // NOLINT
+    vehicle_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
+      "~/vehicle_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+        // similar to the reference message, we need to transform the vehicle state message into the appropriate frame
+        m2m::transforms::transform_message(*msg, "map_ned", "base_link");
+        vehicle_state_.writeFromNonRT(*msg);
+      });
+  }
+
   const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).transient_local().reliable();
   robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
-    "~/robot_description", qos, [this](const std::shared_ptr<std_msgs::msg::String> msg) {
+    "robot_description", qos, [this](const std::shared_ptr<std_msgs::msg::String> msg) {
       if (model_initialized_ || msg->data.empty()) {
         return;
       }
@@ -169,7 +162,9 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
       ik_solver_->initialize(get_node(), model_, data_);
 
-      RCLCPP_INFO(get_node()->get_logger(), "Initialized IK controller with solver %s", params_.ik_solver.c_str());
+      RCLCPP_INFO(  // NOLINT
+        get_node()->get_logger(),
+        std::format("Initialized IK controller with solver {}", params_.ik_solver).c_str());
     });
 
   // TODO(evan-palmer): add controller state publisher
@@ -180,7 +175,8 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 auto IKController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  reset_pose_msg(reference_.readFromNonRT());
+  common::messages::reset_message(reference_.readFromNonRT());
+  common::messages::reset_message(vehicle_state_.readFromNonRT());
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
@@ -190,39 +186,24 @@ auto IKController::command_interface_configuration() const -> controller_interfa
 {
   controller_interface::InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-
-  // the ik controller produces both the velocity solution and integrated positions
   config.names.reserve(n_dofs_ + n_vel_dofs_);
 
-  // position interfaces
-  for (const auto & dof : free_flyer_dofs_) {
-    config.names.push_back(
-      params_.vehicle_reference_controller.empty()
-        ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
-        : std::format("{}/{}/{}", params_.vehicle_reference_controller, dof, hardware_interface::HW_IF_POSITION));
-  }
+  auto add_interfaces =
+    [&config](const std::vector<std::string> & dofs, const std::string & reference, const std::string & interface) {
+      for (const auto & dof : dofs) {
+        config.names.push_back(
+          reference.empty() ? std::format("{}/{}", dof, interface)
+                            : std::format("{}/{}/{}", reference, dof, interface));
+      }
+    };
 
-  for (const auto & dof : manipulator_dofs_) {
-    config.names.push_back(
-      params_.manipulator_reference_controller.empty()
-        ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
-        : std::format("{}/{}/{}", params_.manipulator_reference_controller, dof, hardware_interface::HW_IF_POSITION));
-  }
+  // add the position interfaces
+  add_interfaces(free_flyer_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_POSITION);
+  add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_POSITION);
 
-  // velocity interfaces
-  for (const auto & dof : free_flyer_vel_dofs_) {
-    config.names.push_back(
-      params_.vehicle_reference_controller.empty()
-        ? std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY)
-        : std::format("{}/{}/{}", params_.vehicle_reference_controller, dof, hardware_interface::HW_IF_VELOCITY));
-  }
-
-  for (const auto & dof : manipulator_dofs_) {
-    config.names.push_back(
-      params_.manipulator_reference_controller.empty()
-        ? std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY)
-        : std::format("{}/{}/{}", params_.manipulator_reference_controller, dof, hardware_interface::HW_IF_VELOCITY));
-  }
+  // add the velocity interfaces
+  add_interfaces(free_flyer_vel_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_VELOCITY);
+  add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_VELOCITY);
 
   return config;
 }
@@ -244,29 +225,17 @@ auto IKController::state_interface_configuration() const -> controller_interface
 auto IKController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
 {
   reference_interfaces_.resize(free_flyer_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
-
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(free_flyer_dofs_.size());
 
   for (size_t i = 0; i < free_flyer_dofs_.size(); ++i) {
-    const auto & dof = free_flyer_dofs_[i];
     interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
+      get_node()->get_name(),
+      std::format("{}/{}", free_flyer_dofs_[i], hardware_interface::HW_IF_POSITION),
+      &reference_interfaces_[i]);
   }
 
   return interfaces;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IKController::transform_goal(const geometry_msgs::msg::PoseStamped & goal, const std::string & target_frame) const
-  -> geometry_msgs::msg::PoseStamped
-{
-  geometry_msgs::msg::PoseStamped transformed_pose;
-  const auto transform = tf_buffer_->lookupTransform(target_frame, goal.header.frame_id, tf2::TimePointZero);
-  tf2::doTransform(goal.pose, transformed_pose.pose, transform);
-  transformed_pose.header.frame_id = target_frame;
-  transformed_pose.header.stamp = goal.header.stamp;
-  return transformed_pose;
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
@@ -274,49 +243,59 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
   -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromRT();
-  const std::string target_frame = params_.world_frame_id;
-
-  geometry_msgs::msg::PoseStamped transformed_pose;
-  if (current_reference->header.frame_id.empty() || current_reference->header.frame_id == target_frame) {
-    transformed_pose = *current_reference;
-  } else {
-    RCLCPP_INFO(
-      get_node()->get_logger(),
-      "Reference pose is in frame %s, attempting to transform to %s",
-      current_reference->header.frame_id.c_str(),
-      target_frame.c_str());
-
-    try {
-      transformed_pose = transform_goal(*current_reference, target_frame);
-    }
-    catch (const tf2::TransformException & ex) {  // NOLINT
-      RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to transform reference pose: {}", ex.what()).c_str());
-      return controller_interface::return_type::ERROR;
-    }
-  }
-
-  const auto reference = pose_msg_to_vector(transformed_pose.pose);
+  const auto reference = common::messages::to_vector(*current_reference);
   for (std::size_t i = 0; i < reference.size(); ++i) {
     if (!std::isnan(reference[i])) {
       reference_interfaces_[i] = reference[i];
     }
   }
-
-  reset_pose_msg(current_reference);
-
+  common::messages::reset_message(current_reference);
   return controller_interface::return_type::OK;
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::update_system_state_values() -> controller_interface::return_type
 {
-  for (std::size_t i = 0; i < system_state_values_.size(); ++i) {
-    const auto out = state_interfaces_[i].get_optional();
+  // save the vehicle state values
+  if (params_.use_external_measured_vehicle_states) {
+    const auto * vehicle_state = vehicle_state_.readFromRT();
+    const auto vehicle_state_vec = common::messages::to_vector(*vehicle_state);
+    std::ranges::copy(vehicle_state_vec, system_state_values_.begin());
+  } else {
+    std::vector<double> vehicle_states;
+    vehicle_states.reserve(free_flyer_dofs_.size());
+    for (std::size_t i = 0; i < free_flyer_dofs_.size(); ++i) {
+      const auto out = state_interfaces_[i].get_optional();
+      if (!out.has_value()) {
+        RCLCPP_WARN(  // NOLINT
+          get_node()->get_logger(),
+          "Failed to get state value for joint %s",
+          free_flyer_dofs_[i].c_str());
+        return controller_interface::return_type::ERROR;
+      }
+      vehicle_states.push_back(out.value());
+    }
+
+    // the system state interfaces use the maritime standard for states, so we need to convert the vehicle states
+    // into the ROS standard before we save them for use with pinocchio
+    auto pose = vector_to_pose(vehicle_states);
+    m2m::transforms::transform_message(pose);
+    const auto transformed_vehicle_states = common::messages::to_vector(pose);
+    std::ranges::copy(transformed_vehicle_states, system_state_values_.begin());
+  }
+
+  // save the manipulator state values
+  // right now we don't provide a topic-based interface for the manipulator states
+  for (std::size_t i = 0; i < n_manipulator_dofs_; ++i) {
+    const auto out = state_interfaces_[free_flyer_dofs_.size() + i].get_optional();
     if (!out.has_value()) {
-      RCLCPP_WARN(get_node()->get_logger(), "Failed to get state value for joint %s", dofs_[i].c_str());  // NOLINT
+      RCLCPP_WARN(  // NOLINT
+        get_node()->get_logger(),
+        "Failed to get state value for joint %s",
+        manipulator_dofs_[i].c_str());
       return controller_interface::return_type::ERROR;
     }
-    system_state_values_[i] = out.value();
+    system_state_values_[free_flyer_dofs_.size() + i] = out.value();
   }
 
   return controller_interface::return_type::OK;

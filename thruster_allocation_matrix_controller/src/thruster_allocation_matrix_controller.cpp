@@ -25,31 +25,11 @@
 #include <ranges>
 #include <stdexcept>
 
+#include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include "pluginlib/class_list_macros.hpp"
 
 namespace thruster_allocation_matrix_controller
 {
-
-namespace
-{
-
-auto reset_wrench_msg(geometry_msgs::msg::Wrench * wrench_msg) -> void  // NOLINT
-{
-  wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->force.z = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.x = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.y = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-auto wrench_to_vector(const geometry_msgs::msg::Wrench & wrench) -> std::vector<double>
-{
-  return {wrench.force.x, wrench.force.y, wrench.force.z, wrench.torque.x, wrench.torque.y, wrench.torque.z};
-}
-
-}  // namespace
 
 auto ThrusterAllocationMatrixController::on_init() -> controller_interface::CallbackReturn
 {
@@ -151,7 +131,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
 auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  reset_wrench_msg(reference_.readFromNonRT());
+  common::messages::reset_message(reference_.readFromNonRT());
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -205,13 +185,13 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
-  const std::vector<double> wrench = wrench_to_vector(*current_reference);
+  const std::vector<double> wrench = common::messages::to_vector(*current_reference);
   for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
     if (!std::isnan(ref)) {
       interface = ref;
     }
   }
-  reset_wrench_msg(current_reference);
+  common::messages::reset_message(current_reference);
   return controller_interface::return_type::OK;
 }
 
@@ -248,6 +228,7 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
 
 }  // namespace thruster_allocation_matrix_controller
 
+#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
   thruster_allocation_matrix_controller::ThrusterAllocationMatrixController,
   controller_interface::ChainableControllerInterface)

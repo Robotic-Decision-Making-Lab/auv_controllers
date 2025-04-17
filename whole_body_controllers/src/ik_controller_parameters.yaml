@@ -7,6 +7,12 @@ ik_controller:
     validation:
       one_of<>: [["task_priority_ik_solver"]]
 
+  use_external_measured_vehicle_states:
+    type: bool
+    read_only: true
+    default_value: false
+    description: "Use vehicle state measurements obtained from a topic instead of state interfaces."
+
   vehicle_reference_controller:
     type: string
     default_value: ""
@@ -18,16 +24,6 @@ ik_controller:
     default_value: ""
     read_only: true
     description: "The prefix of the reference controller to send manipulator commands to."
-
-  base_frame_id:
-    type: string
-    default_value: "base_link"
-    description: "The name of the base link of the robot."
-
-  world_frame_id:
-    type: string
-    default_value: "map"
-    description: "The name of the world frame."
 
   manipulator_joints:
     type: string_array

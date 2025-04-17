@@ -19,6 +19,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     auv_control_msgs
     control_msgs
     hydrodynamics
+    controller_common
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
@@ -52,16 +53,6 @@ ament_target_dependencies(thruster_allocation_matrix_controller PUBLIC ${THIS_PA
 target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface thruster_allocation_matrix_controller.xml)
-
-if(BUILD_TESTING)
-    find_package(ament_lint_auto REQUIRED)
-
-    set(ament_cmake_copyright_FOUND TRUE)
-    set(ament_cmake_uncrustify_FOUND TRUE)
-    set(ament_cmake_cpplint_FOUND TRUE)
-
-    ament_lint_auto_find_test_dependencies()
-endif()
 
 install(
     TARGETS

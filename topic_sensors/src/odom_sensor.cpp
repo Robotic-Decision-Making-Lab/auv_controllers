@@ -23,49 +23,10 @@
 #include <format>
 #include <ranges>
 
+#include "controller_common/common.hpp"
+
 namespace topic_sensors
 {
-
-namespace
-{
-
-// NOLINTNEXTLINE(readability-non-const-parameter)
-auto reset_odom_msg(nav_msgs::msg::Odometry * msg) -> void
-{
-  msg->pose.pose.position.x = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.position.y = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.position.z = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.orientation.x = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.orientation.y = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.orientation.z = std::numeric_limits<double>::quiet_NaN();
-  msg->pose.pose.orientation.w = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.linear.x = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.linear.y = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.linear.z = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.angular.x = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.angular.y = std::numeric_limits<double>::quiet_NaN();
-  msg->twist.twist.angular.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-auto odom_to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>
-{
-  return {
-    odom.pose.pose.position.x,
-    odom.pose.pose.position.y,
-    odom.pose.pose.position.z,
-    odom.pose.pose.orientation.x,
-    odom.pose.pose.orientation.y,
-    odom.pose.pose.orientation.z,
-    odom.pose.pose.orientation.w,
-    odom.twist.twist.linear.x,
-    odom.twist.twist.linear.y,
-    odom.twist.twist.linear.z,
-    odom.twist.twist.angular.x,
-    odom.twist.twist.angular.y,
-    odom.twist.twist.angular.z};
-}
-
-}  // namespace
 
 auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> hardware_interface::CallbackReturn
 {
@@ -78,15 +39,15 @@ auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> h
 
 auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) -> hardware_interface::CallbackReturn
 {
-  reset_odom_msg(state_.readFromNonRT());
+  common::messages::reset_message(state_.readFromNonRT());
   state_values_.fill(std::numeric_limits<double>::quiet_NaN());
 
   const std::string topic = info_.hardware_parameters.at("topic");
   if (topic.empty()) {
-    RCLCPP_ERROR(logger_, "Topic name is empty. Please provide a valid topic name.");
+    RCLCPP_ERROR(logger_, "Topic name is empty. Please provide a valid topic name.");  // NOLINT
     return hardware_interface::CallbackReturn::ERROR;
   }
-  RCLCPP_INFO(logger_, std::format("Subscribing to topic: {}", topic).c_str());
+  RCLCPP_INFO(logger_, std::format("Subscribing to topic: {}", topic).c_str());  // NOLINT
 
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     topic, rclcpp::SensorDataQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
@@ -124,7 +85,7 @@ auto OdomSensor::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*
   if (rclcpp::ok()) {
     rclcpp::spin_some(node_);
     const auto * current_state = state_.readFromRT();
-    std::ranges::copy(odom_to_vector(*current_state), state_values_.begin());
+    std::ranges::copy(common::messages::to_vector(*current_state), state_values_.begin());
   }
   return hardware_interface::return_type::OK;
 }

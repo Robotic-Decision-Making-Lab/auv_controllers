@@ -22,6 +22,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     geometry_msgs
     tf2_ros
     tf2_eigen
+    message_transforms
+    controller_common
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
