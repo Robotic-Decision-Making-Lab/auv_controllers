@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "ik_solvers/task_priority_ik_solver.hpp"
+#include "ik_solvers/task_priority_solver.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -28,7 +28,6 @@
 #include "pinocchio/algorithm/frames.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
-#include "pluginlib/class_list_macros.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
 namespace ik_solvers
@@ -303,7 +302,7 @@ auto TaskPriorityIKSolver::initialize(
   const std::shared_ptr<pinocchio::Data> & data) -> void
 {
   IKSolver::initialize(node, model, data);
-  param_listener_ = std::make_shared<task_priority_ik_solver::ParamListener>(node_);
+  param_listener_ = std::make_shared<task_priority_solver::ParamListener>(node_);
   params_ = param_listener_->get_params();
 }
 
@@ -362,4 +361,5 @@ auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const E
 
 }  // namespace ik_solvers
 
+#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(ik_solvers::TaskPriorityIKSolver, ik_solvers::IKSolver)

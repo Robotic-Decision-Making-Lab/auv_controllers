@@ -1,4 +1,4 @@
-task_priority_ik_solver:
+task_priority_solver:
   end_effector_frame_id:
     type: string
     default_value: "tcp"
