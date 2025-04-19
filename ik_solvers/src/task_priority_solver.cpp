@@ -170,7 +170,7 @@ namespace
 {
 
 /// Compute the nullspace of the Jacobian matrix using the pseudoinverse.
-auto compute_jacobian_nullspace(const Eigen::MatrixXd & augmented_jacobian) -> Eigen::MatrixXd
+auto compute_nullspace(const Eigen::MatrixXd & augmented_jacobian) -> Eigen::MatrixXd
 {
   // TODO(evan-palmer): do we need the damping here?
   const Eigen::MatrixXd eye = Eigen::MatrixXd::Identity(augmented_jacobian.cols(), augmented_jacobian.cols());
@@ -178,7 +178,7 @@ auto compute_jacobian_nullspace(const Eigen::MatrixXd & augmented_jacobian) -> E
 }
 
 /// Construct the augmented Jacobian matrix from a list of Jacobian matrices.
-auto compute_augmented_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eigen::MatrixXd
+auto construct_augmented_jacobian(const std::vector<Eigen::MatrixXd> & jacobians) -> Eigen::MatrixXd
 {
   if (jacobians.empty()) {
     throw std::invalid_argument("At least one Jacobian matrix must be provided.");
@@ -207,20 +207,22 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
     return std::unexpected(SolverError::NO_SOLUTION);
   }
 
-  auto vel = Eigen::VectorXd::Zero(nv);
+  Eigen::VectorXd vel = Eigen::VectorXd::Zero(nv);
   std::vector<Eigen::MatrixXd> jacobians;
   jacobians.reserve(tasks.size());
   Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(nv, nv);
 
   for (const auto & task : tasks) {
-    const Eigen::MatrixXd x = task->jacobian() * nullspace;
-    const auto eye = Eigen::MatrixXd::Identity(x.rows(), x.rows());
+    // damped pseudoinverse of the Jacobian
+    const Eigen::MatrixXd J = task->jacobian();
+    const auto eye = Eigen::MatrixXd::Identity(J.rows(), J.rows());
+    const Eigen::MatrixXd J_inv = J.transpose() * (J * J.transpose() + damping * eye).inverse();
 
-    const Eigen::MatrixXd x_inv = x.transpose() * (x * x.transpose() + damping * eye).inverse();
-    const Eigen::VectorXd vel = x_inv * (task->gain() * task->error() - task->jacobian() * vel);
+    // closed-loop task priority IK
+    vel += nullspace * J_inv * (task->gain() * task->error());
 
-    jacobians.push_back(task->jacobian());
-    nullspace = compute_jacobian_nullspace(compute_augmented_jacobian(jacobians));
+    jacobians.push_back(J);
+    nullspace = compute_nullspace(construct_augmented_jacobian(jacobians));
   }
 
   return vel;
