@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation as R
 np.set_printoptions(precision=5, suppress=True, linewidth=200)
 
 # Load the URDF model using a free-flyer as root joint
-model = pinocchio.buildModelFromUrdf("output.urdf", pinocchio.JointModelFreeFlyer())
+model = pinocchio.buildModelFromUrdf("/home/ubuntu/ws_ros/src/auv_controllers/ik_solvers/examples/urdf/example.urdf", pinocchio.JointModelFreeFlyer())
 
 joint_names_to_lock = [
     "alpha_rs1_130_joint",
@@ -30,13 +30,13 @@ q_ref = pinocchio.neutral(model)
 model = pinocchio.buildReducedModel(model, joint_ids_to_lock, q_ref)
 data = model.createData()
 
-rot = R.random()
+# rot = R.random()
 q = pinocchio.neutral(model)
-q[:3] = np.random.rand(3)
-q[3:7] = rot.as_quat().reshape(-1)
-# q[-1] = 1.54
+# q[:3] = np.random.rand(3)
+# q[3:7] = rot.as_quat().reshape(-1)
 
 print(q)
+print(len(q))
 
 # Perform the forward kinematics over the kinematic tree
 pinocchio.forwardKinematics(model, data, q)
