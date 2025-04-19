@@ -338,6 +338,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   // update the adaptive gain
   for (auto [i, val] : std::views::enumerate(k1_.diagonal())) {
     k1_(i, i) = val > k1_min_(i) ? k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_) : k1_min_(i);
+    RCLCPP_INFO(get_node()->get_logger(), std::format("Adaptive gain for joint {}: {}", dofs_[i], k1_(i, i)).c_str());
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
