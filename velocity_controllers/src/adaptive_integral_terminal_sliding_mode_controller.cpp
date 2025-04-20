@@ -85,7 +85,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   alpha_ = Eigen::Vector6d(alpha.data()).asDiagonal();
   k1_min_ = Eigen::Vector6d(k1_min.data());
   mu_ = Eigen::Vector6d(mu.data());
-  k_theta_ = Eigen::Vector6d(k_theta_.data());
+  k_theta_ = Eigen::Vector6d(k_theta.data());
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
     std::cout << std::format("ktheta: {}, k2: {}, k1_min: {}, mu: {}", k_theta_(i), k2_(i, i), k1_min_(i), mu_(i))
