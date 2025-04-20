@@ -353,11 +353,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
     k1_(i, i) = val > k1_min_(i) ? k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_) : k1_min_(i);
     // k1_(i, i) = std::max(k1_min_(i, i), k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_));
   }
-  // RCLCPP_INFO(get_node()->get_logger(), std::format("{} {} {} {} {} {}\n", ))
-  // RCLCPP_INFO(
-  //   get_node()->get_logger(),
-  //   std::format("gain: {} {} {} {} {} {}\n", k1_(0, 0), k1_(1, 1), k1_(2, 2), k1_(3, 3), k1_(4, 4), k1_(5,
-  //   5)).c_str());
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    std::format("gain: {} {} {} {} {} {}\n", k1_(0, 0), k1_(1, 1), k1_(2, 2), k1_(3, 3), k1_(4, 4), k1_(5, 5)).c_str());
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
