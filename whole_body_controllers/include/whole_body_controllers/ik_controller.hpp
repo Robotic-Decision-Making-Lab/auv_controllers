@@ -24,7 +24,7 @@
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "ik_solvers/ik_solver.hpp"
+#include "ik_solvers/solver.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "pinocchio/algorithm/joint-configuration.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
