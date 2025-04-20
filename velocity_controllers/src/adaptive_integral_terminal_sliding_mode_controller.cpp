@@ -343,13 +343,12 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   // update the adaptive gain
   for (auto [i, val] : std::views::enumerate(k1_.diagonal())) {
     // std::cout << "val: " << k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_) << "\n";
-    // RCLCPP_INFO(
-    //   get_node()->get_logger(),
-    //   std::format("k_theta: {}, val: {}, sign: {}", k_theta_(i), std::abs(val), sign(std::abs(val) - mu_(i),
-    //   lambda_))
-    //     .c_str());
-    // RCLCPP_INFO(
-    //   get_node()->get_logger(), std::format("out: {}", k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_)).c_str());
+    RCLCPP_INFO(
+      get_node()->get_logger(),
+      std::format("k_theta: {}, val: {}, sign: {}", k_theta_(i), std::abs(val), sign(std::abs(val) - mu_(i), lambda_))
+        .c_str());
+    RCLCPP_INFO(
+      get_node()->get_logger(), std::format("out: {}", k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_)).c_str());
     k1_(i, i) = val > k1_min_(i) ? k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_) : k1_min_(i);
     // k1_(i, i) = std::max(k1_min_(i, i), k_theta_(i) * sign(std::abs(val) - mu_(i), lambda_));
   }
