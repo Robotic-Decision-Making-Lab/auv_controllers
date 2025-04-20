@@ -88,7 +88,8 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   k_theta_ = Eigen::Vector6d(k_theta_.data());
 
   for (std::size_t i = 0; i < n_dofs_; ++i) {
-    std::cout << k_theta_(i) << "\n";
+    std::cout << std::format("ktheta: {}, k2: {}, k1_min: {}, mu: {}", k_theta_(i), k2_(i, i), k1_min_(i), mu_(i))
+              << std::endl;
   }
 
   return controller_interface::CallbackReturn::SUCCESS;
