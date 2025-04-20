@@ -87,11 +87,6 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   mu_ = Eigen::Vector6d(mu.data());
   k_theta_ = Eigen::Vector6d(k_theta.data());
 
-  for (std::size_t i = 0; i < n_dofs_; ++i) {
-    std::cout << std::format("ktheta: {}, k2: {}, k1_min: {}, mu: {}", k_theta_(i), k2_(i, i), k1_min_(i), mu_(i))
-              << std::endl;
-  }
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -326,6 +321,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   // calculate the adaptive disturbance rejection control
   const Eigen::Vector6d u2 = (k1_ * s.cwiseAbs().cwiseSqrt()).asDiagonal() * sign(s, lambda_) + k2_ * s;
   const Eigen::Vector6d t1 = model_->M.mass_matrix * u2;
+
+  RCLCPP_INFO(
+    get_node()->get_logger(), std::format("{} {} {} {} {} {}\n", t1(0), t1(1), t1(2), t1(3), t1(4), t1(5)).c_str());
 
   // the total control is the sum of the nominal control and disturbance rejection control
   const Eigen::Vector6d t = t0 + t1;
