@@ -323,7 +323,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   const Eigen::Vector6d t1 = model_->M.mass_matrix * u2;
 
   RCLCPP_INFO(
-    get_node()->get_logger(), std::format("{} {} {} {} {} {}\n", t1(0), t1(1), t1(2), t1(3), t1(4), t1(5)).c_str());
+    get_node()->get_logger(), std::format("t0: {} {} {} {} {} {}\n", t0(0), t0(1), t0(2), t0(3), t0(4), t0(5)).c_str());
+  RCLCPP_INFO(
+    get_node()->get_logger(), std::format("t1: {} {} {} {} {} {}\n", t1(0), t1(1), t1(2), t1(3), t1(4), t1(5)).c_str());
 
   // the total control is the sum of the nominal control and disturbance rejection control
   const Eigen::Vector6d t = t0 + t1;
