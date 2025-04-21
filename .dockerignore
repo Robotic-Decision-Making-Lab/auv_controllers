@@ -11,4 +11,7 @@
 !auv_control_msgs
 !auv_control_demos
 !whole_body_controllers
+!ik_solvers
+!controller_common
+!topic_sensors
 !ros2.repos

@@ -60,7 +60,8 @@ target_link_libraries(
     PUBLIC solver_base task_priority_solver_parameters
 )
 
-pluginlib_export_plugin_description_file(solver_base solvers.xml)
+# the first argument is the name of the package, NOT the target name
+pluginlib_export_plugin_description_file(ik_solvers solvers.xml)
 
 set(EXAMPLES tpik_demo)
 foreach(example IN ITEMS ${EXAMPLES})
@@ -82,6 +83,7 @@ install(
     FILE_SET HEADERS
 )
 
+# ament_export_include_directories(include)
 ament_export_libraries(ik_solvers)
 ament_export_targets(export_ik_solvers)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
