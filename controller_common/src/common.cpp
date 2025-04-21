@@ -134,8 +134,7 @@ auto calculate_error(const std::vector<double> & reference, const std::vector<do
 {
   std::vector<double> error;
   error.reserve(reference.size());
-  // NOLINTNEXTLINE
-  std::ranges::transform(reference, state, std::back_inserter(error), [](double ref, double state) {
+  std::ranges::transform(reference, state, std::back_inserter(error), [](double ref, double state) {  // NOLINT
     return !std::isnan(ref) && !std::isnan(state) ? ref - state : std::numeric_limits<double>::quiet_NaN();
   });
   return error;

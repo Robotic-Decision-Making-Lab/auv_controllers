@@ -62,6 +62,17 @@ target_link_libraries(
 
 pluginlib_export_plugin_description_file(solver_base solvers.xml)
 
+set(EXAMPLES tpik_demo)
+foreach(example IN ITEMS ${EXAMPLES})
+    add_executable(${example})
+    target_sources(${example} PRIVATE examples/src/${example}.cpp)
+    target_link_libraries(${example} PUBLIC ik_solvers)
+    set_target_properties(
+        ${example}
+        PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/examples
+    )
+endforeach()
+
 install(
     TARGETS solver_base ik_solvers task_priority_solver_parameters
     EXPORT export_ik_solvers
