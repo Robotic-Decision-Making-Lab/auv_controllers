@@ -95,7 +95,7 @@ protected:
   bool model_initialized_{false};
 
   std::vector<std::string> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
-  std::vector<std::string> free_flyer_vel_dofs_{"vx", "vy", "vz", "wx", "wy", "wz"};
+  std::vector<std::string> free_flyer_vel_dofs_{"x", "y", "z", "rx", "ry", "rz"};
   std::vector<std::string> dofs_, vel_dofs_, manipulator_dofs_;
   std::size_t n_dofs_, n_manipulator_dofs_, n_vel_dofs_;
 };
