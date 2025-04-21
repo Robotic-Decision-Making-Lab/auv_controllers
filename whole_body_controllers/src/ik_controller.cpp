@@ -81,8 +81,6 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
 {
   update_parameters();
 
-  // TODO(evan-palmer): can we simplify this by using all joints except the locked joints??
-
   manipulator_dofs_ = params_.manipulator_joints;
   n_manipulator_dofs_ = manipulator_dofs_.size();
 
@@ -124,7 +122,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
     vehicle_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
       "~/vehicle_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
         // similar to the reference message, we need to transform the vehicle state message into the appropriate frame
-        m2m::transforms::transform_message(*msg, "map_ned", "base_link");
+        m2m::transforms::transform_message(*msg, "map", "base_link");
         vehicle_state_.writeFromNonRT(*msg);
       });
   }
@@ -160,6 +158,8 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       ik_solver_loader_ =
         std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
       ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
+
+      // TODO(evan-palmer): do we need to give the solver its own node?
       ik_solver_->initialize(get_node(), model_, data_);
 
       RCLCPP_INFO(  // NOLINT
@@ -260,44 +260,39 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 {
   // save the vehicle state values
   if (params_.use_external_measured_vehicle_states) {
+    // if we are using the external measured vehicle states, the message has already been transformed into the
+    // appropriate frame, so we can just copy the values into the system state values
     const auto * vehicle_state = vehicle_state_.readFromRT();
     const auto vehicle_state_vec = common::messages::to_vector(*vehicle_state);
     std::ranges::copy(vehicle_state_vec, system_state_values_.begin());
   } else {
-    std::vector<double> vehicle_states;
-    vehicle_states.reserve(free_flyer_dofs_.size());
-    for (std::size_t i = 0; i < free_flyer_dofs_.size(); ++i) {
+    std::vector<double> states;
+    states.reserve(free_flyer_dofs_.size());
+
+    for (const auto & [i, dof] : std::views::enumerate(free_flyer_dofs_)) {
       const auto out = state_interfaces_[i].get_optional();
-      if (!out.has_value()) {
-        RCLCPP_WARN(  // NOLINT
-          get_node()->get_logger(),
-          "Failed to get state value for joint %s",
-          free_flyer_dofs_[i].c_str());
-        return controller_interface::return_type::ERROR;
-      }
-      vehicle_states.push_back(out.value());
+      states.push_back(out.value_or(std::numeric_limits<double>::quiet_NaN()));
     }
 
     // the system state interfaces use the maritime standard for states, so we need to convert the vehicle states
     // into the ROS standard before we save them for use with pinocchio
-    auto pose = vector_to_pose(vehicle_states);
+    auto pose = vector_to_pose(states);
     m2m::transforms::transform_message(pose);
-    const auto transformed_vehicle_states = common::messages::to_vector(pose);
-    std::ranges::copy(transformed_vehicle_states, system_state_values_.begin());
+    const auto transformed_states = common::messages::to_vector(pose);
+    std::ranges::copy(transformed_states, system_state_values_.begin());
   }
 
   // save the manipulator state values
   // right now we don't provide a topic-based interface for the manipulator states
   for (std::size_t i = 0; i < n_manipulator_dofs_; ++i) {
     const auto out = state_interfaces_[free_flyer_dofs_.size() + i].get_optional();
-    if (!out.has_value()) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        "Failed to get state value for joint %s",
-        manipulator_dofs_[i].c_str());
-      return controller_interface::return_type::ERROR;
-    }
-    system_state_values_[free_flyer_dofs_.size() + i] = out.value();
+    system_state_values_[free_flyer_dofs_.size() + i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
+  }
+
+  // return an error if any of the state values are NaN
+  if (std::ranges::any_of(system_state_values_, [](double x) { return std::isnan(x); })) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Received system state with NaN value.");  // NOLINT
+    return controller_interface::return_type::ERROR;
   }
 
   return controller_interface::return_type::OK;
@@ -307,7 +302,10 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
-  update_system_state_values();
+  if (update_system_state_values() != controller_interface::return_type::OK) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to update system state values");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
 
   if (!model_initialized_) {
     RCLCPP_WARN(get_node()->get_logger(), "Waiting for the robot description to be published...");

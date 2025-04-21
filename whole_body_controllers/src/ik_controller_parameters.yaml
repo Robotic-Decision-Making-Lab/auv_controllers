@@ -1,11 +1,11 @@
 ik_controller:
   ik_solver:
     type: string
-    default_value: "task_priority_ik_solver"
+    default_value: "task_priority_solver"
     read_only: true
     description: "The name of the IK solver to use."
     validation:
-      one_of<>: [["task_priority_ik_solver"]]
+      one_of<>: [["task_priority_solver"]]
 
   use_external_measured_vehicle_states:
     type: bool
