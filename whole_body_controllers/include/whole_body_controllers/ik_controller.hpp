@@ -74,6 +74,8 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
+  auto update_and_validate_interfaces() -> controller_interface::return_type;
+
   std::shared_ptr<pinocchio::Model> model_;
   std::shared_ptr<pinocchio::Data> data_;
 

@@ -297,7 +297,27 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 
   // return an error if any of the state values are NaN
   if (std::ranges::any_of(system_state_values_, [](double x) { return std::isnan(x); })) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Received system state with NaN value.");  // NOLINT
+    RCLCPP_DEBUG(get_node()->get_logger(), "Received system state with NaN value.");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
+
+  return controller_interface::return_type::OK;
+}
+
+auto IKController::update_and_validate_interfaces() -> controller_interface::return_type
+{
+  if (update_system_state_values() != controller_interface::return_type::OK) {
+    RCLCPP_DEBUG(get_node()->get_logger(), "Failed to update system state values");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
+
+  if (!model_initialized_) {
+    RCLCPP_DEBUG(get_node()->get_logger(), "Waiting for the robot description to be published");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
+
+  if (std::ranges::any_of(reference_interfaces_, [](double x) { return std::isnan(x); })) {
+    RCLCPP_DEBUG(get_node()->get_logger(), "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
 
@@ -308,18 +328,8 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
-  if (update_system_state_values() != controller_interface::return_type::OK) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Skipping control update: failed to update system state values");  // NOLINT
-    return controller_interface::return_type::OK;
-  }
-
-  if (!model_initialized_) {
-    RCLCPP_WARN(get_node()->get_logger(), "Skipping control update: Waiting for the robot description to be published");
-    return controller_interface::return_type::OK;
-  }
-
-  if (std::ranges::any_of(reference_interfaces_, [](double x) { return std::isnan(x); })) {
-    RCLCPP_WARN(get_node()->get_logger(), "Skipping control update: received reference with NaN value.");  // NOLINT
+  if (update_and_validate_interfaces() != controller_interface::return_type::OK) {
+    RCLCPP_DEBUG(get_node()->get_logger(), "Skipping controller update. Failed to update and validate interfaces");
     return controller_interface::return_type::OK;
   }
 
