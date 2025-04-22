@@ -94,7 +94,7 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
 
   // NOLINTBEGIN
   RCLCPP_INFO(get_node()->get_logger(), "Commands won't be sent until both reference and state messages are received.");
-  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot_description to be received");
+  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot description to be received");
   // NOLINTEND
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(

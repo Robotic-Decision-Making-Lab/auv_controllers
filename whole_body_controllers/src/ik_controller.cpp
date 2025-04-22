@@ -100,6 +100,11 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
 auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
+  // NOLINTBEGIN
+  RCLCPP_INFO(get_node()->get_logger(), "Commands won't be sent until both reference and state messages are received.");
+  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot description to be received");
+  // NOLINTEND
+
   configure_parameters();
 
   reference_.writeFromNonRT(geometry_msgs::msg::Pose());

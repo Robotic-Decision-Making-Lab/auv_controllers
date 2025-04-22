@@ -104,7 +104,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   // reset the adaptive gain
   k1_ = Eigen::Matrix6d::Identity();
 
-  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot_description to be received");  // NOLINT
+  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot description to be received");  // NOLINT
 
   // NOLINTNEXTLINE(performance-unnecessary-value-param)
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
