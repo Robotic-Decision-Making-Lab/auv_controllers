@@ -1,9 +1,9 @@
 adaptive_integral_terminal_sliding_mode_controller:
   joints:
     type: string_array
-    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    default_value: [x, y, z, rx, ry, rz]
     read_only: true
-    description: "The controlled force/torque joints."
+    description: The controlled force/torque joints.
     validation:
       fixed_size<>: 6
 
@@ -11,32 +11,36 @@ adaptive_integral_terminal_sliding_mode_controller:
     type: bool
     read_only: true
     default_value: false
-    description: "Use state measurements obtained from a topic instead of state interfaces."
+    description: >
+      Use state measurements obtained from a topic instead of state interfaces.
 
   reference_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
+    description: >
+      The prefix of the reference controller to send commands to. This can be
+      used to configure command interfaces in chained mode.
 
   vehicle_frame_id:
     type: string
-    default_value: "base_link_fsd"
+    default_value: base_link_fsd
     read_only: true
-    description: "The name of the vehicle base frame."
+    description: The name of the vehicle base frame.
 
   odom_frame_id:
     type: string
-    default_value: "odom_ned"
+    default_value: odom_ned
     read_only: true
-    description: "The name of the inertial frame."
+    description: The name of the inertial frame.
 
   gains:
     lambda:
       type: double
       default_value: 0.0
       read_only: false
-      description: "The sign boundary thickness used to alleviate sliding mode chatter."
+      description: >
+        The sign boundary thickness used to alleviate sliding mode chatter.
       validation:
         gt<>: [0.0]
 
@@ -45,28 +49,32 @@ adaptive_integral_terminal_sliding_mode_controller:
         type: double
         default_value: 1.0
         read_only: false
-        description: "The proportional feedback gain for the computed torque control."
+        description: >
+          The proportional feedback gain for the computed torque control.
 
       k1_min:
         type: double
         default_value: 0.0
         read_only: false
-        description: "The minimum adaptation rate."
+        description: The minimum adaptation rate.
 
       k2:
         type: double
         default_value: 0.0
         read_only: false
-        description: "The sliding variable gain used in the disturbance rejection control."
+        description: >
+          The sliding variable gain used in the disturbance rejection control.
 
       k_theta:
         type: double
         default_value: 0.0
         read_only: false
-        description: "The gain for the adaptation rate dynamics."
+        description: The gain for the adaptation rate dynamics.
 
       mu:
         type: double
         default_value: 0.0
         read_only: false
-        description: "The minimum value of the sliding variable - used to detect loss of sliding mode."
+        description: >
+          The minimum value of the sliding variable - used to detect loss of
+          sliding mode.

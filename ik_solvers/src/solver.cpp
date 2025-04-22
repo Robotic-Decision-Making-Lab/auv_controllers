@@ -50,11 +50,9 @@ auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & go
   update_pinocchio(q);
 
   const auto result = solve_ik(goal, q);
-
   if (!result.has_value()) {
     return std::unexpected(result.error());
   }
-
   const Eigen::VectorXd solution = result.value();
 
   // Integrate the solution to get the new joint positions
@@ -65,10 +63,10 @@ auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & go
   point.time_from_start = period;
 
   point.positions.reserve(q_next.size());
-  point.velocities.reserve(solution.size());
+  std::ranges::copy(q_next, std::back_inserter(point.positions));
 
-  point.positions = std::vector<double>(q_next.data(), q_next.data() + q_next.size());
-  point.velocities = std::vector<double>(solution.data(), solution.data() + solution.size());
+  point.velocities.reserve(solution.size());
+  std::ranges::copy(solution, std::back_inserter(point.velocities));
 
   return point;
 }

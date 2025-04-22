@@ -3,7 +3,7 @@ rotation_rate_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The name of the thruster."
+    description: The name of the thruster to control.
     validation:
       not_empty<>: null
 
@@ -11,40 +11,40 @@ rotation_rate_controller:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The minimum thrust that can be produced by the thruster."
+    description: The minimum thrust that can be produced by the thruster.
 
   max_thrust:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The maximum thrust that can be produced by the thruster."
+    description: The maximum thrust that can be produced by the thruster.
 
   min_deadband:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The minimum thrust in the deadband range."
+    description: The minimum thrust in the deadband range.
 
   max_deadband:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The maximum thrust in the deadband range."
+    description: The maximum thrust in the deadband range.
 
   thrust_coefficient:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The thrust coefficient for the thruster."
+    description: The thrust coefficient for the thruster.
 
   propeller_diameter:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The diameter of the propeller in meters."
+    description: The diameter of the propeller in meters.
 
   fluid_density:
     type: double
     default_value: 1000.0
     read_only: true
-    description: "The density of the fluid in kg/m^3."
+    description: The density of the fluid in kg/m^3.

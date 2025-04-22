@@ -1,9 +1,9 @@
 integral_sliding_mode_controller:
   joints:
     type: string_array
-    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    default_value: [x, y, z, rx, ry, rz]
     read_only: true
-    description: "The controlled joints."
+    description: The controlled joints.
     validation:
       fixed_size<>: 6
 
@@ -11,27 +11,30 @@ integral_sliding_mode_controller:
     type: bool
     read_only: true
     default_value: false
-    description: "Use state measurements obtained from a topic instead of state interfaces."
+    description: >
+      Use state measurements obtained from a topic instead of state interfaces.
 
   reference_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The prefix of the reference controller to send commands to. This can be used to configure command interfaces in chained mode."
+    description: >
+      The prefix of the reference controller to send commands to. This can be
+      used to configure command interfaces in chained mode.
 
   vehicle_frame_id:
     type: string
-    default_value: "base_link_fsd"
+    default_value: base_link_fsd
     read_only: true
-    description: "The name of the vehicle base frame."
+    description: The name of the vehicle base frame.
     validation:
       not_empty<>: null
 
   odom_frame_id:
     type: string
-    default_value: "odom_ned"
+    default_value: odom_ned
     read_only: true
-    description: "The name of the inertial frame."
+    description: The name of the inertial frame.
     validation:
       not_empty<>: null
 
@@ -39,15 +42,18 @@ integral_sliding_mode_controller:
     lambda:
       type: double
       default_value: 0.0
-      description: "The boundary thickness of the tanh function used to attenuate chatter."
+      description: >
+        The boundary thickness of the tanh function used to attenuate chatter.
 
     __map_joints:
       rho:
         type: double
         default_value: 0.0
-        description: "The sliding mode gain. This adjusts how quickly the controller drives the system to the sliding surface."
+        description: >
+          The sliding mode gain. This adjusts how quickly the controller drives
+          the system to the sliding surface.
 
       kp:
         type: double
         default_value: 0.0
-        description: "The proportional gain."
+        description: The proportional gain.

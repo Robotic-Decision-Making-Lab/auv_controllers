@@ -77,6 +77,17 @@ auto to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>
     odom.twist.twist.angular.z};
 }
 
+auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Pose * msg) -> void
+{
+  msg->position.x = data[0];
+  msg->position.y = data[1];
+  msg->position.z = data[2];
+  msg->orientation.x = data[3];
+  msg->orientation.y = data[4];
+  msg->orientation.z = data[5];
+  msg->orientation.w = data[6];
+}
+
 auto reset_message(geometry_msgs::msg::Pose * msg) -> void
 {
   msg->position.x = nan;

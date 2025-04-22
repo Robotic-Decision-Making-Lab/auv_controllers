@@ -3,7 +3,7 @@ gz_passthrough_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The name of the thruster"
+    description: The name of the thruster
     validation:
       not_empty<>: null
 
@@ -11,6 +11,6 @@ gz_passthrough_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The Gazebo topic to publish the thruster command to"
+    description: The Gazebo topic to publish the thruster command to
     validation:
       not_empty<>: null

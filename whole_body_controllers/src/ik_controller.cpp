@@ -37,25 +37,12 @@ namespace whole_body_controllers
 namespace
 {
 
-auto vector_to_pose(const std::vector<double> & vec) -> geometry_msgs::msg::Pose
-{
-  geometry_msgs::msg::Pose pose;
-  pose.position.x = vec[0];
-  pose.position.y = vec[1];
-  pose.position.z = vec[2];
-  pose.orientation.x = vec[3];
-  pose.orientation.y = vec[4];
-  pose.orientation.z = vec[5];
-  pose.orientation.w = vec[6];
-  return pose;
-}
-
-auto vector_to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
+auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
 {
   Eigen::Translation3d translation = {vec[0], vec[1], vec[2]};
-  Eigen::Quaterniond quat = {vec[6], vec[3], vec[4], vec[5]};
-  quat.normalize();
-  return Eigen::Affine3d(translation * quat);
+  Eigen::Quaterniond rotation = {vec[6], vec[3], vec[4], vec[5]};
+  rotation.normalize();
+  return Eigen::Affine3d(translation * rotation);
 }
 
 }  // namespace
@@ -84,15 +71,27 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
   manipulator_dofs_ = params_.manipulator_joints;
   n_manipulator_dofs_ = manipulator_dofs_.size();
 
-  dofs_.reserve(free_flyer_dofs_.size() + manipulator_dofs_.size());
-  std::ranges::copy(free_flyer_dofs_, std::back_inserter(dofs_));
-  std::ranges::copy(manipulator_dofs_, std::back_inserter(dofs_));
-  n_dofs_ = dofs_.size();
+  pos_dofs_.reserve(free_flyer_pos_dofs_.size() + manipulator_dofs_.size());
+  std::ranges::copy(free_flyer_pos_dofs_, std::back_inserter(pos_dofs_));
+  std::ranges::copy(manipulator_dofs_, std::back_inserter(pos_dofs_));
+  n_pos_dofs_ = pos_dofs_.size();
 
   vel_dofs_.reserve(free_flyer_vel_dofs_.size() + manipulator_dofs_.size());
   std::ranges::copy(free_flyer_vel_dofs_, std::back_inserter(vel_dofs_));
   std::ranges::copy(manipulator_dofs_, std::back_inserter(vel_dofs_));
   n_vel_dofs_ = vel_dofs_.size();
+
+  has_position_interface_ =
+    std::ranges::find(params_.command_interfaces, "position") != params_.command_interfaces.end();
+  has_velocity_interface_ =
+    std::ranges::find(params_.command_interfaces, "velocity") != params_.command_interfaces.end();
+
+  if (has_position_interface_) {
+    n_command_interfaces_ += n_pos_dofs_;
+  }
+  if (has_velocity_interface_) {
+    n_command_interfaces_ += n_vel_dofs_;
+  }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -106,8 +105,8 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   reference_.writeFromNonRT(geometry_msgs::msg::Pose());
   vehicle_state_.writeFromNonRT(nav_msgs::msg::Odometry());
 
-  command_interfaces_.reserve(n_dofs_ + n_vel_dofs_);
-  system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
+  command_interfaces_.reserve(n_command_interfaces_);
+  system_state_values_.resize(n_pos_dofs_, std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {
@@ -155,12 +154,12 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       model_initialized_ = true;
 
       // initialize the ik solver
-      ik_solver_loader_ =
+      solver_loader_ =
         std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
-      ik_solver_ = ik_solver_loader_->createSharedInstance(params_.ik_solver);
+      solver_ = solver_loader_->createSharedInstance(params_.ik_solver);
 
       // TODO(evan-palmer): do we need to give the solver its own node?
-      ik_solver_->initialize(get_node(), model_, data_);
+      solver_->initialize(get_node(), model_, data_);
 
       RCLCPP_INFO(  // NOLINT
         get_node()->get_logger(),
@@ -186,7 +185,7 @@ auto IKController::command_interface_configuration() const -> controller_interfa
 {
   controller_interface::InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-  config.names.reserve(n_dofs_ + n_vel_dofs_);
+  config.names.reserve(n_command_interfaces_);
 
   auto add_interfaces =
     [&config](const std::vector<std::string> & dofs, const std::string & reference, const std::string & interface) {
@@ -198,12 +197,16 @@ auto IKController::command_interface_configuration() const -> controller_interfa
     };
 
   // add the position interfaces
-  add_interfaces(free_flyer_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_POSITION);
-  add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_POSITION);
+  if (has_position_interface_) {
+    add_interfaces(free_flyer_pos_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_POSITION);
+    add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_POSITION);
+  }
 
   // add the velocity interfaces
-  add_interfaces(free_flyer_vel_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_VELOCITY);
-  add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_VELOCITY);
+  if (has_velocity_interface_) {
+    add_interfaces(free_flyer_vel_dofs_, params_.vehicle_reference_controller, hardware_interface::HW_IF_VELOCITY);
+    add_interfaces(manipulator_dofs_, params_.manipulator_reference_controller, hardware_interface::HW_IF_VELOCITY);
+  }
 
   return config;
 }
@@ -215,8 +218,8 @@ auto IKController::state_interface_configuration() const -> controller_interface
     config.type = controller_interface::interface_configuration_type::NONE;
   } else {
     config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
-    config.names.reserve(n_dofs_);
-    for (const auto & dof : dofs_) {
+    config.names.reserve(n_pos_dofs_);
+    for (const auto & dof : pos_dofs_) {
       config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY));
     }
   }
@@ -226,14 +229,14 @@ auto IKController::state_interface_configuration() const -> controller_interface
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IKController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
 {
-  reference_interfaces_.resize(free_flyer_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(free_flyer_pos_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
   std::vector<hardware_interface::CommandInterface> interfaces;
-  interfaces.reserve(free_flyer_dofs_.size());
+  interfaces.reserve(free_flyer_pos_dofs_.size());
 
-  for (size_t i = 0; i < free_flyer_dofs_.size(); ++i) {
+  for (size_t i = 0; i < free_flyer_pos_dofs_.size(); ++i) {
     interfaces.emplace_back(
       get_node()->get_name(),
-      std::format("{}/{}", free_flyer_dofs_[i], hardware_interface::HW_IF_POSITION),
+      std::format("{}/{}", free_flyer_pos_dofs_[i], hardware_interface::HW_IF_POSITION),
       &reference_interfaces_[i]);
   }
 
@@ -267,16 +270,17 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     std::ranges::copy(vehicle_state_vec, system_state_values_.begin());
   } else {
     std::vector<double> states;
-    states.reserve(free_flyer_dofs_.size());
+    states.reserve(free_flyer_pos_dofs_.size());
 
-    for (const auto & [i, dof] : std::views::enumerate(free_flyer_dofs_)) {
+    for (const auto & [i, dof] : std::views::enumerate(free_flyer_pos_dofs_)) {
       const auto out = state_interfaces_[i].get_optional();
       states.push_back(out.value_or(std::numeric_limits<double>::quiet_NaN()));
     }
 
     // the system state interfaces use the maritime standard for states, so we need to convert the vehicle states
     // into the ROS standard before we save them for use with pinocchio
-    auto pose = vector_to_pose(states);
+    geometry_msgs::msg::Pose pose;
+    common::messages::to_msg(states, &pose);
     m2m::transforms::transform_message(pose);
     const auto transformed_states = common::messages::to_vector(pose);
     std::ranges::copy(transformed_states, system_state_values_.begin());
@@ -285,8 +289,8 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   // save the manipulator state values
   // right now we don't provide a topic-based interface for the manipulator states
   for (std::size_t i = 0; i < n_manipulator_dofs_; ++i) {
-    const auto out = state_interfaces_[free_flyer_dofs_.size() + i].get_optional();
-    system_state_values_[free_flyer_dofs_.size() + i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
+    const auto out = state_interfaces_[free_flyer_pos_dofs_.size() + i].get_optional();
+    system_state_values_[free_flyer_pos_dofs_.size() + i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
 
   // return an error if any of the state values are NaN
@@ -313,9 +317,9 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   }
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(system_state_values_.data(), system_state_values_.size());
-  const Eigen::Affine3d target_pose = vector_to_eigen(reference_interfaces_);
+  const Eigen::Affine3d target_pose = to_eigen(reference_interfaces_);
 
-  const auto result = ik_solver_->solve(period, target_pose, q);
+  const auto result = solver_->solve(period, target_pose, q);
 
   if (!result.has_value()) {
     const auto err = result.error();
@@ -329,21 +333,42 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 
   const trajectory_msgs::msg::JointTrajectoryPoint point = result.value();
 
-  for (std::size_t i = 0; i < n_dofs_; ++i) {
-    if (!command_interfaces_[i].set_value(point.positions[i])) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set position command value for joint {}", dofs_[i]).c_str());
-      return controller_interface::return_type::ERROR;
+  if (point.positions.size() != n_pos_dofs_) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      std::format(
+        "IK solution has mismatched position dimensions. Expected {} but got {}", n_pos_dofs_, point.positions.size())
+        .c_str());
+    return controller_interface::return_type::ERROR;
+  }
+
+  if (point.velocities.size() != n_vel_dofs_) {
+    RCLCPP_ERROR(
+      get_node()->get_logger(),
+      std::format(
+        "IK solution has mismatched velocity dimensions. Expected {} but got {}", n_vel_dofs_, point.velocities.size())
+        .c_str());
+    return controller_interface::return_type::ERROR;
+  }
+
+  if (has_position_interface_) {
+    for (std::size_t i = 0; i < n_pos_dofs_; ++i) {
+      if (!command_interfaces_[i].set_value(point.positions[i])) {
+        RCLCPP_WARN(  // NOLINT
+          get_node()->get_logger(),
+          std::format("Failed to set position command value for joint {}", pos_dofs_[i]).c_str());
+      }
     }
   }
 
-  for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
-    if (!command_interfaces_[n_dofs_ + i].set_value(point.velocities[i])) {
-      RCLCPP_WARN(  // NOLINT
-        get_node()->get_logger(),
-        std::format("Failed to set velocity command value for joint {}", vel_dofs_[i]).c_str());
-      return controller_interface::return_type::ERROR;
+  if (has_velocity_interface_) {
+    for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
+      const std::size_t idx = has_position_interface_ ? n_pos_dofs_ + i : i;
+      if (!command_interfaces_[idx].set_value(point.velocities[i])) {
+        RCLCPP_WARN(  // NOLINT
+          get_node()->get_logger(),
+          std::format("Failed to set velocity command value for joint {}", vel_dofs_[i]).c_str());
+      }
     }
   }
 

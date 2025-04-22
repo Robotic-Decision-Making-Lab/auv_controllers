@@ -80,24 +80,32 @@ protected:
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> reference_sub_;
 
+  // allow users to send the vehicle state as a message - this can simplify integration with state estimators
+  // that publish the vehicle state without the manipulator states
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> vehicle_state_sub_;
   realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> vehicle_state_;
   std::vector<double> system_state_values_;
 
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
 
-  std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> ik_solver_loader_;
-  std::shared_ptr<ik_solvers::IKSolver> ik_solver_;
+  std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> solver_loader_;
+  std::shared_ptr<ik_solvers::IKSolver> solver_;
 
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
 
   bool model_initialized_{false};
 
-  std::vector<std::string> free_flyer_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
+  std::vector<std::string> pos_dofs_, vel_dofs_, manipulator_dofs_;
+  std::size_t n_pos_dofs_, n_vel_dofs_, n_manipulator_dofs_;
+
+  // make the free-flyer position and velocity dof names static
+  std::vector<std::string> free_flyer_pos_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
   std::vector<std::string> free_flyer_vel_dofs_{"x", "y", "z", "rx", "ry", "rz"};
-  std::vector<std::string> dofs_, vel_dofs_, manipulator_dofs_;
-  std::size_t n_dofs_, n_manipulator_dofs_, n_vel_dofs_;
+
+  // keep track of the command interfaces
+  bool has_position_interface_{false}, has_velocity_interface_{false};
+  std::size_t n_command_interfaces_{0};
 };
 
 }  // namespace whole_body_controllers

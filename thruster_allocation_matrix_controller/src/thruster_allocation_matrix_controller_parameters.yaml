@@ -1,9 +1,9 @@
 thruster_allocation_matrix_controller:
   joints:
     type: string_array
-    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    default_value: [x, y, z, rx, ry, rz]
     read_only: true
-    description: "The reference force/torque joints."
+    description: The reference force/torque joints.
     validation:
       fixed_size<>: 6
 
@@ -11,7 +11,9 @@ thruster_allocation_matrix_controller:
     type: string_array
     default_value: []
     read_only: true
-    description: "The list of thruster names. These should be provided in the same order as the thruster allocation matrix."
+    description: >
+      The list of thruster names. These should be provided in the same order
+      as the thruster allocation matrix.
     validation:
       not_empty<>: null
 
@@ -19,41 +21,50 @@ thruster_allocation_matrix_controller:
     type: string_array
     default_value: []
     read_only: true
-    description: "The names of the reference controllers. This can be used to configure command interfaces in chained mode, and should be provided in the same order as the thruster names."
+    description: >
+      The names of the reference controllers. This can be used to configure
+      command interfaces in chained mode, and should be provided in the same
+      order as the thruster names.
 
   tam:
     x:
       type: double_array
       read_only: true
       default_value: []
-      description: "Thruster allocation matrix row for translation along the x-axis."
+      description: >
+        Thruster allocation matrix row for translation along the x-axis.
 
     y:
       type: double_array
       read_only: true
       default_value: []
-      description: "Thruster allocation matrix row for translation along the y-axis."
+      description: >
+        Thruster allocation matrix row for translation along the y-axis.
 
     z:
       type: double_array
       read_only: true
       default_value: []
-      description: "Thruster allocation matrix row for translation along the z-axis."
+      description: >
+        Thruster allocation matrix row for translation along the z-axis.
 
     rx:
       type: double_array
       read_only: true
       default_value: []
-      description: "Thruster allocation matrix row for rotation about the x-axis."
+      description: >
+        Thruster allocation matrix row for rotation about the x-axis.
 
     ry:
       type: double_array
       read_only: true
       default_value: []
-      description: "Thruster allocation matrix row for rotation about the y-axis."
+      description: >
+        Thruster allocation matrix row for rotation about the y-axis.
 
     rz:
       type: double_array
       read_only: true
       default_value: []
-      description: "Trhuster allocation matrix row for rotation about the z-axis."
+      description: >
+        Thruster allocation matrix row for rotation about the z-axis.

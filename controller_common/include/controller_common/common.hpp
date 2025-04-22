@@ -41,6 +41,8 @@ auto to_vector(const geometry_msgs::msg::Wrench & wrench) -> std::vector<double>
 
 auto to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>;
 
+auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Pose * msg) -> void;
+
 auto reset_message(geometry_msgs::msg::Pose * msg) -> void;
 
 auto reset_message(geometry_msgs::msg::Twist * msg) -> void;
