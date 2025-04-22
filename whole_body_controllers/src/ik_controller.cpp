@@ -241,14 +241,10 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
   reference_interfaces_.resize(free_flyer_pos_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(free_flyer_pos_dofs_.size());
-
-  for (size_t i = 0; i < free_flyer_pos_dofs_.size(); ++i) {
+  for (const auto & [i, dof] : std::views::enumerate(free_flyer_pos_dofs_)) {
     interfaces.emplace_back(
-      get_node()->get_name(),
-      std::format("{}/{}", free_flyer_pos_dofs_[i], hardware_interface::HW_IF_POSITION),
-      &reference_interfaces_[i]);
+      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
   }
-
   return interfaces;
 }
 
@@ -295,9 +291,9 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 
   // save the manipulator state values
   for (std::size_t i = 0; i < n_manipulator_dofs_; ++i) {
-    const std::size_t idx = params_.use_external_measured_vehicle_states ? i : free_flyer_pos_dofs_.size() + i;
+    const std::size_t idx = free_flyer_pos_dofs_.size() + i;
     const auto out = state_interfaces_[idx].get_optional();
-    system_state_values_[free_flyer_pos_dofs_.size() + i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
+    system_state_values_[idx] = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
 
   // return an error if any of the state values are NaN
