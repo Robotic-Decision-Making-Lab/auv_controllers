@@ -215,12 +215,16 @@ auto IKController::state_interface_configuration() const -> controller_interface
 {
   controller_interface::InterfaceConfiguration config;
   if (params_.use_external_measured_vehicle_states) {
-    config.type = controller_interface::interface_configuration_type::NONE;
+    config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+    config.names.reserve(n_manipulator_dofs_);
+    for (const auto & dof : manipulator_dofs_) {
+      config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION));
+    }
   } else {
     config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
     config.names.reserve(n_pos_dofs_);
     for (const auto & dof : pos_dofs_) {
-      config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY));
+      config.names.emplace_back(std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION));
     }
   }
   return config;
@@ -266,8 +270,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     // if we are using the external measured vehicle states, the message has already been transformed into the
     // appropriate frame, so we can just copy the values into the system state values
     const auto * vehicle_state = vehicle_state_.readFromRT();
-    const auto vehicle_state_vec = common::messages::to_vector(*vehicle_state);
-    std::ranges::copy(vehicle_state_vec, system_state_values_.begin());
+    std::ranges::copy(common::messages::to_vector(*vehicle_state), system_state_values_.begin());
   } else {
     std::vector<double> states;
     states.reserve(free_flyer_pos_dofs_.size());
@@ -282,14 +285,13 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     geometry_msgs::msg::Pose pose;
     common::messages::to_msg(states, &pose);
     m2m::transforms::transform_message(pose);
-    const auto transformed_states = common::messages::to_vector(pose);
-    std::ranges::copy(transformed_states, system_state_values_.begin());
+    std::ranges::copy(common::messages::to_vector(pose), system_state_values_.begin());
   }
 
   // save the manipulator state values
-  // right now we don't provide a topic-based interface for the manipulator states
   for (std::size_t i = 0; i < n_manipulator_dofs_; ++i) {
-    const auto out = state_interfaces_[free_flyer_pos_dofs_.size() + i].get_optional();
+    const std::size_t idx = params_.use_external_measured_vehicle_states ? i : free_flyer_pos_dofs_.size() + i;
+    const auto out = state_interfaces_[idx].get_optional();
     system_state_values_[free_flyer_pos_dofs_.size() + i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
 
@@ -307,12 +309,17 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   -> controller_interface::return_type
 {
   if (update_system_state_values() != controller_interface::return_type::OK) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Failed to update system state values");  // NOLINT
-    return controller_interface::return_type::ERROR;
+    RCLCPP_ERROR(get_node()->get_logger(), "Skipping control update: failed to update system state values");  // NOLINT
+    return controller_interface::return_type::OK;
   }
 
   if (!model_initialized_) {
-    RCLCPP_WARN(get_node()->get_logger(), "Waiting for the robot description to be published...");
+    RCLCPP_WARN(get_node()->get_logger(), "Skipping control update: Waiting for the robot description to be published");
+    return controller_interface::return_type::OK;
+  }
+
+  if (std::ranges::any_of(reference_interfaces_, [](double x) { return std::isnan(x); })) {
+    RCLCPP_WARN(get_node()->get_logger(), "Skipping control update: received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
