@@ -301,10 +301,11 @@ auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
 auto TaskPriorityIKSolver::initialize(
   const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
   const std::shared_ptr<pinocchio::Model> & model,
-  const std::shared_ptr<pinocchio::Data> & data) -> void
+  const std::shared_ptr<pinocchio::Data> & data,
+  const std::string & prefix) -> void
 {
-  IKSolver::initialize(node, model, data);
-  param_listener_ = std::make_shared<task_priority_solver::ParamListener>(node_);
+  IKSolver::initialize(node, model, data, prefix);
+  param_listener_ = std::make_shared<task_priority_solver::ParamListener>(node_, prefix);
   params_ = param_listener_->get_params();
 }
 

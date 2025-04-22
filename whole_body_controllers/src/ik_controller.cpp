@@ -159,12 +159,9 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       model_initialized_ = true;
 
       // initialize the ik solver
-      solver_loader_ =
-        std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
-      solver_ = solver_loader_->createSharedInstance(params_.ik_solver);
-
-      // TODO(evan-palmer): do we need to give the solver its own node?
-      solver_->initialize(get_node(), model_, data_);
+      loader_ = std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
+      solver_ = loader_->createSharedInstance(params_.ik_solver);
+      solver_->initialize(get_node(), model_, data_, params_.ik_solver);
 
       RCLCPP_INFO(  // NOLINT
         get_node()->get_logger(),

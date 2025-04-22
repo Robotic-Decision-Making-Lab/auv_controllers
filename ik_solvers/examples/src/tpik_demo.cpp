@@ -41,7 +41,7 @@ auto main(int argc, char ** argv) -> int
 
   // create a new node for the solver
   // the solver uses the node to retrieve parameters
-  auto node = rclcpp_lifecycle::LifecycleNode::make_shared("task_priority_solver", options);
+  auto node = rclcpp_lifecycle::LifecycleNode::make_shared("example_node", options);
 
   // create a class loader for the solver
   pluginlib::ClassLoader<ik_solvers::IKSolver> loader("ik_solvers", "ik_solvers::IKSolver");
@@ -81,8 +81,12 @@ auto main(int argc, char ** argv) -> int
   auto data = std::make_shared<pinocchio::Data>(*reduced_model);
 
   // create the solver and initialize it
-  std::shared_ptr<ik_solvers::IKSolver> solver = loader.createSharedInstance("task_priority_solver");
-  solver->initialize(node, reduced_model, data);
+  const std::string solver_name = "task_priority_solver";
+  std::shared_ptr<ik_solvers::IKSolver> solver = loader.createSharedInstance(solver_name);
+
+  // initialize the solver with the solver name as the prefix
+  // this will configure the parameter namespace to be a child of the solver name
+  solver->initialize(node, reduced_model, data, solver_name);
 
   // create an initial configuration for the model
   Eigen::VectorXd q0 = pinocchio::neutral(*reduced_model);

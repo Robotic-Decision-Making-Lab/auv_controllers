@@ -52,7 +52,8 @@ public:
   virtual auto initialize(
     const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
     const std::shared_ptr<pinocchio::Model> & model,
-    const std::shared_ptr<pinocchio::Data> & data) -> void;
+    const std::shared_ptr<pinocchio::Data> & data,
+    const std::string & prefix) -> void;
 
   /// Solve the IK problem for a target pose given the integration period and current joint configuration.
   [[nodiscard]] auto solve(const rclcpp::Duration & period, const Eigen::Affine3d & goal, const Eigen::VectorXd & q)

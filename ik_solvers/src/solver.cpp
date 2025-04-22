@@ -29,7 +29,8 @@ namespace ik_solvers
 auto IKSolver::initialize(
   const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
   const std::shared_ptr<pinocchio::Model> & model,
-  const std::shared_ptr<pinocchio::Data> & data) -> void
+  const std::shared_ptr<pinocchio::Data> & data,
+  const std::string & /*prefix*/) -> void
 {
   node_ = node;
   model_ = model;

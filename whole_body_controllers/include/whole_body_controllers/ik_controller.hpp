@@ -90,7 +90,7 @@ protected:
 
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
 
-  std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> solver_loader_;
+  std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> loader_;
   std::shared_ptr<ik_solvers::IKSolver> solver_;
 
   std::unique_ptr<ik_controller::ParamListener> param_listener_;

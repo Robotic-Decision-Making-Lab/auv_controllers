@@ -47,7 +47,7 @@ public:
   : primal_(primal),
     constraint_(constraint),
     priority_(priority),
-    gain_(gain) {};
+    gain_(gain){};
 
   /// Destructor.
   virtual ~Constraint() = default;
@@ -214,7 +214,8 @@ public:
   virtual auto initialize(
     const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
     const std::shared_ptr<pinocchio::Model> & model,
-    const std::shared_ptr<pinocchio::Data> & data) -> void override;
+    const std::shared_ptr<pinocchio::Data> & data,
+    const std::string & prefix) -> void override;
 
 protected:
   [[nodiscard]] auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
