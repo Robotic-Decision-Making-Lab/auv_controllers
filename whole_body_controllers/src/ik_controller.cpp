@@ -311,7 +311,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
       state_interfaces_, [joint_name](const auto & interface) { return interface.get_prefix_name() == joint_name; });
 
     if (it == state_interfaces_.end()) {
-      RCLCPP_ERROR(logger_, "Could not find joint {} in state interfaces", joint_name);  // NOLINT
+      RCLCPP_ERROR(logger_, std::format("Could not find joint {} in state interfaces", joint_name).c_str());  // NOLINT
       return controller_interface::return_type::ERROR;
     }
     system_state_values_[joint.idx_q()] = it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
