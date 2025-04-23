@@ -343,7 +343,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
     } else if (err == ik_solvers::SolverError::SOLVER_ERROR) {
       RCLCPP_WARN(get_node()->get_logger(), "The solver experienced an error while solving the IK problem");
     }
-    return controller_interface::return_type::ERROR;
+    return controller_interface::return_type::OK;
   }
 
   const trajectory_msgs::msg::JointTrajectoryPoint point = result.value();
