@@ -346,7 +346,19 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
     return controller_interface::return_type::OK;
   }
 
-  const trajectory_msgs::msg::JointTrajectoryPoint point = result.value();
+  trajectory_msgs::msg::JointTrajectoryPoint point = result.value();
+
+  // transform the solution into the appropriate frame
+  geometry_msgs::msg::Twist twist;
+  common::messages::to_msg({point.velocities.begin(), point.velocities.begin() + free_flyer_vel_dofs_.size()}, &twist);
+  m2m::transforms::transform_message(twist);
+  std::ranges::copy(common::messages::to_vector(twist), point.velocities.begin());
+
+  // transform the pose into the appropriate frame
+  geometry_msgs::msg::Pose pose;
+  common::messages::to_msg({point.positions.begin(), point.positions.begin() + free_flyer_pos_dofs_.size()}, &pose);
+  m2m::transforms::transform_message(pose);
+  std::ranges::copy(common::messages::to_vector(pose), point.positions.begin());
 
   if (point.positions.size() != n_pos_dofs_) {
     RCLCPP_ERROR(

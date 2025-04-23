@@ -88,6 +88,16 @@ auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Pose * msg) ->
   msg->orientation.w = data[6];
 }
 
+auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Twist * msg) -> void
+{
+  msg->linear.x = data[0];
+  msg->linear.y = data[1];
+  msg->linear.z = data[2];
+  msg->angular.x = data[3];
+  msg->angular.y = data[4];
+  msg->angular.z = data[5];
+}
+
 auto reset_message(geometry_msgs::msg::Pose * msg) -> void
 {
   msg->position.x = nan;
