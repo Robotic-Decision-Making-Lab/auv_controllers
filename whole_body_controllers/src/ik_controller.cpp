@@ -305,10 +305,16 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     std::ranges::copy(common::messages::to_vector(pose), system_state_values_.begin() + root.idx_q());
   }
 
-  for (const auto & [i, joint_name] : std::views::enumerate(manipulator_dofs_)) {
+  for (const auto & joint_name : manipulator_dofs_) {
     const pinocchio::JointModel joint = model_->joints[model_->getJointId(joint_name)];
-    const auto out = state_interfaces_[i].get_optional();
-    system_state_values_[joint.idx_q()] = out.value_or(std::numeric_limits<double>::quiet_NaN());
+    auto it = std::ranges::find_if(
+      state_interfaces_, [joint_name](const auto & interface) { return interface.get_prefix_name() == joint_name; });
+
+    if (it == state_interfaces_.end()) {
+      RCLCPP_ERROR(logger_, "Could not find joint {} in state interfaces", joint_name);  // NOLINT
+      return controller_interface::return_type::ERROR;
+    }
+    system_state_values_[joint.idx_q()] = it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
   }
 
   if (std::ranges::any_of(system_state_values_, [](double x) { return std::isnan(x); })) {
