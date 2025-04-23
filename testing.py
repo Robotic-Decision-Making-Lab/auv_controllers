@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation as R
 np.set_printoptions(precision=5, suppress=True, linewidth=200)
 
 # Load the URDF model using a free-flyer as root joint
-model = pinocchio.buildModelFromUrdf("/home/ubuntu/ws_ros/src/auv_controllers/ik_solvers/examples/urdf/example.urdf", pinocchio.JointModelFreeFlyer())
+model = pinocchio.buildModelFromUrdf("/home/ubuntu/ws_ros/src/auv_controllers/ik_solvers/examples/urdf/uvms.urdf", pinocchio.JointModelFreeFlyer())
 
 joint_names_to_lock = [
     "alpha_rs1_130_joint",
@@ -34,6 +34,11 @@ data = model.createData()
 q = pinocchio.neutral(model)
 # q[:3] = np.random.rand(3)
 # q[3:7] = rot.as_quat().reshape(-1)
+
+for idx, joint in enumerate(model.joints):
+    joint_name = model.names[idx]
+    nq = joint.nq  # Number of configuration variables for this joint
+    print(f"{joint_name}: index in q = {joint.idx_q}, nq = {nq}")
 
 print(q)
 print(len(q))

@@ -101,13 +101,15 @@ protected:
   std::vector<std::string> pos_dofs_, vel_dofs_, manipulator_dofs_;
   std::size_t n_pos_dofs_, n_vel_dofs_, n_manipulator_dofs_;
 
-  // make the free-flyer position and velocity dof names static
+  // make the free-flyer position and velocity dof names "static"
   std::vector<std::string> free_flyer_pos_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
   std::vector<std::string> free_flyer_vel_dofs_{"x", "y", "z", "rx", "ry", "rz"};
 
   // keep track of the command interfaces
   bool has_position_interface_{false}, has_velocity_interface_{false};
   std::size_t n_command_interfaces_{0};
+
+  rclcpp::Logger logger_{rclcpp::get_logger("ik_controller")};
 };
 
 }  // namespace whole_body_controllers
