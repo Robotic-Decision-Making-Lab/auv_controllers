@@ -63,12 +63,16 @@ auto IKController::on_init() -> controller_interface::CallbackReturn
   // lock all uncontrolled joints
   std::vector<std::string> controlled_joints = {"universe", "root_joint"};
   std::ranges::copy(params_.controlled_joints, std::back_inserter(controlled_joints));
-  const std::vector<pinocchio::JointIndex> locked_joints =
-    std::ranges::transform(model_->names, [this](const auto & name) {
-      if (std::ranges::find(controlled_joints, name) == controlled_joints.end()) {
-        return model_->getJointId(name);
-      }
-    });
+
+  std::vector<std::string> locked_joint_names;
+  std::ranges::copy_if(model_->names, std::back_inserter(locked_joint_names), [&controlled_joints](const auto & name) {
+    return std::ranges::find(controlled_joints, name) == controlled_joints.end();
+  });
+
+  std::vector<pinocchio::JointIndex> locked_joints;
+  std::ranges::transform(locked_joint_names, std::back_inserter(locked_joints), [this](const auto & name) {
+    return model_->getJointId(name);
+  });
 
   // build the reduced model
   pinocchio::Model reduced_model;
@@ -169,7 +173,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   loader_ = std::make_unique<pluginlib::ClassLoader<ik_solvers::IKSolver>>("ik_solvers", "ik_solvers::IKSolver");
   solver_ = loader_->createSharedInstance(params_.ik_solver);
   solver_->initialize(get_node(), model_, data_, params_.ik_solver);
-  RCLCPP_INFO(logger_, "Configured the IK controller with solver %s", params_.ik_solver);  // NOLINT
+  RCLCPP_INFO(logger_, "Configured the IK controller with solver %s", params_.ik_solver.c_str());  // NOLINT
 
   // TODO(evan-palmer): add controller state publisher
 
@@ -274,10 +278,10 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
   -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromRT();
-  auto reference = common::messages::to_vector(*current_reference);
+  std::vector<double> reference = common::messages::to_vector(*current_reference);
 
-  for (auto & [interface, value] : std::views::zip(reference_interfaces_, reference)) {
-    interface = value;
+  for (std::size_t i = 0; i < reference.size(); ++i) {
+    reference_interfaces_[i] = reference[i];
   }
 
   common::messages::reset_message(current_reference);
@@ -291,49 +295,67 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   // appropriate frame, so we can just copy the values into the system state values. otherwise, we need to transform
   // the states first, then save them.
   if (params_.use_external_measured_vehicle_states) {
-    const auto * vehicle_state_msg = vehicle_state_.readFromRT();
-    const auto state = common::messages::to_vector(*vehicle_state_msg);
+    const auto * state_msg = vehicle_state_.readFromRT();
+    const auto state = common::messages::to_vector(*state_msg);
     std::ranges::copy(state.begin(), state.begin() + free_flyer_pos_dofs_.size(), position_state_values_.begin());
     std::ranges::copy(state.begin() + free_flyer_pos_dofs_.size(), state.end(), velocity_state_values_.begin());
   } else {
+    auto save_states = [](const auto & interfaces, auto out) {
+      std::ranges::transform(interfaces, out, [](const auto & interface) {
+        return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+      });
+    };
+
+    // retrieve the vehicle  position and velocity state interfaces
+    const auto position_interfaces_end = state_interfaces_.begin() + free_flyer_pos_dofs_.size();
+    const auto velocity_interfaces_start = position_interfaces_end + params_.controlled_joints.size();
+    const auto velocity_interfaces_end = velocity_interfaces_start + free_flyer_vel_dofs_.size();
+
+    const auto position_interfaces = std::span(state_interfaces_.begin(), position_interfaces_end);
+    const auto velocity_interfaces = std::span(velocity_interfaces_start, velocity_interfaces_end);
+
+    std::vector<double> position_states, velocity_states;
+    position_states.reserve(position_interfaces.size());
+    velocity_states.reserve(velocity_interfaces.size());
+
+    save_states(position_interfaces, std::back_inserter(position_states));
+    save_states(velocity_interfaces, std::back_inserter(velocity_states));
+
+    // transform the states into the appropriate frame and save them
+    geometry_msgs::msg::Pose pose;
+    common::messages::to_msg(position_states, &pose);
+    m2m::transforms::transform_message(pose);
+    std::ranges::copy(common::messages::to_vector(pose), position_state_values_.begin());
+
+    geometry_msgs::msg::Twist twist;
+    common::messages::to_msg(velocity_states, &twist);
+    m2m::transforms::transform_message(twist);
+    std::ranges::copy(common::messages::to_vector(twist), velocity_state_values_.begin());
   }
 
-  // const pinocchio::JointModel root = model_->joints[model_->getJointId("root_joint")];
-  // if (params_.use_external_measured_vehicle_states) {
-  //   const auto * vehicle_state = vehicle_state_.readFromRT();
-  //   std::ranges::copy(common::messages::to_vector(*vehicle_state), system_state_values_.begin() + root.idx_q());
-  // } else {
-  //   std::vector<double> vehicle_states;
-  //   vehicle_states.reserve(free_flyer_pos_dofs_.size());
-  //   for (std::size_t i = 0; i < free_flyer_pos_dofs_.size(); ++i) {
-  //     const auto out = state_interfaces_[i].get_optional();
-  //     vehicle_states.push_back(out.value_or(std::numeric_limits<double>::quiet_NaN()));
-  //   }
+  auto find_interface = [](const auto & interfaces, const std::string & name, const std::string & type) {
+    return std::ranges::find_if(interfaces, [&name, &type](const auto & interface) {
+      return interface.get_interface_name() == std::format("{}/{}", name, type);
+    });
+  };
 
-  //   geometry_msgs::msg::Pose pose;
-  //   common::messages::to_msg(vehicle_states, &pose);
-  //   m2m::transforms::transform_message(pose);
-  //   std::ranges::copy(common::messages::to_vector(pose), system_state_values_.begin() + root.idx_q());
-  // }
+  // save the manipulator states
+  for (const auto & [i, joint_name] : std::views::enumerate(params_.controlled_joints)) {
+    const pinocchio::JointModel joint = model_->joints[model_->getJointId(joint_name)];
 
-  // // TODO(evan-palmer): debug changing behavior based on state interface order
-  // for (const auto & joint_name : manipulator_dofs_) {
-  //   const pinocchio::JointModel joint = model_->joints[model_->getJointId(joint_name)];
-  //   auto it = std::ranges::find_if(
-  //     state_interfaces_, [&joint_name](const auto & interface) { return interface.get_prefix_name() == joint_name;
-  //     });
+    const auto pos_it = find_interface(state_interfaces_, joint_name, hardware_interface::HW_IF_POSITION);
+    const double pos = pos_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    position_state_values_[free_flyer_pos_dofs_.size() + i] = pos;
 
-  //   if (it == state_interfaces_.end()) {
-  //     RCLCPP_ERROR(logger_, std::format("Could not find joint {} in state interfaces", joint_name).c_str());  //
-  //     NOLINT return controller_interface::return_type::ERROR;
-  //   }
-  //   system_state_values_[joint.idx_q()] = it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
-  // }
+    const auto vel_it = find_interface(state_interfaces_, joint_name, hardware_interface::HW_IF_VELOCITY);
+    const double vel = vel_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    velocity_state_values_[free_flyer_vel_dofs_.size() + i] = vel;
+  }
 
-  // if (std::ranges::any_of(system_state_values_, [](double x) { return std::isnan(x); })) {
-  //   RCLCPP_DEBUG(logger_, "Received system state with NaN value.");  // NOLINT
-  //   return controller_interface::return_type::ERROR;
-  // }
+  if (std::ranges::any_of(position_state_values_, [](double x) { return std::isnan(x); })) {
+    RCLCPP_DEBUG(logger_, "Received system state with NaN value.");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
 
   return controller_interface::return_type::OK;
 }
@@ -365,14 +387,16 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
   const Eigen::Affine3d target_pose = to_eigen(reference_interfaces_);
 
+  // TODO(anyone): add solver support for velocity states
+  // right now we only use the positions for the solver
   const auto result = solver_->solve(period, target_pose, q);
 
   if (!result.has_value()) {
     const auto err = result.error();
     if (err == ik_solvers::SolverError::NO_SOLUTION) {
-      RCLCPP_WARN(logger_, "The solver could not find a solution to the current IK problem");
+      RCLCPP_WARN(logger_, "The solver could not find a solution to the current IK problem");  // NOLINT
     } else if (err == ik_solvers::SolverError::SOLVER_ERROR) {
-      RCLCPP_WARN(logger_, "The solver experienced an error while solving the IK problem");
+      RCLCPP_WARN(logger_, "The solver experienced an error while solving the IK problem");  // NOLINT
     }
     return controller_interface::return_type::OK;
   }
@@ -391,40 +415,19 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   m2m::transforms::transform_message(pose);
   std::ranges::copy(common::messages::to_vector(pose), point.positions.begin());
 
-  if (point.positions.size() != n_pos_dofs_) {
-    RCLCPP_ERROR(
-      logger_,
-      std::format(
-        "IK solution has mismatched position dimensions. Expected {} but got {}", n_pos_dofs_, point.positions.size())
-        .c_str());
-    return controller_interface::return_type::ERROR;
-  }
-
-  if (point.velocities.size() != n_vel_dofs_) {
-    RCLCPP_ERROR(
-      logger_,
-      std::format(
-        "IK solution has mismatched velocity dimensions. Expected {} but got {}", n_vel_dofs_, point.velocities.size())
-        .c_str());
-    return controller_interface::return_type::ERROR;
-  }
-
-  if (has_pos_interface_) {
-    for (std::size_t i = 0; i < n_pos_dofs_; ++i) {
+  if (use_position_commands_) {
+    for (const auto & [i, joint_name] : std::views::enumerate(position_interface_names_)) {
       if (!command_interfaces_[i].set_value(point.positions[i])) {
-        RCLCPP_WARN(  // NOLINT
-          logger_,
-          std::format("Failed to set position command value for joint {}", pos_dofs_[i]).c_str());
+        RCLCPP_WARN(logger_, "Failed to set position command value for joint %s", joint_name.c_str());  // NOLINT
       }
     }
   }
 
-  if (has_vel_interface_) {
-    for (std::size_t i = 0; i < n_vel_dofs_; ++i) {
-      const std::size_t idx = has_pos_interface_ ? n_pos_dofs_ + i : i;
+  if (use_velocity_commands_) {
+    for (const auto & [i, joint_name] : std::views::enumerate(velocity_interface_names_)) {
+      const std::size_t idx = use_position_commands_ ? position_interface_names_.size() + i : i;
       if (!command_interfaces_[idx].set_value(point.velocities[i])) {
-        // NOLINTNEXTLINE
-        RCLCPP_WARN(logger_, std::format("Failed to set velocity command value for joint {}", vel_dofs_[i]).c_str());
+        RCLCPP_WARN(logger_, "Failed to set velocity command value for joint %s", joint_name.c_str());  // NOLINT
       }
     }
   }
