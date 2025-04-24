@@ -80,8 +80,8 @@ auto IKController::on_init() -> controller_interface::CallbackReturn
   *model_ = reduced_model;
   data_ = std::make_shared<pinocchio::Data>(*model_);
 
-  position_interface_names_.reserve(model_->nq);
-  velocity_interface_names_.reserve(model_->nv);
+  position_interface_names_.resize(model_->nq);
+  velocity_interface_names_.resize(model_->nv);
 
   // save the interface names in the same order as the model
   // start at index 1 to skip the universe joint
@@ -283,8 +283,8 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
   for (std::size_t i = 0; i < reference.size(); ++i) {
     reference_interfaces_[i] = reference[i];
   }
-
   common::messages::reset_message(current_reference);
+
   return controller_interface::return_type::OK;
 }
 
