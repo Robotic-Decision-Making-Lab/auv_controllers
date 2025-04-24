@@ -1,11 +1,4 @@
 ik_controller:
-  command_interfaces:
-    type: string_array
-    default_value: [velocity]
-    description: The list of command interfaces for the controller to load.
-    validation:
-      subset_of<>: [[position, velocity]]
-
   ik_solver:
     type: string
     default_value: task_priority_solver
@@ -13,6 +6,28 @@ ik_controller:
     description: The name of the IK solver to use.
     validation:
       one_of<>: [[task_priority_solver]]
+
+  command_interfaces:
+    type: string_array
+    default_value: [velocity]
+    description: The list of command interfaces for the controller to load.
+    validation:
+      subset_of<>: [[position, velocity]]
+
+  state_interfaces:
+    type: string_array
+    default_value: [position]
+    description: The list of state interfaces for the controller to load.
+    validation:
+      subset_of<>: [[position, velocity]]
+
+  controlled_joints:
+    type: string_array
+    default_value: []
+    description: >
+      The list of controlled joints, excluding the free-flyer joint (i.e.,
+      the manipulator joints). The controller will lock all other joints in
+      the model.
 
   use_external_measured_vehicle_states:
     type: bool
@@ -39,15 +54,3 @@ ik_controller:
       The prefix of the reference controller to send manipulator commands to.
       This can be the same as or different from the vehicle reference
       controller.
-
-  manipulator_joints:
-    type: string_array
-    default_value: []
-    description: The list of controlled manipulator joints.
-
-  locked_joints:
-    type: string_array
-    default_value: []
-    description: >
-      The list of joints to lock in the Pinocchio model. These joints will not
-      be controlled by the IK solver.

@@ -86,9 +86,7 @@ protected:
   // that publish the vehicle state without the manipulator states
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> vehicle_state_sub_;
   realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> vehicle_state_;
-  std::vector<double> system_state_values_;
-
-  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
+  std::vector<double> position_state_values_, velocity_state_values_;
 
   std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> loader_;
   std::shared_ptr<ik_solvers::IKSolver> solver_;
@@ -96,18 +94,17 @@ protected:
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
 
-  bool model_initialized_{false};
-
-  std::vector<std::string> pos_dofs_, vel_dofs_, manipulator_dofs_;
-  std::size_t n_pos_dofs_, n_vel_dofs_, n_manipulator_dofs_;
-
   // make the free-flyer position and velocity dof names "static"
   std::vector<std::string> free_flyer_pos_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
   std::vector<std::string> free_flyer_vel_dofs_{"x", "y", "z", "rx", "ry", "rz"};
 
-  // keep track of the command interfaces
-  bool has_position_interface_{false}, has_velocity_interface_{false};
-  std::size_t n_command_interfaces_{0};
+  // store the names of the position and velocity interfaces
+  // this is stored in the same order as the pinocchio model to simplify integration with the solver
+  std::vector<std::string> position_interface_names_, velocity_interface_names_;
+
+  // track the interfaces used by the controller
+  bool use_position_commands_, use_velocity_commands_, use_position_states_, use_velocity_states_;
+  std::size_t n_command_interfaces_, n_state_interfaces_;
 
   rclcpp::Logger logger_{rclcpp::get_logger("ik_controller")};
 };
