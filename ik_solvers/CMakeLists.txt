@@ -72,7 +72,6 @@ install(
     FILE_SET HEADERS
 )
 
-# ament_export_include_directories(include)
 ament_export_libraries(ik_solvers)
 ament_export_targets(export_ik_solvers)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
