@@ -48,6 +48,11 @@ auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
   return Eigen::Affine3d(translation * rotation);
 }
 
+auto has_nan(const std::vector<double> & vec) -> bool
+{
+  return std::ranges::any_of(vec, [](double x) { return std::isnan(x); });
+}
+
 }  // namespace
 
 auto IKController::on_init() -> controller_interface::CallbackReturn
@@ -280,12 +285,10 @@ auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time
 {
   auto * current_reference = reference_.readFromRT();
   std::vector<double> reference = common::messages::to_vector(*current_reference);
-
-  for (std::size_t i = 0; i < reference.size(); ++i) {
-    reference_interfaces_[i] = reference[i];
+  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
+    interface = ref;
   }
   common::messages::reset_message(current_reference);
-
   return controller_interface::return_type::OK;
 }
 
@@ -357,8 +360,8 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     }
   }
 
-  if (std::ranges::any_of(position_state_values_, [](double x) { return std::isnan(x); })) {
-    RCLCPP_DEBUG(logger_, "Received system state with NaN value.");  // NOLINT
+  if (has_nan(position_state_values_) || has_nan(velocity_state_values_)) {
+    RCLCPP_DEBUG(logger_, "Received system states with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
 
@@ -371,12 +374,10 @@ auto IKController::update_and_validate_interfaces() -> controller_interface::ret
     RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
-
-  if (std::ranges::any_of(reference_interfaces_, [](double x) { return std::isnan(x); })) {
+  if (has_nan(reference_interfaces_)) {
     RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
-
   return controller_interface::return_type::OK;
 }
 
@@ -388,6 +389,8 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
     RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
+
+  configure_parameters();
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
   const Eigen::Affine3d target_pose = to_eigen(reference_interfaces_);

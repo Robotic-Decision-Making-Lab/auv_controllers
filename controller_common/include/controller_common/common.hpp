@@ -60,6 +60,10 @@ namespace math
 
 auto calculate_error(const std::vector<double> & reference, const std::vector<double> & state) -> std::vector<double>;
 
+auto has_nan(const std::vector<double> & vec) -> bool;
+
+auto all_nan(const std::vector<double> & vec) -> bool;
+
 }  // namespace math
 
 }  // namespace common

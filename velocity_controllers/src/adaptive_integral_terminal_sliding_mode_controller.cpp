@@ -48,6 +48,17 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_init() -> controller_inte
 {
   param_listener_ = std::make_shared<adaptive_integral_terminal_sliding_mode_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
+  logger_ = get_node()->get_logger();
+
+  RCLCPP_INFO(logger_, "Parsing hydrodynamic model from robot description");  // NOLINT
+  const auto out = hydrodynamics::parse_model_from_xml(get_robot_description());
+  if (!out.has_value()) {
+    // NOLINTNEXTLINE
+    RCLCPP_ERROR(logger_, "Failed to parse hydrodynamic model from robot description: %s", out.error().c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  model_ = std::make_unique<hydrodynamics::Params>(out.value());
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -104,35 +115,15 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   // reset the adaptive gain
   k1_ = Eigen::Matrix6d::Identity();
 
-  RCLCPP_INFO(get_node()->get_logger(), "Waiting for robot description to be received");  // NOLINT
-
   // NOLINTNEXTLINE(performance-unnecessary-value-param)
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
       reference_.writeFromNonRT(*msg);
     });
 
-  const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).transient_local().reliable();
-  robot_description_sub_ = get_node()->create_subscription<std_msgs::msg::String>(
-    "robot_description", qos, [this](const std::shared_ptr<std_msgs::msg::String> msg) {
-      if (model_initialized_ || msg->data.empty()) {
-        return;
-      }
-      RCLCPP_INFO(get_node()->get_logger(), "Parsing hydrodynamic model from robot description");  // NOLINT
-      const auto out = hydrodynamics::parse_model_from_xml(msg->data);
-      if (!out.has_value()) {
-        RCLCPP_ERROR(
-          get_node()->get_logger(),
-          std::format("Failed to parse hydrodynamic model from robot description: {}", out.error()).c_str());
-        return;
-      }
-      model_ = std::make_unique<hydrodynamics::Params>(out.value());
-      model_initialized_ = true;
-    });
-
   // use the tf interface when we aren't getting the state from a topic
   if (params_.use_external_measured_states) {
-    RCLCPP_INFO(get_node()->get_logger(), "Using external measured states");  // NOLINT
+    RCLCPP_INFO(logger_, "Using external measured states");  // NOLINT
     system_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
       "~/system_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
         system_state_.writeFromNonRT(*msg);
@@ -228,9 +219,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_reference_from_subscr
   auto * current_reference = reference_.readFromNonRT();
   const std::vector<double> reference = common::messages::to_vector(*current_reference);
   for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
-    if (!std::isnan(ref)) {
-      interface = ref;
-    }
+    interface = ref;
   }
   common::messages::reset_message(current_reference);
   return controller_interface::return_type::OK;
@@ -241,41 +230,44 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_system_state_values()
 {
   if (params_.use_external_measured_states) {
     auto * current_state = system_state_.readFromNonRT();
-    const std::vector<double> state = common::messages::to_vector(current_state->twist.twist);
-    system_state_values_.assign(state.begin(), state.end());
+    std::ranges::copy(common::messages::to_vector(current_state->twist.twist), system_state_values_.begin());
     tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
   } else {
-    // read the velocity values from the state interfaces
-    for (auto && [interface, dof, value] : std::views::zip(state_interfaces_, dofs_, system_state_values_)) {
-      const auto val = interface.get_optional();
-      if (!val.has_value()) {
-        // NOLINTNEXTLINE
-        RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to get state value for joint {}", dof).c_str());
-        return controller_interface::return_type::ERROR;
-      }
-      value = val.value();
-    }
+    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
+      return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    });
 
-    // try getting the latest orientation of the vehicle in the inertial frame
-    // if the transform is not available, use the last known orientation.
     try {
-      const geometry_msgs::msg::TransformStamped t =
-        tf_buffer_->lookupTransform(params_.odom_frame_id, params_.vehicle_frame_id, tf2::TimePointZero);
+      const auto t = tf_buffer_->lookupTransform(params_.odom_frame_id, params_.vehicle_frame_id, tf2::TimePointZero);
       tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
     }
     catch (const tf2::TransformException & e) {
-      // NOLINTNEXTLINE
-      RCLCPP_DEBUG(
-        get_node()->get_logger(),
-        std::format(
-          "Could not transform {} to {} using latest available transform. {}",
-          params_.odom_frame_id,
-          params_.vehicle_frame_id,
-          e.what())
+      RCLCPP_DEBUG(  // NOLINT
+        logger_,
+        std::format("Could not transform {} to {}. {}", params_.odom_frame_id, params_.vehicle_frame_id, e.what())
           .c_str());
     }
   }
 
+  if (common::math::has_nan(system_state_values_)) {
+    RCLCPP_DEBUG(logger_, "Received system state with NaN value.");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
+
+  return controller_interface::return_type::OK;
+}
+
+auto AdaptiveIntegralTerminalSlidingModeController::update_and_validate_interfaces()
+  -> controller_interface::return_type
+{
+  if (update_system_state_values() != controller_interface::return_type::OK) {
+    RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
+  if (common::math::has_nan(reference_interfaces_)) {
+    RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
+    return controller_interface::return_type::ERROR;
+  }
   return controller_interface::return_type::OK;
 }
 
@@ -283,18 +275,17 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   const rclcpp::Time & time,
   const rclcpp::Duration & period) -> controller_interface::return_type
 {
-  if (!model_initialized_) {
+  if (update_and_validate_interfaces() != controller_interface::return_type::OK) {
+    RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
   configure_parameters();
-  update_system_state_values();
 
   // calculate the velocity error
   const std::vector<double> error_values = common::math::calculate_error(reference_interfaces_, system_state_values_);
-  if (std::ranges::all_of(error_values, [](double x) { return std::isnan(x); })) {
-    // NOLINTNEXTLINE
-    RCLCPP_DEBUG(get_node()->get_logger(), "All velocity error values are NaN. Skipping control update.");
+  if (common::math::all_nan(error_values)) {
+    RCLCPP_DEBUG(logger_, "All velocity error values are NaN. Skipping control update.");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
@@ -327,11 +318,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
   for (auto && [command_interface, tau] : std::views::zip(command_interfaces_, t)) {
     if (!command_interface.set_value(tau)) {
-      // NOLINTNEXTLINE
-      RCLCPP_WARN(
-        get_node()->get_logger(),
-        std::format("Failed to set command value for joint {}", command_interface.get_name()).c_str());
-      return controller_interface::return_type::ERROR;
+      RCLCPP_WARN(logger_, "Failed to set command for joint {}", command_interface.get_name().c_str());  // NOLINT
     };
   }
 

@@ -78,15 +78,14 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
+  auto update_and_validate_interfaces() -> controller_interface::return_type;
+
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
 
   realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> system_state_;
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> system_state_sub_;
   std::vector<double> system_state_values_;
-
-  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
-  bool model_initialized_{false};
 
   // we need the system rotation from the inertial frame to the vehicle frame for the hydrodynamic model
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -114,6 +113,8 @@ protected:
   Eigen::Vector6d init_error_, total_error_;
 
   std::unique_ptr<hydrodynamics::Params> model_;
+
+  rclcpp::Logger logger_{rclcpp::get_logger("integral_sliding_mode_controller")};
 };
 
 }  // namespace velocity_controllers

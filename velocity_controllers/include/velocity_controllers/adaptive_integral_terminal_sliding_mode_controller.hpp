@@ -73,6 +73,8 @@ protected:
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
+  auto update_and_validate_interfaces() -> controller_interface::return_type;
+
   // provide an interface for setting reference commands from a topic
   // this allows us to use tools like the keyboard teleop node
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
@@ -86,9 +88,6 @@ protected:
 
   bool first_update_{true};
   Eigen::Vector6d integral_error_;
-
-  std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> robot_description_sub_;
-  bool model_initialized_{false};
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -114,6 +113,8 @@ protected:
   Eigen::Matrix6d alpha_, k1_, k2_;
 
   std::unique_ptr<hydrodynamics::Params> model_;
+
+  rclcpp::Logger logger_{rclcpp::get_logger("adaptive_integral_terminal_sliding_mode_controller")};
 };
 
 }  // namespace velocity_controllers

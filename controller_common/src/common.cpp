@@ -161,6 +161,16 @@ auto calculate_error(const std::vector<double> & reference, const std::vector<do
   return error;
 }
 
+auto has_nan(const std::vector<double> & vec) -> bool
+{
+  return std::ranges::any_of(vec, [](double x) { return std::isnan(x); });
+}
+
+auto all_nan(const std::vector<double> & vec) -> bool
+{
+  return std::ranges::all_of(vec, [](double x) { return std::isnan(x); });
+}
+
 }  // namespace math
 
 }  // namespace common
