@@ -119,7 +119,7 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
   };
 
   auto count_interfaces = [](bool use_interface, const std::vector<std::string> & interface_names, std::size_t & n) {
-    n += interface_names.size() ? use_interface : 0;
+    n += use_interface ? interface_names.size() : 0;
   };
 
   use_position_commands_ = has_interface(params_.command_interfaces, "position");
@@ -142,11 +142,6 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
-
-  // NOLINTBEGIN
-  RCLCPP_INFO(logger_, "Commands won't be sent until both reference and state messages are received.");
-  RCLCPP_INFO(logger_, "Waiting for robot description to be received");
-  // NOLINTEND
 
   reference_.writeFromNonRT(geometry_msgs::msg::Pose());
   vehicle_state_.writeFromNonRT(nav_msgs::msg::Odometry());
