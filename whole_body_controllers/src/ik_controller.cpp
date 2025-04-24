@@ -118,21 +118,27 @@ auto IKController::configure_parameters() -> controller_interface::CallbackRetur
     return std::ranges::find(interfaces, type) != interfaces.end();
   };
 
-  auto count_interfaces = [](bool use_interface, const std::vector<std::string> & interface_names, std::size_t & n) {
-    n += use_interface ? interface_names.size() : 0;
-  };
-
   use_position_commands_ = has_interface(params_.command_interfaces, "position");
   use_velocity_commands_ = has_interface(params_.command_interfaces, "velocity");
 
-  count_interfaces(use_position_commands_, position_interface_names_, n_command_interfaces_);
-  count_interfaces(use_velocity_commands_, velocity_interface_names_, n_command_interfaces_);
+  n_command_interfaces_ = 0;
+  if (use_position_commands_) {
+    n_command_interfaces_ += position_interface_names_.size();
+  }
+  if (use_velocity_commands_) {
+    n_command_interfaces_ += velocity_interface_names_.size();
+  }
 
   use_position_states_ = has_interface(params_.state_interfaces, "position");
   use_velocity_states_ = has_interface(params_.state_interfaces, "velocity");
 
-  count_interfaces(use_position_states_, position_interface_names_, n_state_interfaces_);
-  count_interfaces(use_velocity_states_, velocity_interface_names_, n_state_interfaces_);
+  n_state_interfaces_ = 0;
+  if (use_position_states_) {
+    n_state_interfaces_ += position_interface_names_.size();
+  }
+  if (use_velocity_states_) {
+    n_state_interfaces_ += velocity_interface_names_.size();
+  }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
