@@ -1,7 +1,0 @@
-<library path="ik_solvers">
-  <class name="task_priority_solver"
-         type="ik_solvers::TaskPriorityIKSolver"
-         base_class_type="ik_solvers::IKSolver">
-    <description>A task priority inverse kinematics (TPIK) solver</description>
-  </class>
-</library>

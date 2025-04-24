@@ -172,7 +172,6 @@ namespace
 /// Compute the nullspace of the Jacobian matrix using the pseudoinverse.
 auto compute_nullspace(const Eigen::MatrixXd & augmented_jacobian) -> Eigen::MatrixXd
 {
-  // TODO(evan-palmer): do we need the damping here?
   const Eigen::MatrixXd eye = Eigen::MatrixXd::Identity(augmented_jacobian.cols(), augmented_jacobian.cols());
   return eye - (augmented_jacobian.completeOrthogonalDecomposition().pseudoInverse() * augmented_jacobian);
 }
@@ -189,7 +188,7 @@ auto construct_augmented_jacobian(const std::vector<Eigen::MatrixXd> & jacobians
     jacobians.begin(), jacobians.end(), 0, [](int sum, const Eigen::MatrixXd & jac) { return sum + jac.rows(); });
 
   Eigen::MatrixXd augmented_jacobian(n_rows, n_cols);
-  int current_row = 0;
+  int current_row = 0;  // NOLINT(misc-const-correctness)
 
   for (const auto & jac : jacobians) {
     augmented_jacobian.block(current_row, 0, jac.rows(), jac.cols()) = jac;
@@ -228,6 +227,21 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
   return vel;
 }
 
+/// Check if the solution is feasible with respect to the set constraints.
+auto is_feasible(const hierarchy::ConstraintSet & constraints, const Eigen::VectorXd & solution) -> bool
+{
+  for (const auto & constraint : constraints) {
+    auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
+    const double pred = (constraint->jacobian() * solution).value();
+
+    if (!((set_task->primal() > set_task->lower_threshold() && pred < 0) ||
+          (set_task->primal() < set_task->upper_threshold() && pred > 0))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /// Search for the feasible solutions to the task hierarchy and return the one with the smallest norm.
 auto search_solutions(
   const hierarchy::ConstraintSet & set_tasks,
@@ -256,23 +270,9 @@ auto search_solutions(
       if (!out.has_value()) {
         continue;
       }
+
       const Eigen::VectorXd & current_solution = out.value();
-
-      // Check if the solution violates any set constraints
-      bool valid = true;
-      for (const auto & task : set_tasks) {
-        auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(task);
-        const double pred = (task->jacobian() * current_solution).value();
-
-        valid = (set_task->primal() > set_task->lower_threshold() && pred < 0) ||
-                (set_task->primal() < set_task->upper_threshold() && pred > 0);
-
-        if (!valid) {
-          break;
-        }
-      }
-
-      if (valid) {
+      if (is_feasible(set_tasks, current_solution)) {
         solutions.push_back(current_solution);
       }
     }
@@ -309,6 +309,7 @@ auto TaskPriorityIKSolver::initialize(
   params_ = param_listener_->get_params();
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto TaskPriorityIKSolver::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
