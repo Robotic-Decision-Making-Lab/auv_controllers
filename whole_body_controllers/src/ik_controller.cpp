@@ -297,7 +297,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   // the states first, then save them.
   if (params_.use_external_measured_vehicle_states) {
     const auto * state_msg = vehicle_state_.readFromRT();
-    const auto state = common::messages::to_vector(*state_msg);
+    const std::vector<double> state = common::messages::to_vector(*state_msg);
     std::ranges::copy(state.begin(), state.begin() + free_flyer_pos_dofs_.size(), position_state_values_.begin());
     std::ranges::copy(state.begin() + free_flyer_pos_dofs_.size(), state.end(), velocity_state_values_.begin());
   } else {
@@ -336,21 +336,25 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 
   auto find_interface = [](const auto & interfaces, const std::string & name, const std::string & type) {
     return std::ranges::find_if(interfaces, [&name, &type](const auto & interface) {
-      return interface.get_interface_name() == std::format("{}/{}", name, type);
+      return interface.get_name() == std::format("{}/{}", name, type);
     });
   };
 
   // save the manipulator states
-  for (const auto & [i, joint_name] : std::views::enumerate(params_.controlled_joints)) {
+  for (const auto & joint_name : params_.controlled_joints) {
     const pinocchio::JointModel joint = model_->joints[model_->getJointId(joint_name)];
 
     const auto pos_it = find_interface(state_interfaces_, joint_name, hardware_interface::HW_IF_POSITION);
-    const double pos = pos_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
-    position_state_values_[free_flyer_pos_dofs_.size() + i] = pos;
+    if (pos_it != state_interfaces_.end()) {
+      const double pos = pos_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+      position_state_values_[joint.idx_q()] = pos;
+    }
 
     const auto vel_it = find_interface(state_interfaces_, joint_name, hardware_interface::HW_IF_VELOCITY);
-    const double vel = vel_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
-    velocity_state_values_[free_flyer_vel_dofs_.size() + i] = vel;
+    if (vel_it != state_interfaces_.end()) {
+      const double vel = vel_it->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+      velocity_state_values_[joint.idx_v()] = vel;
+    }
   }
 
   if (std::ranges::any_of(position_state_values_, [](double x) { return std::isnan(x); })) {
