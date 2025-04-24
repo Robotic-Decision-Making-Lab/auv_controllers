@@ -48,11 +48,6 @@ auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
   return Eigen::Affine3d(translation * rotation);
 }
 
-auto has_nan(const std::vector<double> & vec) -> bool
-{
-  return std::ranges::any_of(vec, [](double x) { return std::isnan(x); });
-}
-
 }  // namespace
 
 auto IKController::on_init() -> controller_interface::CallbackReturn
@@ -360,7 +355,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     }
   }
 
-  if (has_nan(position_state_values_) || has_nan(velocity_state_values_)) {
+  if (common::math::has_nan(position_state_values_) || common::math::has_nan(velocity_state_values_)) {
     RCLCPP_DEBUG(logger_, "Received system states with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
@@ -371,11 +366,11 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 auto IKController::update_and_validate_interfaces() -> controller_interface::return_type
 {
   if (update_system_state_values() != controller_interface::return_type::OK) {
-    RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
+    RCLCPP_INFO(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
-  if (has_nan(reference_interfaces_)) {
-    RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
+  if (common::math::has_nan(reference_interfaces_)) {
+    RCLCPP_INFO(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
   return controller_interface::return_type::OK;
@@ -386,7 +381,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   -> controller_interface::return_type
 {
   if (update_and_validate_interfaces() != controller_interface::return_type::OK) {
-    RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
+    RCLCPP_INFO(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
