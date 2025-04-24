@@ -355,9 +355,18 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     }
   }
 
-  if (common::math::has_nan(position_state_values_) || common::math::has_nan(velocity_state_values_)) {
-    RCLCPP_DEBUG(logger_, "Received system states with NaN value.");  // NOLINT
-    return controller_interface::return_type::ERROR;
+  if (use_position_states_) {
+    if (common::math::has_nan(position_state_values_)) {
+      RCLCPP_DEBUG(logger_, "Received position states with NaN value.");  // NOLINT
+      return controller_interface::return_type::ERROR;
+    }
+  }
+
+  if (use_velocity_states_) {
+    if (common::math::has_nan(velocity_state_values_)) {
+      RCLCPP_DEBUG(logger_, "Received velocity states with NaN value.");  // NOLINT
+      return controller_interface::return_type::ERROR;
+    }
   }
 
   return controller_interface::return_type::OK;
@@ -366,11 +375,11 @@ auto IKController::update_system_state_values() -> controller_interface::return_
 auto IKController::update_and_validate_interfaces() -> controller_interface::return_type
 {
   if (update_system_state_values() != controller_interface::return_type::OK) {
-    RCLCPP_INFO(logger_, "Failed to update system state values");  // NOLINT
+    RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
   if (common::math::has_nan(reference_interfaces_)) {
-    RCLCPP_INFO(logger_, "Received reference with NaN value.");  // NOLINT
+    RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
   return controller_interface::return_type::OK;
@@ -381,7 +390,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   -> controller_interface::return_type
 {
   if (update_and_validate_interfaces() != controller_interface::return_type::OK) {
-    RCLCPP_INFO(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
+    RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
