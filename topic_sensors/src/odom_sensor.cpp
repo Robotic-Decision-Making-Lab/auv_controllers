@@ -24,6 +24,7 @@
 #include <ranges>
 
 #include "controller_common/common.hpp"
+#include "message_transforms/transforms.hpp"
 
 namespace topic_sensors
 {
@@ -49,8 +50,17 @@ auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/
   }
   RCLCPP_INFO(logger_, std::format("Subscribing to topic: {}", topic).c_str());  // NOLINT
 
+  const bool transform_message = info_.hardware_parameters.at("transform_message") == "true";
+  if (transform_message) {
+    // NOLINTNEXTLINE
+    RCLCPP_INFO(logger_, "Incoming messages will be transform from the ROS mobile standard to the maritime standard");
+  }
+
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
-    topic, rclcpp::SensorDataQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
+    topic, rclcpp::SensorDataQoS(), [this, &transform_message](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+      if (transform_message) {
+        m2m::transforms::transform_message(*msg, "map_ned", "base_link_fsd");
+      }
       state_.writeFromNonRT(*msg);
     });
   return hardware_interface::CallbackReturn::SUCCESS;

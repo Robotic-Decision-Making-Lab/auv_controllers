@@ -1,14 +1,20 @@
 # Topic Sensors
 
-This package provides a collection of Sensor interfaces that write incoming
+This package provides a collection of sensor interfaces that write incoming
 ROS 2 messages to ros2_control state interfaces.
 
 ## Odometry Sensor
 
 A sensor plugin that reads incoming `nav_msgs/Odometry` messages and writes
-them to state interfaces. No manipulation is done to the data, beyond proxying
-the message values.
+them to state interfaces.
 
 ### Plugin Library
 
 topic_sensors/odom_sensor
+
+### Parameters
+
+- topic: The topic that the sensor should subscribe to
+- transform: Whether or not the sensor should transform the message from the
+ROS [REP-105](https://ros.org/reps/rep-0105.html) convention to the maritime
+convention documented in [REP-156](https://github.com/ros-infrastructure/rep/pull/398).
