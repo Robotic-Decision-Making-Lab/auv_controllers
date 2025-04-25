@@ -207,7 +207,9 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   auto * current_reference = reference_.readFromNonRT();
   const std::vector<double> reference = common::messages::to_vector(*current_reference);
   for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
-    interface = ref;
+    if (!std::isnan(ref)) {
+      interface = ref;
+    }
   }
   common::messages::reset_message(current_reference);
   return controller_interface::return_type::OK;
