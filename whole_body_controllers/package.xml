@@ -29,6 +29,7 @@
   <depend>message_transforms</depend>
   <depend>controller_common</depend>
   <depend>ik_solvers</depend>
+  <depend>auv_control_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

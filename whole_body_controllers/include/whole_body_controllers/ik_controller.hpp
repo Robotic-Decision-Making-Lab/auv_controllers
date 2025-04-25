@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "auv_control_msgs/msg/ik_controller_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "geometry_msgs/msg/pose.hpp"
@@ -93,6 +94,10 @@ protected:
 
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
+
+  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::IKControllerStateStamped>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::IKControllerStateStamped>>
+    rt_controller_state_pub_;
 
   // make the free-flyer position and velocity dof names "static"
   std::vector<std::string> free_flyer_pos_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};

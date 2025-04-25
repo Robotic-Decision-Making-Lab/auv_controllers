@@ -329,7 +329,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
     rt_controller_state_pub_->msg_.header.stamp = time;
-    for (const auto && [i, state] : std::views::enumerate(rt_controller_state_pub_->msg_.dof_states)) {
+    for (auto && [i, state] : std::views::enumerate(rt_controller_state_pub_->msg_.dof_states)) {
       const auto out = command_interfaces_[i].get_optional();
       state.reference = reference_interfaces_[i];
       state.feedback = system_state_values_[i];

@@ -24,6 +24,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     message_transforms
     controller_common
     ik_solvers
+    auv_control_msgs
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
