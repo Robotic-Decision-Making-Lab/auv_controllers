@@ -46,7 +46,7 @@ target_compile_features(solver_base PUBLIC cxx_std_23)
 add_library(ik_solvers SHARED)
 target_sources(
     ik_solvers
-    PRIVATE src/task_priority_solver.cpp
+    PRIVATE src/task_priority_solver.cpp src/pseudoinverse.cpp
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
