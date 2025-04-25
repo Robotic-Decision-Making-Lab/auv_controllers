@@ -24,6 +24,7 @@
   <depend>geometry_msgs</depend>
   <depend>generate_parameter_library</depend>
   <depend>controller_common</depend>
+  <depend>message_transforms</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

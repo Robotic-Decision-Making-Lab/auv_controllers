@@ -14,6 +14,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     std_msgs
     nav_msgs
     controller_common
+    message_transforms
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
