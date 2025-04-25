@@ -29,11 +29,6 @@ namespace ik_solvers::pinv
 auto least_squares(const Eigen::MatrixXd & jac) -> Eigen::MatrixXd;
 
 /// Calculate the pseudoinverse of a Jacobian matrix using the damped least squares method.
-///
-/// This version allows for more granular selection of the damping values to tune the solution velocities.
-auto damped_least_squares(const Eigen::MatrixXd & jac, const Eigen::VectorXd & damping) -> Eigen::MatrixXd;
-
-/// Calculate the pseudoinverse of a Jacobian matrix using the damped least squares method.
 auto damped_least_squares(const Eigen::MatrixXd & jac, double damping) -> Eigen::MatrixXd;
 
 }  // namespace ik_solvers::pinv
