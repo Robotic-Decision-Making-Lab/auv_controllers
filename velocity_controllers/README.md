@@ -48,7 +48,6 @@ T<sub>ry</sub>, T<sub>rz</sub> in N and Nm, respectively.
 
 - adaptive_integral_terminal_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
 - adaptive_integral_terminal_sliding_mode_controller/system_state [nav_msgs::msg::Odometry]
-- robot_description [std_msgs::msg::String]
 
 ### Publishers
 
@@ -97,7 +96,6 @@ T<sub>ry</sub>, T<sub>rz</sub> in N and Nm, respectively.
 
 - integral_sliding_mode_controller/reference [geometry_msgs::msg::Twist]
 - integral_sliding_mode_controller/system_state [nav_msgs::msg::Odometry]
-- robot_description [std_msgs::msg::String]
 
 ### Publishers
 

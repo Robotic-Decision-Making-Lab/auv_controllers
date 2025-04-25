@@ -28,6 +28,7 @@
 #include "pinocchio/algorithm/frames.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
+#include "pseudoinverse.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
 namespace ik_solvers
@@ -173,7 +174,7 @@ namespace
 auto compute_nullspace(const Eigen::MatrixXd & augmented_jacobian) -> Eigen::MatrixXd
 {
   const Eigen::MatrixXd eye = Eigen::MatrixXd::Identity(augmented_jacobian.cols(), augmented_jacobian.cols());
-  return eye - (augmented_jacobian.completeOrthogonalDecomposition().pseudoInverse() * augmented_jacobian);
+  return eye - (pinv::least_squares(augmented_jacobian) * augmented_jacobian);
 }
 
 /// Construct the augmented Jacobian matrix from a list of Jacobian matrices.
@@ -198,7 +199,7 @@ auto construct_augmented_jacobian(const std::vector<Eigen::MatrixXd> & jacobians
   return augmented_jacobian;
 }
 
-/// Closed-loop task priority IK using the damped pseudoinverse.
+/// Closed-loop task priority IK.
 auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
   -> std::expected<Eigen::VectorXd, SolverError>
 {
@@ -206,34 +207,29 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
     return std::unexpected(SolverError::NO_SOLUTION);
   }
 
-  Eigen::VectorXd vel = Eigen::VectorXd::Zero(nv);
   std::vector<Eigen::MatrixXd> jacobians;
   jacobians.reserve(tasks.size());
+
+  Eigen::VectorXd vel = Eigen::VectorXd::Zero(nv);
   Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(nv, nv);
 
   for (const auto & task : tasks) {
-    // damped pseudoinverse of the Jacobian
-    const Eigen::MatrixXd J = task->jacobian();
-    const auto eye = Eigen::MatrixXd::Identity(J.rows(), J.rows());
-    const Eigen::MatrixXd J_inv = J.transpose() * (J * J.transpose() + damping * eye).inverse();
-
-    // closed-loop task priority IK
+    const Eigen::MatrixXd J_inv = pinv::damped_least_squares(task->jacobian(), damping);
     vel += nullspace * J_inv * (task->gain() * task->error());
 
-    jacobians.push_back(J);
+    jacobians.push_back(task->jacobian());
     nullspace = compute_nullspace(construct_augmented_jacobian(jacobians));
   }
 
   return vel;
 }
 
-/// Check if the solution is feasible with respect to the set constraints.
+/// Check if the solution is feasible.
 auto is_feasible(const hierarchy::ConstraintSet & constraints, const Eigen::VectorXd & solution) -> bool
 {
   for (const auto & constraint : constraints) {
     auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
     const double pred = (constraint->jacobian() * solution).value();
-
     if (!((set_task->primal() > set_task->lower_threshold() && pred < 0) ||
           (set_task->primal() < set_task->upper_threshold() && pred > 0))) {
       return false;
@@ -253,39 +249,32 @@ auto search_solutions(
     return std::unexpected(SolverError::NO_SOLUTION);
   }
 
-  Eigen::VectorXd solution;
-
+  // there is only one solution if there are no set tasks
   if (set_tasks.empty()) {
-    const auto out = tpik(hierarchies.front(), nv, damping);
-    if (!out.has_value()) {
-      return std::unexpected(out.error());
-    }
-    solution = out.value();
-  } else {
-    std::vector<Eigen::VectorXd> solutions;
-    solutions.reserve(hierarchies.size());
-
-    for (const auto & tasks : hierarchies) {
-      const auto out = tpik(tasks, nv, damping);
-      if (!out.has_value()) {
-        continue;
-      }
-
-      const Eigen::VectorXd & current_solution = out.value();
-      if (is_feasible(set_tasks, current_solution)) {
-        solutions.push_back(current_solution);
-      }
-    }
-
-    if (solutions.empty()) {
-      return std::unexpected(SolverError::NO_SOLUTION);
-    }
-
-    // Choose the solution with the smallest norm
-    solution = *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
+    return tpik(hierarchies.front(), nv, damping);
   }
 
-  return solution;
+  std::vector<Eigen::VectorXd> solutions;
+  solutions.reserve(hierarchies.size());
+
+  for (const auto & tasks : hierarchies) {
+    const auto out = tpik(tasks, nv, damping);
+    if (!out.has_value()) {
+      continue;
+    }
+
+    const Eigen::VectorXd & current_solution = out.value();
+    if (is_feasible(set_tasks, current_solution)) {
+      solutions.push_back(current_solution);
+    }
+  }
+
+  if (solutions.empty()) {
+    return std::unexpected(SolverError::NO_SOLUTION);
+  }
+
+  // Choose the solution with the smallest norm
+  return *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
 }
 
 auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
@@ -354,7 +343,7 @@ auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const E
     const double activation = params_.joint_limit_task.constrained_joints_map[joint_name].activation_threshold;
     const double joint_limit_gain = params_.joint_limit_task.constrained_joints_map[joint_name].gain;
 
-    // insert the joint constraint
+    // insert the joint limit constraint
     hierarchy_.insert(std::make_shared<hierarchy::JointConstraint>(
       model_, primal, ub, lb, tol, activation, joint_name, joint_limit_gain));
   }
