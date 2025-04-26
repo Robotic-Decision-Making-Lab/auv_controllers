@@ -47,7 +47,6 @@
 
 namespace velocity_controllers
 {
-
 class IntegralSlidingModeController : public controller_interface::ChainableControllerInterface
 {
 public:

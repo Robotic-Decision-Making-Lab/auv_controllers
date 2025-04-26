@@ -54,6 +54,12 @@ auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackR
   }
   model_ = std::make_unique<hydrodynamics::Params>(out.value());
 
+  // Notify users about this. This can be confusing for folks that expect the controller to work without a reference
+  // or state message.
+  RCLCPP_INFO(
+    get_node()->get_logger(),
+    "Reference and state messages are required for operation - commands will not be sent until both are received.");
+
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
