@@ -129,6 +129,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
         system_state_.writeFromNonRT(*msg);
       });
   } else {
+    RCLCPP_INFO(logger_, "Using state interfaces and tf2 to get the system state");  // NOLINT
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   }
