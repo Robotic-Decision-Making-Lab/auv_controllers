@@ -159,7 +159,7 @@ auto PolynomialThrustCurveController::update_and_write_commands(
     pwm = pwm > params_.min_deadband_pwm && pwm < params_.max_deadband_pwm ? params_.neutral_pwm : pwm;
   }
 
-  if (!command_interfaces_[0].set_value(pwm)) {
+  if (!command_interfaces_[0].set_value(static_cast<double>(pwm))) {
     RCLCPP_WARN(logger_, "Failed to set command for thruster %s", thruster_name_.c_str());  // NOLINT
   }
 
