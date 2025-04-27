@@ -47,7 +47,7 @@ public:
   : primal_(std::move(primal)),
     constraint_(std::move(constraint)),
     priority_(priority),
-    gain_(gain){};
+    gain_(gain) {};
 
   /// Destructor.
   virtual ~Constraint() = default;
