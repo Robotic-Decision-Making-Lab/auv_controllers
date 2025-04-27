@@ -7,26 +7,20 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    controller_interface
-    hardware_interface
-    rclcpp
-    rclcpp_lifecycle
-    realtime_tools
-    Eigen3
-    hydrodynamics
-    geometry_msgs
-    control_msgs
-    tf2_eigen
-    tf2
-    tf2_ros
-    nav_msgs
-    controller_common
-)
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(hydrodynamics REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(controller_common REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -90,6 +84,21 @@ install(
 )
 
 ament_export_targets(export_velocity_controllers HAS_LIBRARY_TARGET)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "controller_interface"
+    "hardware_interface"
+    "rclcpp"
+    "rclcpp_lifecycle"
+    "realtime_tools"
+    "Eigen3"
+    "hydrodynamics"
+    "geometry_msgs"
+    "control_msgs"
+    "tf2_eigen"
+    "tf2"
+    "tf2_ros"
+    "nav_msgs"
+    "controller_common"
+)
 
 ament_package()

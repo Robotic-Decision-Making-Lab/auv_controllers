@@ -37,6 +37,6 @@ install(
 )
 
 ament_export_targets(export_controller_common HAS_LIBRARY_TARGET)
-ament_export_dependencies(rclcpp geometry_msgs nav_msgs)
+ament_export_dependencies("rclcpp" "geometry_msgs" "nav_msgs")
 
 ament_package()

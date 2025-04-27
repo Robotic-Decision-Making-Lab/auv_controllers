@@ -7,19 +7,13 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    hardware_interface
-    rclcpp
-    realtime_tools
-    std_msgs
-    nav_msgs
-    controller_common
-    message_transforms
-)
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(hardware_interface REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(controller_common REQUIRED)
+find_package(message_transforms REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -57,6 +51,14 @@ install(
 )
 
 ament_export_targets(export_topic_sensors HAS_LIBRARY_TARGET)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "hardware_interface"
+    "rclcpp"
+    "realtime_tools"
+    "std_msgs"
+    "nav_msgs"
+    "controller_common"
+    "message_transforms"
+)
 
 ament_package()

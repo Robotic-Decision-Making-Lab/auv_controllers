@@ -7,19 +7,13 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    rclcpp
-    rclcpp_lifecycle
-    pluginlib
-    Eigen3
-    pinocchio
-    trajectory_msgs
-    tf2_eigen
-)
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(pinocchio REQUIRED)
+find_package(trajectory_msgs REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
 find_package(generate_parameter_library REQUIRED)
@@ -39,7 +33,6 @@ target_sources(
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/solver.hpp
 )
-# ament_target_dependencies(solver_base PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_link_libraries(
     solver_base
     PUBLIC
@@ -63,7 +56,6 @@ target_sources(
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/task_priority_solver.hpp
 )
-# ament_target_dependencies(ik_solvers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(ik_solvers PUBLIC cxx_std_23)
 target_link_libraries(
     ik_solvers
@@ -92,6 +84,14 @@ install(
 )
 
 ament_export_targets(export_ik_solvers)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "rclcpp"
+    "rclcpp_lifecycle"
+    "pluginlib"
+    "Eigen3"
+    "pinocchio"
+    "trajectory_msgs"
+    "tf2_eigen"
+)
 
 ament_package()

@@ -7,28 +7,22 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    controller_interface
-    hardware_interface
-    rclcpp
-    rclcpp_lifecycle
-    realtime_tools
-    nav_msgs
-    std_msgs
-    control_msgs
-    pinocchio
-    geometry_msgs
-    tf2_ros
-    tf2_eigen
-    message_transforms
-    controller_common
-    ik_solvers
-    auv_control_msgs
-)
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(pinocchio REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(message_transforms REQUIRED)
+find_package(controller_common REQUIRED)
+find_package(ik_solvers REQUIRED)
+find_package(auv_control_msgs REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -81,6 +75,23 @@ install(
 )
 
 ament_export_targets(export_whole_body_controllers HAS_LIBRARY_TARGET)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "controller_interface"
+    "hardware_interface"
+    "rclcpp"
+    "rclcpp_lifecycle"
+    "realtime_tools"
+    "nav_msgs"
+    "std_msgs"
+    "control_msgs"
+    "pinocchio"
+    "geometry_msgs"
+    "tf2_ros"
+    "tf2_eigen"
+    "message_transforms"
+    "controller_common"
+    "ik_solvers"
+    "auv_control_msgs"
+)
 
 ament_package()

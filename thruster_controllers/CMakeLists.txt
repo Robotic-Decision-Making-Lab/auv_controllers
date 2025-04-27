@@ -7,19 +7,13 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    controller_interface
-    hardware_interface
-    rclcpp
-    rclcpp_lifecycle
-    realtime_tools
-    std_msgs
-    control_msgs
-)
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -81,6 +75,14 @@ install(
 )
 
 ament_export_targets(export_thruster_controllers HAS_LIBRARY_TARGET)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "controller_interface"
+    "hardware_interface"
+    "rclcpp"
+    "rclcpp_lifecycle"
+    "realtime_tools"
+    "std_msgs"
+    "control_msgs"
+)
 
 ament_package()
