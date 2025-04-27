@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>whole_body_controllers</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>Whole-body controllers for underwater vehicle manipulator systems</description>
 
-  <maintainer email="evanp922@gmail.com">ros</maintainer>
+  <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
