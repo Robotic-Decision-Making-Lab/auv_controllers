@@ -1,112 +1,59 @@
 integral_sliding_mode_controller:
+  joints:
+    type: string_array
+    default_value: [x, y, z, rx, ry, rz]
+    read_only: true
+    description: The controlled joints.
+    validation:
+      fixed_size<>: 6
+
   use_external_measured_states:
     type: bool
     read_only: true
     default_value: false
-    description: "Use velocity measurements obtained from a topic instead of from state interfaces."
-
-  enable_parameter_update_without_reactivation:
-    type: bool
-    default_value: true
-    description: "If enabled, the parameters will be dynamically updated while the controller is running."
+    description: >
+      Use state measurements obtained from a topic instead of state interfaces.
 
   reference_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The prefix of the reference controller to send command to. This can be used to configure command interfaces in chained mode."
+    description: >
+      The prefix of the reference controller to send commands to. This can be
+      used to configure command interfaces in chained mode.
 
-  tf:
-    base_frame:
-      type: string
-      default_value: "base_link_fsd"
-      read_only: true
-      description: "The name of the vehicle base frame."
-      validation:
-        not_empty<>: null
+  vehicle_frame_id:
+    type: string
+    default_value: base_link_fsd
+    read_only: true
+    description: The name of the vehicle base frame.
+    validation:
+      not_empty<>: null
 
-    odom_frame:
-      type: string
-      default_value: "odom_ned"
-      read_only: true,
-      description: "The name of the inertial frame."
-      validation:
-        not_empty<>: null
+  odom_frame_id:
+    type: string
+    default_value: odom_ned
+    read_only: true
+    description: The name of the inertial frame.
+    validation:
+      not_empty<>: null
 
   gains:
-    rho:
-      type: double
-      default_value: 0.0
-      description: "The sliding mode gain. This adjusts how quickly the controller drives the system to the sliding surface."
-
     lambda:
       type: double
       default_value: 0.0
-      description: "The boundary thickness of the tanh function used to attenuate ISMC chatter."
+      description: >
+        The boundary thickness of the tanh function used to attenuate chatter.
 
-    Kp:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      description: "The proportional gains for the controller provided in the order: x, y, z, rx, ry, rz."
-      validation:
-        fixed_size<>: 6
+    __map_joints:
+      rho:
+        type: double
+        default_value: 0.0
+        description: >
+          The sliding mode gain. This adjusts how quickly the controller drives
+          the system to the sliding surface.
 
-  hydrodynamics:
-    mass:
-      type: double
-      default_value: 0.0
-      description: "The mass of the vehicle."
-      validation:
-        gt<>: [0.0]
-
-    moments_of_inertia:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0]
-      description: "The moments of inertia of the vehicle in the order: Ixx, Iyy, Izz."
-      validation:
-        fixed_size<>: 3
-
-    added_mass:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      description: "The added mass coefficients of the vehicle in the order: Xdu, Ydv, Zdw, Kdp, Mdq, Ndr."
-      validation:
-        fixed_size<>: 6
-
-    weight:
-      type: double
-      default_value: 0.0
-      description: "The weight of the vehicle."
-
-    buoyancy:
-      type: double
-      default_value: 0.0
-      description: "The buoyancy of the vehicle."
-
-    center_of_buoyancy:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0]
-      description: "The center-of-buoyancy of the vehicle in the order: x, y, z."
-      validation:
-        fixed_size<>: 3
-
-    center_of_gravity:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0]
-      description: "The center-of-gravity of the vehicle in the order: x, y, z."
-      validation:
-        fixed_size<>: 3
-
-    linear_damping:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      description: "The linear damping coefficients of the vehicle in the order: Xu, Yv, Zw, Kp, Mq, Nr."
-      validation:
-        fixed_size<>: 6
-
-    quadratic_damping:
-      type: double_array
-      default_value: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-      description: "The quadratic damping coefficients of the vehicle in the order: Xuu, Yvv, Zww, Kpp, Mqq, Nrr."
-      validation:
-        fixed_size<>: 6
+      kp:
+        type: double
+        default_value: 0.0
+        description: The proportional gain.

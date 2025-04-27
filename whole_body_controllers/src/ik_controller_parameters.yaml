@@ -1,0 +1,76 @@
+ik_controller:
+  ik_solver:
+    type: string
+    default_value: task_priority_solver
+    read_only: true
+    description: The name of the IK solver to use.
+    validation:
+      one_of<>: [[task_priority_solver]]
+
+  command_interfaces:
+    type: string_array
+    default_value: [velocity]
+    description: The list of command interfaces for the controller to load.
+    validation:
+      subset_of<>: [[position, velocity]]
+
+  state_interfaces:
+    type: string_array
+    default_value: [position]
+    description: The list of state interfaces for the controller to load.
+    validation:
+      subset_of<>: [[position, velocity]]
+
+  free_flyer_position_joints:
+    type: string_array
+    default_value: ["x", "y", "z", "qx", "qy", "qz", "qw"]
+    description: >
+      The list of position joints to use for the free-flyer position
+      interfaces. This can be used to configure a prefix for the free-flyer
+      position interfaces.
+    validation:
+      fixed_size<>: 7 # position + orientation (quaternion)
+
+  free_flyer_velocity_joints:
+    type: string_array
+    default_value: ["x", "y", "z", "rx", "ry", "rz"]
+    description: >
+      The list of velocity joints to use for the free-flyer position
+      interfaces. This can be used to configure a prefix for the free-flyer
+      velocity interfaces.
+    validation:
+      fixed_size<>: 6
+
+  controlled_joints:
+    type: string_array
+    default_value: []
+    description: >
+      The list of controlled joints in the Pinocchio model, excluding the
+      free-flyer joint (i.e., the manipulator joints). The controller will lock
+      all other joints in the model.
+
+  use_external_measured_vehicle_states:
+    type: bool
+    read_only: true
+    default_value: false
+    description: >
+      Use vehicle state measurements obtained from a topic instead of state
+      interfaces.
+
+  vehicle_reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: >
+      The prefix of the reference controller to send vehicle commands to. This
+      can be the same as or different from the manipulator reference
+      controller.
+
+  manipulator_reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: >
+      The prefix of the reference controller to send manipulator commands to.
+      This can be the same as or different from the vehicle reference
+      controller.

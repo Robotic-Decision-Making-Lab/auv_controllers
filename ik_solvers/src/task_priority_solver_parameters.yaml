@@ -1,0 +1,47 @@
+task_priority_solver:
+  end_effector_frame_id:
+    type: string
+    default_value: tcp
+    read_only: true
+    description: The end effector frame ID.
+
+  damping:
+    type: double
+    default_value: 0.000001
+    read_only: true
+    description: The damping factor for the pseudo-inverse calculation.
+
+  constrained_joints:
+    type: string_array
+    default_value: []
+    read_only: true
+    description: The list of constrained manipulator joints.
+
+  end_effector_pose_task:
+    gain:
+      type: double
+      default_value: 0.0
+      read_only: false
+      description: The end effector pose tracking task gain.
+
+  joint_limit_task:
+    __map_constrained_joints:
+      safety_tolerance:
+        type: double
+        default_value: 0.0
+        read_only: true
+        description: The safety tolerance for the joint limit task.
+
+      activation_threshold:
+        type: double
+        default_value: 0.0
+        read_only: true
+        description: >
+          The distance from a safety limit that activates a set task when
+          crossed (rad).
+
+      gain:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: The gain for the manipulator joint limit task.

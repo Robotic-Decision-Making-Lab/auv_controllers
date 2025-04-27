@@ -3,11 +3,14 @@
 *
 
 # Except the following
-
+!auv_control_demos
+!auv_control_msgs
 !auv_controllers
-!velocity_controllers
+!controller_common
+!ik_solvers
 !thruster_allocation_matrix_controller
 !thruster_controllers
-!auv_control_msgs
-!auv_control_demos
+!topic_sensors
+!velocity_controllers
+!whole_body_controllers
 !ros2.repos

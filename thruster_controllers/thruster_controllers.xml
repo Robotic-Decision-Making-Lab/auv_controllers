@@ -1,10 +1,26 @@
 <library path="thruster_controllers">
 
   <class name="thruster_controllers/PolynomialThrustCurveController"
-    type="thruster_controllers::PolynomialThrustCurveController"
-    base_class_type="controller_interface::ChainableControllerInterface">
+         type="thruster_controllers::PolynomialThrustCurveController"
+         base_class_type="controller_interface::ChainableControllerInterface">
     <description>
       Controller used to convert thrust values to PWM values using a polynomial thrust curve
+    </description>
+  </class>
+
+  <class name="thruster_controllers/RotationRateController"
+         type="thruster_controllers::RotationRateController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Controller used to convert thrust values into rotation rates
+    </description>
+  </class>
+
+  <class name="thruster_controllers/GazeboPassthroughController"
+         type="thruster_controllers::GazeboPassthroughController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Controller used to pass through thrust values to a Gazebo thruster plugin
     </description>
   </class>
 

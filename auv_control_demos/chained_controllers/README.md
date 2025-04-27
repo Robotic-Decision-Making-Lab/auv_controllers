@@ -88,7 +88,7 @@ applies a PWM command to the hardware interface.
    following command:
 
    ```bash
-   ros2 topic pub /integral_sliding_mode_controller/system_state geometry_msgs/msg/Twist
+   ros2 topic pub /integral_sliding_mode_controller/system_state nav_msgs/msg/Odometry
    ```
 
 5. The ISMC accepts reference commands sent over a topic or a reference

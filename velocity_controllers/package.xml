@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>velocity_controllers</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>A collection of velocity controllers for underwater vehicles</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -20,7 +20,6 @@
   <depend>eigen</depend>
   <depend>rclcpp</depend>
   <depend>ros2_control</depend>
-  <depend>ros2_controllers</depend>
   <depend>pluginlib</depend>
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
@@ -30,6 +29,8 @@
   <depend>tf2_eigen</depend>
   <depend>hydrodynamics</depend>
   <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>controller_common</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
