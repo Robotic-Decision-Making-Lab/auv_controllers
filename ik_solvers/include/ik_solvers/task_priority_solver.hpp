@@ -43,11 +43,11 @@ class Constraint
 {
 public:
   /// Create a new constraint given the current primal value, constraint value, task priority and feedback gain.
-  Constraint(const Eigen::MatrixXd & primal, const Eigen::MatrixXd & constraint, int priority, double gain)
-  : primal_(primal),
-    constraint_(constraint),
+  Constraint(Eigen::MatrixXd primal, Eigen::MatrixXd constraint, int priority, double gain)
+  : primal_(std::move(primal)),
+    constraint_(std::move(constraint)),
     priority_(priority),
-    gain_(gain) {};
+    gain_(gain){};
 
   /// Destructor.
   virtual ~Constraint() = default;
@@ -167,7 +167,7 @@ public:
 /// If the priorities are equal, the constraints are sorted based on their memory address.
 struct ConstraintCompare
 {
-  bool operator()(const std::shared_ptr<Constraint> & lhs, const std::shared_ptr<Constraint> & rhs) const
+  auto operator()(const std::shared_ptr<Constraint> & lhs, const std::shared_ptr<Constraint> & rhs) const -> bool
   {
     return lhs->priority() == rhs->priority() ? std::less<>{}(lhs, rhs) : lhs->priority() < rhs->priority();
   }
@@ -211,7 +211,7 @@ class TaskPriorityIKSolver : public IKSolver
 public:
   TaskPriorityIKSolver() = default;
 
-  virtual auto initialize(
+  auto initialize(
     const std::shared_ptr<rclcpp_lifecycle::LifecycleNode> & node,
     const std::shared_ptr<pinocchio::Model> & model,
     const std::shared_ptr<pinocchio::Data> & data,

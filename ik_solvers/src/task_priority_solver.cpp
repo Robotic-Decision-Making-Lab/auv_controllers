@@ -214,8 +214,8 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
   Eigen::MatrixXd nullspace = Eigen::MatrixXd::Identity(nv, nv);
 
   for (const auto & task : tasks) {
-    const Eigen::MatrixXd J_inv = pinv::damped_least_squares(task->jacobian(), damping);
-    vel += nullspace * J_inv * (task->gain() * task->error());
+    const Eigen::MatrixXd jacobian_inv = pinv::damped_least_squares(task->jacobian(), damping);
+    vel += nullspace * jacobian_inv * (task->gain() * task->error());
 
     jacobians.push_back(task->jacobian());
     nullspace = compute_nullspace(construct_augmented_jacobian(jacobians));
@@ -227,15 +227,13 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
 /// Check if the solution is feasible.
 auto is_feasible(const hierarchy::ConstraintSet & constraints, const Eigen::VectorXd & solution) -> bool
 {
-  for (const auto & constraint : constraints) {
+  return std::ranges::all_of(constraints, [&solution](const auto & constraint) {
     auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
     const double pred = (constraint->jacobian() * solution).value();
-    if (!((set_task->primal() > set_task->lower_threshold() && pred < 0) ||
-          (set_task->primal() < set_task->upper_threshold() && pred > 0))) {
-      return false;
-    }
-  }
-  return true;
+    return (
+      (set_task->primal() > set_task->lower_threshold() && pred < 0) ||
+      (set_task->primal() < set_task->upper_threshold() && pred > 0));
+  });
 }
 
 /// Search for the feasible solutions to the task hierarchy and return the one with the smallest norm.
@@ -316,7 +314,7 @@ auto TaskPriorityIKSolver::configure_parameters() -> void
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const Eigen::VectorXd & q)
+auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
   -> std::expected<Eigen::VectorXd, SolverError>
 {
   configure_parameters();
@@ -328,7 +326,7 @@ auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & target_pose, const E
 
   // insert the pose constraint
   const double gain = params_.end_effector_pose_task.gain;
-  hierarchy_.insert(std::make_shared<hierarchy::PoseConstraint>(model_, data_, ee_pose, target_pose, ee_frame_, gain));
+  hierarchy_.insert(std::make_shared<hierarchy::PoseConstraint>(model_, data_, ee_pose, goal, ee_frame_, gain));
 
   for (const auto & joint_name : params_.constrained_joints) {
     // get the joint index in the configuration vector

@@ -42,10 +42,10 @@ auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
   if (vec.size() != 7) {
     throw std::invalid_argument("Invalid size for pose vector");
   }
-  Eigen::Translation3d translation = {vec[0], vec[1], vec[2]};
+  const Eigen::Translation3d translation = {vec[0], vec[1], vec[2]};
   Eigen::Quaterniond rotation = {vec[6], vec[3], vec[4], vec[5]};
   rotation.normalize();
-  return Eigen::Affine3d(translation * rotation);
+  return {translation * rotation};
 }
 
 }  // namespace
@@ -161,7 +161,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   velocity_state_values_.resize(velocity_interface_names_.size(), std::numeric_limits<double>::quiet_NaN());
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {
+    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
       m2m::transform_message(*msg);
       reference_.writeFromNonRT(*msg);
     });
@@ -169,7 +169,9 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   if (params_.use_external_measured_vehicle_states) {
     RCLCPP_INFO(logger_, "Using external measured vehicle states");  // NOLINT
     vehicle_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
-      "~/vehicle_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+      "~/vehicle_state",
+      rclcpp::SystemDefaultsQoS(),
+      [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
         m2m::transform_message(*msg, "map", "base_link");
         vehicle_state_.writeFromNonRT(*msg);
       });
@@ -221,9 +223,8 @@ auto IKController::command_interface_configuration() const -> controller_interfa
       position_interface_names_, std::back_inserter(config.names), [this, &format_interface](const auto & name) {
         if (std::ranges::find(free_flyer_pos_dofs_, name) != free_flyer_pos_dofs_.end()) {
           return format_interface(name, hardware_interface::HW_IF_POSITION, params_.vehicle_reference_controller);
-        } else {
-          return format_interface(name, hardware_interface::HW_IF_POSITION, params_.manipulator_reference_controller);
         }
+        return format_interface(name, hardware_interface::HW_IF_POSITION, params_.manipulator_reference_controller);
       });
   }
 
@@ -232,9 +233,8 @@ auto IKController::command_interface_configuration() const -> controller_interfa
       velocity_interface_names_, std::back_inserter(config.names), [this, &format_interface](const auto & name) {
         if (std::ranges::find(free_flyer_vel_dofs_, name) != free_flyer_vel_dofs_.end()) {
           return format_interface(name, hardware_interface::HW_IF_VELOCITY, params_.vehicle_reference_controller);
-        } else {
-          return format_interface(name, hardware_interface::HW_IF_VELOCITY, params_.manipulator_reference_controller);
         }
+        return format_interface(name, hardware_interface::HW_IF_VELOCITY, params_.manipulator_reference_controller);
       });
   }
 
@@ -327,7 +327,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     const auto position_interfaces = std::span(state_interfaces_.begin(), position_interfaces_end);
     const auto velocity_interfaces = std::span(velocity_interfaces_start, velocity_interfaces_end);
 
-    std::vector<double> position_states, velocity_states;
+    std::vector<double> position_states, velocity_states;  // NOLINT(readability-isolate-declaration)
     position_states.reserve(position_interfaces.size());
     velocity_states.reserve(velocity_interfaces.size());
 
@@ -411,11 +411,11 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   configure_parameters();
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
-  const Eigen::Affine3d target_pose = to_eigen(reference_interfaces_);
+  const Eigen::Affine3d goal = to_eigen(reference_interfaces_);
 
   // TODO(anyone): add solver support for velocity states
   // right now we only use the positions for the solver
-  const auto result = solver_->solve(period, target_pose, q);
+  const auto result = solver_->solve(period, goal, q);
 
   if (!result.has_value()) {
     const auto err = result.error();

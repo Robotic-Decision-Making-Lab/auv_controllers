@@ -117,7 +117,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
 
   // NOLINTNEXTLINE(performance-unnecessary-value-param)
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Twist>(
-    "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
       reference_.writeFromNonRT(*msg);
     });
 
@@ -125,7 +127,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::on_configure(const rclcpp_li
   if (params_.use_external_measured_states) {
     RCLCPP_INFO(logger_, "Using external measured states");  // NOLINT
     system_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
-      "~/system_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
+      "~/system_state",
+      rclcpp::SystemDefaultsQoS(),
+      [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
         system_state_.writeFromNonRT(*msg);
       });
   } else {
