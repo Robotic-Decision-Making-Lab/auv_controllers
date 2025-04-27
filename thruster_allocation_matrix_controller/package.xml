@@ -22,7 +22,6 @@
   <depend>eigen</depend>
   <depend>rclcpp</depend>
   <depend>ros2_control</depend>
-  <depend>ros2_controllers</depend>
   <depend>pluginlib</depend>
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
