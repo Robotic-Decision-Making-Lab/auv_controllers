@@ -420,7 +420,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   if (!result.has_value()) {
     const auto err = result.error();
     if (err == ik_solvers::SolverError::NO_SOLUTION) {
-      RCLCPP_WARN(logger_, "The solver could not find a solution to the current IK problem");  // NOLINT
+      RCLCPP_DEBUG(logger_, "The solver could not find a solution to the current IK problem");  // NOLINT
     } else if (err == ik_solvers::SolverError::SOLVER_ERROR) {
       RCLCPP_WARN(logger_, "The solver experienced an error while solving the IK problem");  // NOLINT
     }
