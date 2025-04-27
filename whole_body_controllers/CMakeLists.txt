@@ -7,7 +7,6 @@ endif()
 
 include(GNUInstallDirs)
 
-# dependencies
 set(THIS_PACKAGE_INCLUDE_DEPENDS
     controller_interface
     hardware_interface
@@ -26,7 +25,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     ik_solvers
     auv_control_msgs
 )
-
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
     find_package(${Dependency} REQUIRED)
 endforeach()
@@ -49,9 +47,28 @@ target_sources(
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/whole_body_controllers/ik_controller.hpp
 )
-ament_target_dependencies(whole_body_controllers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(whole_body_controllers PUBLIC cxx_std_23)
-target_link_libraries(whole_body_controllers PUBLIC ik_controller_parameters)
+target_link_libraries(
+    whole_body_controllers
+    PUBLIC
+        ik_controller_parameters
+        controller_interface::controller_interface
+        hardware_interface::hardware_interface
+        rclcpp::rclcpp
+        rclcpp_lifecycle::rclcpp_lifecycle
+        realtime_tools::realtime_tools
+        pinocchio::pinocchio
+        tf2_ros::tf2_ros
+        ik_solvers::ik_solvers
+        tf2_eigen::tf2_eigen
+        message_transforms::message_transforms
+        controller_common::controller_common
+        ${geometry_msgs_TARGETS}
+        ${nav_msgs_TARGETS}
+        ${std_msgs_TARGETS}
+        ${control_msgs_TARGETS}
+        ${auv_control_msgs_TARGETS}
+)
 pluginlib_export_plugin_description_file(controller_interface whole_body_controllers.xml)
 
 install(

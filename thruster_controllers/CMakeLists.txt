@@ -16,7 +16,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     std_msgs
     control_msgs
 )
-
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
     find_package(${Dependency} REQUIRED)
 endforeach()
@@ -50,15 +49,20 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/rotation_rate_controller.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/gz_passthrough_controller.hpp
 )
-ament_target_dependencies(thruster_controllers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(thruster_controllers PUBLIC cxx_std_23)
 target_link_libraries(
     thruster_controllers
     PUBLIC
-        ${rclcpp_LIBRARIES}
         polynomial_thrust_curve_controller_parameters
         rotation_rate_controller_parameters
         gz_passthrough_controller_parameters
+        controller_interface::controller_interface
+        hardware_interface::hardware_interface
+        rclcpp::rclcpp
+        rclcpp_lifecycle::rclcpp_lifecycle
+        realtime_tools::realtime_tools
+        ${std_msgs_TARGETS}
+        ${control_msgs_TARGETS}
 )
 
 pluginlib_export_plugin_description_file(controller_interface thruster_controllers.xml)

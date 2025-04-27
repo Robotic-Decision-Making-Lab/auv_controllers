@@ -87,6 +87,7 @@ protected:
   // that publish the vehicle state without the manipulator states
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> vehicle_state_sub_;
   realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> vehicle_state_;
+
   std::vector<double> position_state_values_, velocity_state_values_;
 
   std::unique_ptr<pluginlib::ClassLoader<ik_solvers::IKSolver>> loader_;
@@ -99,9 +100,8 @@ protected:
   std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::IKControllerStateStamped>>
     rt_controller_state_pub_;
 
-  // make the free-flyer position and velocity dof names "static"
-  std::vector<std::string> free_flyer_pos_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
-  std::vector<std::string> free_flyer_vel_dofs_{"x", "y", "z", "rx", "ry", "rz"};
+  // store the names of the base joints
+  std::vector<std::string> free_flyer_pos_dofs_, free_flyer_vel_dofs_;
 
   // store the names of the position and velocity interfaces
   // this is stored in the same order as the pinocchio model to simplify integration with the solver

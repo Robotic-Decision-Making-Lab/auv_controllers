@@ -40,7 +40,6 @@
 namespace thruster_controllers
 {
 
-/// Controller used to convert thruster forces into PWM signals using a polynomial thrust curve.
 class GazeboPassthroughController : public controller_interface::ChainableControllerInterface
 {
 public:

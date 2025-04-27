@@ -50,6 +50,7 @@ auto RotationRateController::on_init() -> controller_interface::CallbackReturn
 {
   param_listener_ = std::make_shared<rotation_rate_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
+  logger_ = get_node()->get_logger();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -157,8 +158,7 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
   }
 
   if (!command_interfaces_[0].set_value(ang_vel)) {
-    // NOLINTNEXTLINE
-    RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
+    RCLCPP_WARN(logger_, "Failed to set command for thruster %s", thruster_name_.c_str());  // NOLINT
     return controller_interface::return_type::ERROR;
   }
 

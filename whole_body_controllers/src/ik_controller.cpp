@@ -56,6 +56,10 @@ auto IKController::on_init() -> controller_interface::CallbackReturn
   params_ = param_listener_->get_params();
   logger_ = get_node()->get_logger();
 
+  // store the joint names
+  free_flyer_pos_dofs_ = params_.free_flyer_position_joints;
+  free_flyer_vel_dofs_ = params_.free_flyer_velocity_joints;
+
   // initialize the pinocchio model
   model_ = std::make_shared<pinocchio::Model>();
   pinocchio::urdf::buildModelFromXML(get_robot_description(), pinocchio::JointModelFreeFlyer(), *model_);
@@ -158,7 +162,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {
-      m2m::transforms::transform_message(*msg);
+      m2m::transform_message(*msg);
       reference_.writeFromNonRT(*msg);
     });
 
@@ -166,7 +170,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
     RCLCPP_INFO(logger_, "Using external measured vehicle states");  // NOLINT
     vehicle_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
       "~/vehicle_state", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
-        m2m::transforms::transform_message(*msg, "map", "base_link");
+        m2m::transform_message(*msg, "map", "base_link");
         vehicle_state_.writeFromNonRT(*msg);
       });
   }
@@ -333,12 +337,12 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     // transform the states into the appropriate frame and save them
     geometry_msgs::msg::Pose pose;
     common::messages::to_msg(position_states, &pose);
-    m2m::transforms::transform_message(pose);
+    m2m::transform_message(pose);
     std::ranges::copy(common::messages::to_vector(pose), position_state_values_.begin());
 
     geometry_msgs::msg::Twist twist;
     common::messages::to_msg(velocity_states, &twist);
-    m2m::transforms::transform_message(twist);
+    m2m::transform_message(twist);
     std::ranges::copy(common::messages::to_vector(twist), velocity_state_values_.begin());
   }
 
@@ -428,13 +432,13 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   // transform the solution into the appropriate frame
   geometry_msgs::msg::Twist twist;
   common::messages::to_msg({point.velocities.begin(), point.velocities.begin() + free_flyer_vel_dofs_.size()}, &twist);
-  m2m::transforms::transform_message(twist);
+  m2m::transform_message(twist);
   std::ranges::copy(common::messages::to_vector(twist), point.velocities.begin());
 
   // transform the pose into the appropriate frame
   geometry_msgs::msg::Pose pose;
   common::messages::to_msg({point.positions.begin(), point.positions.begin() + free_flyer_pos_dofs_.size()}, &pose);
-  m2m::transforms::transform_message(pose);
+  m2m::transform_message(pose);
   std::ranges::copy(common::messages::to_vector(pose), point.positions.begin());
 
   if (use_position_commands_) {

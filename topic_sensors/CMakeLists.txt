@@ -16,7 +16,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     controller_common
     message_transforms
 )
-
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
     find_package(${Dependency} REQUIRED)
 endforeach()
@@ -33,9 +32,19 @@ target_sources(
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/topic_sensors/odom_sensor.hpp
 )
-ament_target_dependencies(topic_sensors PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(topic_sensors PUBLIC cxx_std_23)
-target_link_libraries(topic_sensors PUBLIC ${rclcpp_LIBRARIES})
+target_link_libraries(
+    topic_sensors
+    PUBLIC
+        hardware_interface::hardware_interface
+        rclcpp::rclcpp
+        realtime_tools::realtime_tools
+        controller_common::controller_common
+        message_transforms::message_transforms
+        ${std_msgs_TARGETS}
+        ${nav_msgs_TARGETS}
+)
+
 pluginlib_export_plugin_description_file(hardware_interface topic_sensors.xml)
 
 install(

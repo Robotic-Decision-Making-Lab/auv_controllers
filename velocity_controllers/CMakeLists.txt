@@ -13,7 +13,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     rclcpp
     rclcpp_lifecycle
     realtime_tools
-    eigen3_cmake_module
     Eigen3
     hydrodynamics
     geometry_msgs
@@ -24,7 +23,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     nav_msgs
     controller_common
 )
-
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
     find_package(${Dependency} REQUIRED)
 endforeach()
@@ -55,18 +53,27 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/integral_sliding_mode_controller.hpp
             ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
 )
-
-ament_target_dependencies(velocity_controllers
-  PUBLIC
-    ${THIS_PACKAGE_INCLUDE_DEPENDS}
-)
+target_compile_features(velocity_controllers PUBLIC cxx_std_23)
 target_link_libraries(
     velocity_controllers
     PRIVATE
         integral_sliding_mode_controller_parameters
         adaptive_integral_terminal_sliding_mode_controller_parameters
+        controller_interface::controller_interface
+        hardware_interface::hardware_interface
+        rclcpp::rclcpp
+        rclcpp_lifecycle::rclcpp_lifecycle
+        realtime_tools::realtime_tools
+        Eigen3::Eigen
+        hydrodynamics::hydrodynamics
+        tf2_eigen::tf2_eigen
+        tf2::tf2
+        tf2_ros::tf2_ros
+        controller_common::controller_common
+        ${geometry_msgs_TARGETS}
+        ${control_msgs_TARGETS}
+        ${nav_msgs_TARGETS}
 )
-target_compile_features(velocity_controllers PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface velocity_controllers.xml)
 

@@ -48,7 +48,7 @@ auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/
     RCLCPP_ERROR(logger_, "Topic name is empty. Please provide a valid topic name.");  // NOLINT
     return hardware_interface::CallbackReturn::ERROR;
   }
-  RCLCPP_INFO(logger_, std::format("Subscribing to topic: {}", topic).c_str());  // NOLINT
+  RCLCPP_INFO(logger_, "Subscribing to topic: %s", topic.c_str());  // NOLINT
 
   const bool transform_message = info_.hardware_parameters.at("transform_message") == "true";
   if (transform_message) {
@@ -59,7 +59,7 @@ auto OdomSensor::on_configure(const rclcpp_lifecycle::State & /*previous_state*/
   state_sub_ = node_->create_subscription<nav_msgs::msg::Odometry>(
     topic, rclcpp::SensorDataQoS(), [this, &transform_message](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
       if (transform_message) {
-        m2m::transforms::transform_message(*msg, "map_ned", "base_link_fsd");
+        m2m::transform_message(*msg, "map_ned", "base_link_fsd");
       }
       state_.writeFromNonRT(*msg);
     });

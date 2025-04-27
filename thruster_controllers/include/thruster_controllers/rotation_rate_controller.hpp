@@ -40,7 +40,6 @@
 namespace thruster_controllers
 {
 
-/// Controller used to convert thruster forces into PWM signals using a polynomial thrust curve.
 class RotationRateController : public controller_interface::ChainableControllerInterface
 {
 public:
@@ -79,6 +78,8 @@ protected:
   rotation_rate_controller::Params params_;
 
   std::string thruster_name_;
+
+  rclcpp::Logger logger_{rclcpp::get_logger("rotation_rate_thruster_controller")};
 };
 
 }  // namespace thruster_controllers

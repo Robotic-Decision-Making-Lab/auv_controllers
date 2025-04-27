@@ -8,11 +8,11 @@ endif()
 include(GNUInstallDirs)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
+    rclcpp
     rclcpp_lifecycle
-    Eigen3
-    eigen3_cmake_module
-    pinocchio
     pluginlib
+    Eigen3
+    pinocchio
     trajectory_msgs
     tf2_eigen
 )
@@ -39,7 +39,17 @@ target_sources(
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/solver.hpp
 )
-ament_target_dependencies(solver_base PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
+# ament_target_dependencies(solver_base PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_link_libraries(
+    solver_base
+    PUBLIC
+        rclcpp::rclcpp
+        rclcpp_lifecycle::rclcpp_lifecycle
+        Eigen3::Eigen
+        pinocchio::pinocchio
+        pluginlib::pluginlib
+        ${trajectory_msgs_TARGETS}
+)
 target_compile_features(solver_base PUBLIC cxx_std_23)
 
 # plugin library
@@ -53,11 +63,20 @@ target_sources(
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/task_priority_solver.hpp
 )
-ament_target_dependencies(ik_solvers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
+# ament_target_dependencies(ik_solvers PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_compile_features(ik_solvers PUBLIC cxx_std_23)
 target_link_libraries(
     ik_solvers
-    PUBLIC solver_base task_priority_solver_parameters
+    PUBLIC
+        solver_base
+        task_priority_solver_parameters
+        tf2_eigen::tf2_eigen
+        rclcpp::rclcpp
+        rclcpp_lifecycle::rclcpp_lifecycle
+        Eigen3::Eigen
+        pinocchio::pinocchio
+        pluginlib::pluginlib
+        ${trajectory_msgs_TARGETS}
 )
 
 # the first argument is the name of the package, NOT the target name
@@ -72,7 +91,6 @@ install(
     FILE_SET HEADERS
 )
 
-ament_export_libraries(ik_solvers)
 ament_export_targets(export_ik_solvers)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 

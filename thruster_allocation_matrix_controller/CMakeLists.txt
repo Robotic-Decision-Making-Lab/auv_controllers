@@ -13,7 +13,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     controller_interface
     hardware_interface
     realtime_tools
-    eigen3_cmake_module
     Eigen3
     geometry_msgs
     auv_control_msgs
@@ -21,7 +20,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
     hydrodynamics
     controller_common
 )
-
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
     find_package(${Dependency} REQUIRED)
 endforeach()
@@ -45,12 +43,24 @@ target_sources(
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp
 )
+target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 target_link_libraries(
     thruster_allocation_matrix_controller
-    PRIVATE thruster_allocation_matrix_controller_parameters
+    PUBLIC
+        thruster_allocation_matrix_controller_parameters
+        controller_interface::controller_interface
+        hardware_interface::hardware_interface
+        hardware_interface::mock_components
+        rclcpp::rclcpp
+        hydrodynamics::hydrodynamics
+        rclcpp_lifecycle::rclcpp_lifecycle
+        realtime_tools::realtime_tools
+        realtime_tools::thread_priority
+        controller_common::controller_common
+        ${control_msgs_TARGETS}
+        ${std_msgs_TARGETS}
+        ${auv_control_msgs_TARGETS}
 )
-ament_target_dependencies(thruster_allocation_matrix_controller PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 
 pluginlib_export_plugin_description_file(controller_interface thruster_allocation_matrix_controller.xml)
 

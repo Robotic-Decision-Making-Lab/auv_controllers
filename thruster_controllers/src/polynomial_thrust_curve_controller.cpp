@@ -48,6 +48,7 @@ auto PolynomialThrustCurveController::on_init() -> controller_interface::Callbac
 {
   param_listener_ = std::make_shared<polynomial_thrust_curve_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
+  logger_ = get_node()->get_logger();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -159,9 +160,7 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   }
 
   if (!command_interfaces_[0].set_value(pwm)) {
-    // NOLINTNEXTLINE
-    RCLCPP_WARN(get_node()->get_logger(), std::format("Failed to set command for thruster {}", thruster_name_).c_str());
-    return controller_interface::return_type::ERROR;
+    RCLCPP_WARN(logger_, "Failed to set command for thruster %s", thruster_name_.c_str());  // NOLINT
   }
 
   if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {

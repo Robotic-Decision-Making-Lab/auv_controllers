@@ -21,9 +21,11 @@ target_sources(
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/controller_common/common.hpp
 )
-
-ament_target_dependencies(controller_common PUBLIC rclcpp geometry_msgs nav_msgs)
 target_compile_features(controller_common PUBLIC cxx_std_23)
+target_link_libraries(
+    controller_common
+    PUBLIC rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS}
+)
 
 install(
     TARGETS controller_common
