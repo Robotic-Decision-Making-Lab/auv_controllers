@@ -71,8 +71,7 @@ WORKDIR $USER_WORKSPACE
 
 # Install debugging/linting Python packages
 RUN pip install \
-    pre-commit \
-    mypy
+    pre-commit
 
 # Install debugging/linting C++ packages
 RUN sudo apt-get -q update \

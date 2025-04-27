@@ -1,7 +1,6 @@
 # Example 1: Individual Controller
 
-This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers) to demonstrate how
-to launch a single controller.
+This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers) to demonstrate how to launch a single controller.
 
 ## Tutorial Steps
 
@@ -62,7 +61,7 @@ to launch a single controller.
    topic-based interface:
 
    ```bash
-   ros2 topic pub /integral_sliding_mode_controller/system_state geometry_msgs/msg/Twist
+   ros2 topic pub /integral_sliding_mode_controller/system_state nav_msgs/msg/Odometry
    ```
 
 5. The ISMC accepts reference commands sent via a topic or the controller's
@@ -80,7 +79,7 @@ to launch a single controller.
    ros2 topic echo /integral_sliding_mode_controller/status
    ```
 
-   Should yield an output similar to the following:
+   should yield an output similar to the following:
 
    ```bash
    header:

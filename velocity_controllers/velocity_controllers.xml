@@ -1,11 +1,17 @@
 <library path="velocity_controllers">
-
   <class name="velocity_controllers/IntegralSlidingModeController"
-    type="velocity_controllers::IntegralSlidingModeController"
-    base_class_type="controller_interface::ChainableControllerInterface">
+         type="velocity_controllers::IntegralSlidingModeController"
+         base_class_type="controller_interface::ChainableControllerInterface">
     <description>
       Integral sliding mode controller for AUV velocity control
     </description>
   </class>
 
+  <class name="velocity_controllers/AdaptiveIntegralTerminalSlidingModeController"
+         type="velocity_controllers::AdaptiveIntegralTerminalSlidingModeController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Adaptive integral terminal sliding mode controller for AUV velocity control
+    </description>
+  </class>
 </library>
