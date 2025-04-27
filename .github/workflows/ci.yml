@@ -28,7 +28,7 @@ jobs:
         uses: ros-industrial/industrial_ci@master
         env:
           ROS_DISTRO: ${{ matrix.env.ROS_DISTRO }}
-          CXXFLAGS: -Wall -Wextra -Wpedantic
+          CXXFLAGS: -Wall -Wextra -Wpedantic -std=c++23
           CLANG_TIDY: true
           UPSTREAM_WORKSPACE: ros2.repos
           AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
