@@ -1,9 +1,15 @@
 # auv_controllers
 
+<p align="center">
+  <img src="teleop.gif" width="45%" />
+  <img src="uvms.gif" width="45%" />
+</p>
+
 auv_controllers is a collection of controllers for autonomous underwater
-vehicles (AUVs) implemented using ros2_control. The controllers have
-been designed to support the complete AUV control hierarchy and to enable
-benchmarking against other commonly-used control algorithms.
+vehicles (AUVs) and underwater vehicle manipulator systems (UVMS) implemented
+using ros2_control. The controllers have been designed to support the complete
+system control hierarchy and to enable benchmarking against other commonly-used
+control algorithms.
 
 ## Installation
 
