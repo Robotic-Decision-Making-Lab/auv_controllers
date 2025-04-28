@@ -1,8 +1,8 @@
 # auv_controllers
 
 <p align="center">
-  <img src="uvms.gif" width="50%" />
-  <img src="teleop.gif" width="50%" />
+  <img src="uvms.gif" width="49%" />
+  <img src="teleop.gif" width="49%" />
 </p>
 
 auv_controllers is a collection of controllers for autonomous underwater
