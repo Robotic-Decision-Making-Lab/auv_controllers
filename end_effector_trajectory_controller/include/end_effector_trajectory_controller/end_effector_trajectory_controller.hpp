@@ -1,0 +1,62 @@
+// Copyright 2025, Evan Palmer
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#pragma once
+
+#include "controller_interface/controller_interface.hpp"
+#include "end_effector_trajectory_controller/trajectory.hpp"
+#include "realtime_tools/realtime_buffer.hpp"
+
+namespace end_effector_trajectory_controller
+{
+
+class EndEffectorTrajectoryController : public controller_interface::ControllerInterface
+{
+public:
+  EndEffectorTrajectoryController() = default;
+
+  auto on_init() -> controller_interface::CallbackReturn override;
+
+  // NOLINTNEXTLINE(modernize-use-nodiscard)
+  auto command_interface_configuration() const -> controller_interface::InterfaceConfiguration override;
+
+  // NOLINTNEXTLINE(modernize-use-nodiscard)
+  auto state_interface_configuration() const -> controller_interface::InterfaceConfiguration override;
+
+  auto on_configure(const rclcpp_lifecycle::State & previous_state) -> controller_interface::CallbackReturn override;
+
+  auto on_activate(const rclcpp_lifecycle::State & previous_state) -> controller_interface::CallbackReturn override;
+
+  auto update(const rclcpp::Time & time, const rclcpp::Duration & period) -> controller_interface::return_type override;
+
+private:
+  auto update_parameters() -> void;
+
+  auto configure_parameters() -> controller_interface::CallbackReturn;
+
+  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> system_state_;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> system_state_sub_;
+
+  std::vector<std::string> joint_names_;
+
+  std::unique_ptr<Trajectory> trajectory_;
+};
+
+}  // namespace end_effector_trajectory_controller

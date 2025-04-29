@@ -1,6 +1,6 @@
 std_msgs/Header header
 
-# The name of the IK solver used by the controller
+# The name of the IK solver used by the controller.
 string solver_name
 
 # Position DoF names, e.g., joint or axis names.
