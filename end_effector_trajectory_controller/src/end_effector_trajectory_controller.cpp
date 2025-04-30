@@ -74,8 +74,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
   configure_parameters();
 
   end_effector_state_.writeFromNonRT(geometry_msgs::msg::Pose());
-  first_sample_.writeFromNonRT(true);
-  holding_position_.writeFromNonRT(false);
+  rt_first_sample_.writeFromNonRT(true);
+  rt_holding_position_.writeFromNonRT(false);
 
   command_interfaces_.reserve(n_dofs_);
 
@@ -107,9 +107,9 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> msg) {  // NOLINT
       update_end_effector_state();
-      trajectory_.writeFromNonRT(Trajectory(msg, *end_effector_state_.readFromNonRT()));
-      first_sample_.writeFromNonRT(true);
-      holding_position_.writeFromNonRT(false);
+      rt_trajectory_.writeFromNonRT(Trajectory(msg, *end_effector_state_.readFromNonRT()));
+      rt_first_sample_.writeFromNonRT(true);
+      rt_holding_position_.writeFromNonRT(false);
     });
 
   controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>(
@@ -229,7 +229,7 @@ auto EndEffectorTrajectoryController::publish_controller_state(
 
 auto EndEffectorTrajectoryController::hold_position() -> void
 {
-  holding_position_.writeFromNonRT(true);
+  rt_holding_position_.writeFromNonRT(true);
   const geometry_msgs::msg::Pose state = *end_effector_state_.readFromRT();
   write_command(command_interfaces_, state);
   geometry_msgs::msg::Pose reference;
@@ -250,28 +250,28 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   const geometry_msgs::msg::Pose & state = *end_effector_state_.readFromRT();
 
   // continue holding position until a new trajectory is received
-  if (*holding_position_.readFromRT()) {
+  if (*rt_holding_position_.readFromRT()) {
     hold_position();
     return controller_interface::return_type::OK;
   }
 
   // wait until a trajectory is received
   // the above condition should prevent this from happening, but we add a check just to be safe
-  if (trajectory_.readFromRT() == nullptr) {
+  if (rt_trajectory_.readFromRT() == nullptr) {
     RCLCPP_DEBUG(logger_, "Skipping controller update. No trajectory received");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
   // set the sample time
   rclcpp::Time sample_time = time;
-  if (*first_sample_.readFromRT()) {
-    first_sample_.writeFromNonRT(false);
+  if (*rt_first_sample_.readFromRT()) {
+    rt_first_sample_.writeFromNonRT(false);
     sample_time += period;
   }
 
   // we use the current sample to measure errors and the future sample as the command
   // the future sample should be used in order to prevent the controller from lagging
-  const auto * t = trajectory_.readFromRT();
+  const auto * t = rt_trajectory_.readFromRT();
   const geometry_msgs::msg::Pose sampled_state = t->sample(sample_time).value_or(geometry_msgs::msg::Pose());
   const auto sampled_command = t->sample(sample_time + update_period_);
 
@@ -284,7 +284,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
         // hold position but don't require a new trajectory
         hold_position();
-        holding_position_.writeFromNonRT(false);
+        rt_holding_position_.writeFromNonRT(false);
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END:

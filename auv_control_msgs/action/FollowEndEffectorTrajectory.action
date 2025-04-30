@@ -1,0 +1,21 @@
+auv_control_msgs/EndEffectorTrajectory trajectory
+
+float64 path_tolerance
+
+float64 goal_tolerance
+
+---
+int32 error_code
+int32 SUCCESSFUL = 0
+int32 INVALID_GOAL = -1
+int32 OLD_HEADER_TIMESTAMP = -2
+int32 PATH_TOLERANCE_VIOLATED = -3
+int32 GOAL_TOLERANCE_VIOLATED = -4
+
+string error_string
+
+---
+std_msgs/Header header
+geometry_msgs/Pose desired
+geometry_msgs/Pose actual
+float64 error

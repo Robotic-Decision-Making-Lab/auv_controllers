@@ -22,13 +22,16 @@
 
 #include <ranges>
 
+#include "auv_control_msgs/action/follow_end_effector_trajectory.hpp"
 #include "auv_control_msgs/msg/end_effector_trajectory_controller_state.hpp"
 #include "controller_common/common.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "end_effector_trajectory_controller/trajectory.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/server.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
+#include "realtime_tools/realtime_server_goal_handle.hpp"
 #include "tf2/exceptions.h"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -73,6 +76,8 @@ private:
     double error,
     const geometry_msgs::msg::Pose & output) -> void;
 
+  // TODO(evan-palmer): add action server callback functions - might be lambdas... we'll see
+
   std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>> controller_state_pub_;
   std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>>
     rt_controller_state_pub_;
@@ -83,10 +88,22 @@ private:
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  realtime_tools::RealtimeBuffer<Trajectory> trajectory_;
+  realtime_tools::RealtimeBuffer<Trajectory> rt_trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  realtime_tools::RealtimeBuffer<bool> first_sample_, holding_position_;
+  // this is psychotic
+  using FollowTrajectoryAction = auv_control_msgs::action::FollowEndEffectorTrajectory;
+  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectoryAction>;
+  using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
+  using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
+
+  std::shared_ptr<rclcpp_action::Server<FollowTrajectoryAction>> action_server_;
+  RealtimeGoalHandleBuffer active_goal_;
+  realtime_tools::RealtimeBuffer<bool> rt_has_pending_goal_;
+  std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
+  rclcpp::Duration action_monitor_period_ = rclcpp::Duration(std::chrono::milliseconds(50));
+
+  realtime_tools::RealtimeBuffer<bool> rt_first_sample_, rt_holding_position_;
   rclcpp::Duration update_period_{0, 0};
 
   std::shared_ptr<end_effector_trajectory_controller::ParamListener> param_listener_;
