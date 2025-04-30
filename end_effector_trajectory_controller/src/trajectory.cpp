@@ -95,19 +95,19 @@ Trajectory::Trajectory(
 {
 }
 
-auto Trajectory::empty() -> bool { return points_->points.empty(); }
+auto Trajectory::empty() const -> bool { return points_->points.empty(); }
 
-auto Trajectory::start_time() -> rclcpp::Time
+auto Trajectory::start_time() const -> rclcpp::Time
 {
   return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.front().time_from_start;
 }
 
-auto Trajectory::end_time() -> rclcpp::Time
+auto Trajectory::end_time() const -> rclcpp::Time
 {
   return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.back().time_from_start;
 }
 
-auto Trajectory::start_point() -> std::optional<geometry_msgs::msg::Pose>
+auto Trajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
 {
   if (empty()) {
     return std::nullopt;
@@ -115,7 +115,7 @@ auto Trajectory::start_point() -> std::optional<geometry_msgs::msg::Pose>
   return points_->points.front().point;
 }
 
-auto Trajectory::end_point() -> std::optional<geometry_msgs::msg::Pose>
+auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
 {
   if (empty()) {
     return std::nullopt;
@@ -123,7 +123,7 @@ auto Trajectory::end_point() -> std::optional<geometry_msgs::msg::Pose>
   return points_->points.back().point;
 }
 
-auto Trajectory::sample(const rclcpp::Time & sample_time) -> std::expected<geometry_msgs::msg::Pose, SampleError>
+auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>
 {
   if (empty()) {
     return std::unexpected(SampleError::EMPTY_TRAJECTORY);

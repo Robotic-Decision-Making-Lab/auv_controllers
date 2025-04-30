@@ -20,10 +20,13 @@
 
 #pragma once
 
+#include <ranges>
+
 #include "auv_control_msgs/msg/end_effector_trajectory_controller_state.hpp"
 #include "controller_common/common.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "end_effector_trajectory_controller/trajectory.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "tf2/exceptions.h"
@@ -77,8 +80,8 @@ private:
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> end_effector_state_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> end_effector_state_sub_;
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
   realtime_tools::RealtimeBuffer<Trajectory> trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
@@ -92,7 +95,7 @@ private:
   std::vector<std::string> dofs_;
   std::size_t n_dofs_;
 
-  rclcpp::Logger logger_{rclcpp::Logger("end_effector_trajectory_controller")};
+  rclcpp::Logger logger_{rclcpp::get_logger("end_effector_trajectory_controller")};
 
   template <typename T>
   auto write_command(T & interfaces, const geometry_msgs::msg::Pose & command) -> void

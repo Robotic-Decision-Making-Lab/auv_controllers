@@ -48,22 +48,22 @@ public:
     const geometry_msgs::msg::Pose & start_state);
 
   /// Whether or not the trajectory is empty.
-  auto empty() -> bool;
+  auto empty() const -> bool;
 
   /// Get the starting time of the trajectory.
-  auto start_time() -> rclcpp::Time;
+  auto start_time() const -> rclcpp::Time;
 
   /// Get the ending time of the trajectory.
-  auto end_time() -> rclcpp::Time;
+  auto end_time() const -> rclcpp::Time;
 
   /// Get the first point in the trajectory.
-  auto start_point() -> std::optional<geometry_msgs::msg::Pose>;
+  auto start_point() const -> std::optional<geometry_msgs::msg::Pose>;
 
   /// Get the last point in the trajectory.
-  auto end_point() -> std::optional<geometry_msgs::msg::Pose>;
+  auto end_point() const -> std::optional<geometry_msgs::msg::Pose>;
 
   /// Sample a point in the trajectory at the given time.
-  auto sample(const rclcpp::Time & sample_time) -> std::expected<geometry_msgs::msg::Pose, SampleError>;
+  auto sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>;
 
 private:
   std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> points_;
