@@ -18,7 +18,7 @@ end_effector_trajectory_controller:
       the end of the trajectory and when the controller will stop executing the
       trajectory, entering position hold.
 
-  error_threshold:
+  error_tolerance:
     type: double
     default_value: 0.1
     read_only: false

@@ -73,7 +73,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
   configure_parameters();
 
   end_effector_state_.writeFromNonRT(geometry_msgs::msg::Pose());
-  first_sample_.writeFromNonRT(true);  // default to true
+  first_sample_.writeFromNonRT(true);
+  holding_position_.writeFromNonRT(false);
   trajectory_.writeFromNonRT(Trajectory());
 
   command_interfaces_.reserve(n_dofs_);
@@ -101,6 +102,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
       update_end_effector_state();
       trajectory_.writeFromNonRT(Trajectory(msg, end_effector_state_.readFromNonRT()));
       first_sample_.writeFromNonRT(true);
+      holding_position_.writeFromNonRT(false);
     });
 
   // TODO(evan-palmer): add controller state
@@ -205,7 +207,16 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   };
 
   // helper function used to hold the current end effector pose
-  auto hold_position = [this]() { write_command(*end_effector_state_.readFromRT()); }
+  auto hold_position = [this]() {
+    holding_position_.writeFromNonRT(true);
+    write_command(*end_effector_state_.readFromRT());
+  };
+
+  // wait until a new trajectory is received
+  if (*holding_position_.readFromRT()) {
+    hold_position();
+    return controller_interface::return_type::OK;
+  }
 
   // set the sample time
   rclcpp::Time sample_time = time;
@@ -227,27 +238,42 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   if (!sampled_command.has_value()) {
     switch (sampled_command.error()) {
       case SampleError::SAMPLE_TIME_BEFORE_START:
-        RCLCPP_WARN(logger_, "Sample time is before trajectory start time");  // NOLINT
-        RCLCPP_INFO(logger_, "Holding position until trajectory start")       // NOLINT
+        RCLCPP_WARN(logger_, "Sample time is before trajectory start time. Waiting for trajectory start");  // NOLINT
+
+        // hold position but don't require a new trajectory
         hold_position();
+        holding_position_.writeFromNonRT(false);
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END:
         RCLCPP_DEBUG(logger_, "Sample time is after trajectory end time");  // NOLINT
-        const double error = geodesic_error(t->end_point().value(), *end_effector_state_.readFromRT());
-        if (error <= params_.position_tolerance) {
-          RCLCPP_INFO(logger_, "Successfully executed the trajectory");  // NOLINT
-        } else {
-          RCLCPP_WARN(logger_, "Trajectory execution failed");  // NOLINT
+        if (params_.error_tolerance > 0.0) {
+          const double terminal_error = geodesic_error(t->end_point().value(), *end_effector_state_.readFromRT());
+          if (terminal_error <= params_.error_tolerance) {
+            RCLCPP_INFO(logger_, "Successfully executed the trajectory");  // NOLINT
+          } else {
+            // NOLINTNEXTLINE
+            RCLCPP_WARN(logger_, "Trajectory execution failed - reached trajectory end with error %f", terminal_error);
+          }
         }
-        RCLCPP_INFO(logger_, "Holding position until a new trajectory is received")  // NOLINT
+        // NOLINTNEXTLINE
+        RCLCPP_INFO(logger_, "Trajectory execution complete. Holding position until a new trajectory is received");
+        hold_position();
         break;
 
       case SampleError::EMPTY_TRAJECTORY:
         RCLCPP_WARN(logger_, "Trajectory is empty");                           // NOLINT
         RCLCPP_INFO(logger_, "Holding position until trajectory is received")  // NOLINT
+        hold_position();
         break;
     }
+    return controller_interface::return_type::OK;
+  }
+
+  const double error = geodesic_error(sampled_state, *end_effector_state_.readFromRT());
+  if (error > params_.error_tolerance) {
+    RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error)  // NOLINT
+    RCLCPP_INFO(logger_, "Holding position until a new trajectory is received")                        // NOLINT
     hold_position();
     return controller_interface::return_type::OK;
   }

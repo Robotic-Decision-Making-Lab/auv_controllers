@@ -68,7 +68,7 @@ private:
   realtime_tools::RealtimeBuffer<Trajectory> trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  realtime_tools::RealtimeBuffer<bool> first_sample_;
+  realtime_tools::RealtimeBuffer<bool> first_sample_, holding_position_;
   rclcpp::Duration update_period_{0, 0};
 
   std::shared_ptr<end_effector_trajectory_controller::ParamListener> param_listener_;
