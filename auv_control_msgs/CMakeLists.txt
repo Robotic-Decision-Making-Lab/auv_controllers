@@ -13,6 +13,7 @@ rosidl_generate_interfaces(auv_control_msgs
   "msg/IKControllerStateStamped.msg"
   "msg/EndEffectorTrajectoryPoint.msg"
   "msg/EndEffectorTrajectory.msg"
+  "msg/EndEffectorTrajectoryControllerState.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs trajectory_msgs
 )
 

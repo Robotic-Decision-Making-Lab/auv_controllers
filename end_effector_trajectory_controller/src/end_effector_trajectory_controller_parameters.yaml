@@ -9,15 +9,6 @@ end_effector_trajectory_controller:
     validation:
       fixed_size<>: 7 # position + orientation (quaternion)
 
-  execution_timeout:
-    type: double
-    default_value: 0.0
-    read_only: false
-    description: >
-      The trajectory execution timeout (s). This is a time buffer between
-      the end of the trajectory and when the controller will stop executing the
-      trajectory, entering position hold.
-
   error_tolerance:
     type: double
     default_value: 0.1

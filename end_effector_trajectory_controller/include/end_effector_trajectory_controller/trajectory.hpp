@@ -42,8 +42,6 @@ enum class SampleError : std::uint8_t
 class Trajectory
 {
 public:
-  Trajectory() = default;
-
   /// Constructor.
   Trajectory(
     const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> & trajectory,

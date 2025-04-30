@@ -33,10 +33,9 @@ namespace
 
 auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::msg::Pose & state) -> double
 {
-  Eigen::Isometry3d goal_mat, state_mat;
+  Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
   tf2::fromMsg(goal, goal_mat);
   tf2::fromMsg(state, state_mat);
-
   return std::pow((goal.inverse() * state).log().norm(), 2);
 }
 
@@ -62,8 +61,8 @@ auto EndEffectorTrajectoryController::update_parameters() -> void
 auto EndEffectorTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
-  dof_names_ = params_.joints;
-  n_dofs_ = dof_names_.size();
+  dofs_ = params_.joints;
+  n_dofs_ = dofs_.size();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -75,12 +74,16 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
   end_effector_state_.writeFromNonRT(geometry_msgs::msg::Pose());
   first_sample_.writeFromNonRT(true);
   holding_position_.writeFromNonRT(false);
-  trajectory_.writeFromNonRT(Trajectory());
 
   command_interfaces_.reserve(n_dofs_);
 
+  // use the update period to sample the "next" trajectory point
   update_period_ = rclcpp::Duration(0.0, static_cast<uint32_t>(1.0e9 / static_cast<double>(get_update_rate())));
 
+  // the states can be captured in one of three ways:
+  // 1. using the topic interface - when available, this is preferred over the tf2 interface
+  // 2. using the state interfaces - this is the default, but often not available
+  // 3. using tf2 - this is the most common interface, but requires a transform to be published and is not as robust
   if (params_.use_external_measured_states) {
     end_effector_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
       "~/end_effector_state",
@@ -95,6 +98,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     }
   }
 
+  // at the moment, the only way to set the current trajectory is via a topic
+  // TODO(evan-palmer): implement an action server to execute trajectories
   trajectory_sub_ = get_node()->create_subscription<auv_control_msgs::msg::EndEffectorTrajectory>(
     "~/trajectory",
     rclcpp::SystemDefaultsQoS(),
@@ -105,7 +110,11 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
       holding_position_.writeFromNonRT(false);
     });
 
-  // TODO(evan-palmer): add controller state
+  controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>(
+    "~/status", rclcpp::SystemDefaultsQoS());
+  rt_controller_state_pub_ =
+    std::make_unique<realtime_tools::RealtimePublisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>>(
+      controller_state_pub_);
 }
 
 auto EndEffectorTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
@@ -122,7 +131,7 @@ auto EndEffectorTrajectoryController::command_interface_configuration() const
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
-  std::ranges::transform(dof_names_, std::back_inserter(config.names), [](const auto & dof) {
+  std::ranges::transform(dofs_, std::back_inserter(config.names), [](const auto & dof) {
     return params_.reference_controller.empty()
              ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
              : std::format("{}/{}/{}", params_.reference_controller, dof, hardware_interface::HW_IF_POSITION)
@@ -144,7 +153,7 @@ auto EndEffectorTrajectoryController::state_interface_configuration() const
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
-  std::ranges::transform(dof_names_, std::back_inserter(config.names), [](const auto & dof) {
+  std::ranges::transform(dofs_, std::back_inserter(config.names), [](const auto & dof) {
     return std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION);
   });
 
@@ -186,6 +195,32 @@ auto EndEffectorTrajectoryController::update_end_effector_state() -> void
   return controller_interface::return_type::OK;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+auto EndEffectorTrajectoryController::publish_controller_state(
+  const geometry_msgs::msg::Pose & reference,
+  const geometry_msgs::msg::Pose & feedback,
+  double error,
+  const geometry_msgs::msg::Pose & output) -> void
+{
+  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
+    rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
+    rt_controller_state_pub_->msg_.reference = reference;
+    rt_controller_state_pub_->msg_.feedback = feedback;
+    rt_controller_state_pub_->msg_.error = error;
+    rt_controller_state_pub_->msg_.output = output;
+    rt_controller_state_pub_->unlockAndPublish();
+  }
+}
+
+auto EndEffectorTrajectoryController::hold_position() -> void
+{
+  holding_position_.writeFromNonRT(true);
+  const geometry_msgs::msg::Pose state = *end_effector_state_.readFromRT();
+  write_command(command_interfaces_, state);
+  const auto reference = common::messages::reset_message(geometry_msgs::msg::Pose());
+  publish_controller_state(reference, state, std::numeric_limits<double>::quiet_NaN(), state);
+}
+
 auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
@@ -196,49 +231,40 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
   configure_parameters();
 
-  // write a pose to the command interfaces
-  auto write_command = [this](const geometry_msgs::msg::Pose & command) {
-    const std::vector<double> vec = common::messages::to_vector(command);
-    for (const auto & [i, dof] : std::views::enumerate(dof_names_)) {
-      if (!command_interfaces_[i].set_value(vec[i])) {
-        RCLCPP_WARN(logger_, "Failed to set command for joint %s", dof.c_str());  // NOLINT
-      }
-    }
-  };
+  const geometry_msgs::msg::Pose & state = *end_effector_state_.readFromRT();
 
-  // helper function used to hold the current end effector pose
-  auto hold_position = [this]() {
-    holding_position_.writeFromNonRT(true);
-    write_command(*end_effector_state_.readFromRT());
-  };
-
-  // wait until a new trajectory is received
+  // continue holding position until a new trajectory is received
   if (*holding_position_.readFromRT()) {
     hold_position();
+    return controller_interface::return_type::OK;
+  }
+
+  // wait until a trajectory is received
+  // the above condition should prevent this from happening, but we add a check just to be safe
+  if (trajectory_.readFromRT() == nullptr) {
+    RCLCPP_DEBUG(logger_, "Skipping controller update. No trajectory received");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
   // set the sample time
   rclcpp::Time sample_time = time;
   if (*first_sample_.readFromRT()) {
-    // this isn't the best way to do this, but there aren't any other options with this tooling:
-    // https://github.com/ros-controls/ros2_controllers/issues/168
-    // https://github.com/ros-controls/realtime_tools/issues/279
     first_sample_.writeFromNonRT(false);
     sample_time += period;
   }
 
-  // we use the current sample to measure errors and the future sample as the setpoint
-  // the future sample should be used to prevent the controller from lagging behind
+  // we use the current sample to measure errors and the future sample as the command
+  // the future sample should be used in order to prevent the controller from lagging
   const auto * t = trajectory_.readFromRT();
   const geometry_msgs::msg::Pose sampled_state = t->sample(sample_time).value_or(geometry_msgs::msg::Pose());
   const auto sampled_command = t->sample(sample_time + update_period_);
 
-  // if we experience an error when sampling the trajectory, handle the error and enter position hold
   if (!sampled_command.has_value()) {
+    // if we experience an error when sampling the trajectory, handle the error and enter position hold
     switch (sampled_command.error()) {
       case SampleError::SAMPLE_TIME_BEFORE_START:
-        RCLCPP_WARN(logger_, "Sample time is before trajectory start time. Waiting for trajectory start");  // NOLINT
+        // NOLINTNEXTLINE
+        RCLCPP_WARN_ONCE(logger_, "Sample time is before trajectory start time. Waiting for trajectory start");
 
         // hold position but don't require a new trajectory
         hold_position();
@@ -248,12 +274,12 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
       case SampleError::SAMPLE_TIME_AFTER_END:
         RCLCPP_DEBUG(logger_, "Sample time is after trajectory end time");  // NOLINT
         if (params_.error_tolerance > 0.0) {
-          const double terminal_error = geodesic_error(t->end_point().value(), *end_effector_state_.readFromRT());
+          const double terminal_error = geodesic_error(t->end_point().value(), end_effector_state);
           if (terminal_error <= params_.error_tolerance) {
             RCLCPP_INFO(logger_, "Successfully executed the trajectory");  // NOLINT
           } else {
             // NOLINTNEXTLINE
-            RCLCPP_WARN(logger_, "Trajectory execution failed - reached trajectory end with error %f", terminal_error);
+            RCLCPP_WARN(logger_, "Trajectory execution failed. Reached trajectory end with error %f", terminal_error);
           }
         }
         // NOLINTNEXTLINE
@@ -270,17 +296,21 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     return controller_interface::return_type::OK;
   }
 
-  const double error = geodesic_error(sampled_state, *end_effector_state_.readFromRT());
-  if (error > params_.error_tolerance) {
-    RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error)  // NOLINT
-    RCLCPP_INFO(logger_, "Holding position until a new trajectory is received")                        // NOLINT
-    hold_position();
-    return controller_interface::return_type::OK;
+  // check to see if the current state is too far from the sampled state
+  const double error = geodesic_error(sampled_state, state);
+  if (params_.error_tolerance > 0.0) {
+    if (error > params_.error_tolerance) {
+      RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error)  // NOLINT
+      RCLCPP_INFO(logger_, "Holding position until a new trajectory is received")                        // NOLINT
+      hold_position();
+      return controller_interface::return_type::OK;
+    }
   }
 
   // we successfully sampled the trajectory
-  const auto & command = result.value();
-  write_command(result.value());
+  const geometry_msgs::msg::Pose command = result.value();
+  write_command(command_interfaces_, command);
+  publish_controller_state(sampled_state, state, error, command);
 
   return controller_interface::return_type::OK;
 }

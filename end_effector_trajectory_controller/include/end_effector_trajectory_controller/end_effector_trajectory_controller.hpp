@@ -20,9 +20,12 @@
 
 #pragma once
 
+#include "auv_control_msgs/msg/end_effector_trajectory_controller_state.hpp"
+#include "controller_common/common.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "end_effector_trajectory_controller/trajectory.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
+#include "realtime_tools/realtime_publisher.hpp"
 #include "tf2/exceptions.h"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -59,6 +62,18 @@ private:
 
   auto update_end_effector_state() -> controller_interface::return_type;
 
+  auto hold_position() -> void;
+
+  auto publish_controller_state(
+    const geometry_msgs::msg::Pose & reference,
+    const geometry_msgs::msg::Pose & feedback,
+    double error,
+    const geometry_msgs::msg::Pose & output) -> void;
+
+  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>>
+    rt_controller_state_pub_;
+
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> end_effector_state_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> end_effector_state_sub_;
 
@@ -74,10 +89,21 @@ private:
   std::shared_ptr<end_effector_trajectory_controller::ParamListener> param_listener_;
   end_effector_trajectory_controller::Params params_;
 
-  std::vector<std::string> dof_names_;
+  std::vector<std::string> dofs_;
   std::size_t n_dofs_;
 
   rclcpp::Logger logger_{rclcpp::Logger("end_effector_trajectory_controller")};
+
+  template <typename T>
+  auto write_command(T & interfaces, const geometry_msgs::msg::Pose & command) -> void
+  {
+    const std::vector<double> vec = common::messages::to_vector(command);
+    for (const auto & [i, dof] : std::views::enumerate(dofs_)) {
+      if (!interfaces[i].set_value(vec[i])) {
+        RCLCPP_WARN(logger_, "Failed to set command for joint %s", dof.c_str());  // NOLINT
+      }
+    }
+  }
 };
 
 }  // namespace end_effector_trajectory_controller
