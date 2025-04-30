@@ -21,6 +21,7 @@
 #include "end_effector_trajectory_controller/trajectory.hpp"
 
 #include <optional>
+#include <ranges>
 
 #include "tf2_eigen/tf2_eigen.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
@@ -38,7 +39,7 @@ auto lerp(double start_pos, double end_pos, double t) -> double { return start_p
 ///
 /// See the following for more information:
 /// https://www.mathworks.com/help/fusion/ref/quaternion.slerp.html
-auto slerp(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & q2, double t) -> Eigen::Quaterniond
+auto slerp(Eigen::Quaterniond q1, Eigen::Quaterniond q2, double t) -> Eigen::Quaterniond
 {
   q1.normalize();
   q2.normalize();
@@ -77,7 +78,7 @@ auto interpolate(
   tf2::fromMsg(p2.orientation, q2);
 
   // spherical linear interpolation between the orientations
-  const Eigen::Quaterniond q_out = slerp(q1, q2, time_between_points.seconds(), time_from_start.seconds());
+  const Eigen::Quaterniond q_out = slerp(q1, q2, t);
   out.orientation = tf2::toMsg(q_out);
 
   return out;
@@ -89,34 +90,62 @@ Trajectory::Trajectory(
   const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> & trajectory,
   const geometry_msgs::msg::Pose & start_state)
 : points_(std::move(trajectory)),
-  start_time_(static_cast<rclcpp::Time>(points_->header.stamp)),
-  start_state_(start_state)
+  initial_time_(static_cast<rclcpp::Time>(points_->header.stamp)),
+  initial_state_(start_state)
 {
+}
+
+auto Trajectory::empty() -> bool { return points_->points.empty(); }
+
+auto Trajectory::start_time() -> rclcpp::Time
+{
+  return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.front().time_from_start;
+}
+
+auto Trajectory::end_time() -> rclcpp::Time
+{
+  return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.back().time_from_start;
+}
+
+auto Trajectory::start_point() -> std::optional<geometry_msgs::msg::Pose>
+{
+  if (empty()) {
+    return std::nullopt;
+  }
+  return points_->points.front().point;
+}
+
+auto Trajectory::end_point() -> std::optional<geometry_msgs::msg::Pose>
+{
+  if (empty()) {
+    return std::nullopt;
+  }
+  return points_->points.back().point;
 }
 
 auto Trajectory::sample(const rclcpp::Time & sample_time) -> std::expected<geometry_msgs::msg::Pose, SampleError>
 {
-  if (trajectory_->points.empty()) {
+  if (empty()) {
     return std::unexpected(SampleError::EMPTY_TRAJECTORY);
   }
 
-  if (sample_time < start_time_) {
+  // the sample time is before the timestamp in the trajectory header
+  if (sample_time < initial_time_) {
     return std::unexpected(SampleError::SAMPLE_TIME_BEFORE_START);
   }
 
   // the sample time is before the first point in the trajectory, so we need to interpolate between the starting
   // state and the first point in the trajectory
-  if (sample_time < (start_time_ + points_->points.front().time_from_start)) {
-    const rclcpp::Duration t1 = start_time_ + points_->points.front().time_from_start;
-    return interpolate(start_state_, points_->points.front(), start_time_, t1, sample_time);
+  if (sample_time < (start_time())) {
+    return interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
   }
 
-  for (const auto [p1, p2] : std::views::zip(trajectory_->points, trajectory_->points | std::views::drop(1))) {
-    const rclcpp::Time t0 = start_time_ + p1.time_from_start;
-    const rclcpp::Time t1 = start_time_ + p2.time_from_start;
+  for (const auto [p1, p2] : std::views::zip(points_->points, points_->points | std::views::drop(1))) {
+    const rclcpp::Time t0 = initial_time_ + p1.time_from_start;
+    const rclcpp::Time t1 = initial_time_ + p2.time_from_start;
 
     if (sample_time >= t0 && sample_time <= t1) {
-      return interpolate(p1, p2, t0, t1, sample_time);
+      return interpolate(p1.point, p2.point, t0, t1, sample_time);
     }
   }
 

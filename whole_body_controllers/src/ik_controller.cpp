@@ -37,7 +37,7 @@ namespace whole_body_controllers
 namespace
 {
 
-auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
+auto to_eigen(const std::vector<double> & vec) -> Eigen::Isometry3d
 {
   if (vec.size() != 7) {
     throw std::invalid_argument("Invalid size for pose vector");
@@ -411,7 +411,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   configure_parameters();
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
-  const Eigen::Affine3d goal = to_eigen(reference_interfaces_);
+  const Eigen::Isometry3d goal = to_eigen(reference_interfaces_);
 
   // TODO(anyone): add solver support for velocity states
   // right now we only use the positions for the solver

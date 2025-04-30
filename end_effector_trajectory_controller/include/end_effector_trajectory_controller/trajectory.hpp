@@ -23,6 +23,7 @@
 #include <Eigen/Dense>
 #include <chrono>
 #include <expected>
+#include <optional>
 
 #include "auv_control_msgs/msg/end_effector_trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
@@ -41,17 +42,35 @@ enum class SampleError : std::uint8_t
 class Trajectory
 {
 public:
+  Trajectory() = default;
+
+  /// Constructor.
   Trajectory(
     const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> & trajectory,
     const geometry_msgs::msg::Pose & start_state);
 
+  /// Whether or not the trajectory is empty.
+  auto empty() -> bool;
+
+  /// Get the starting time of the trajectory.
+  auto start_time() -> rclcpp::Time;
+
+  /// Get the ending time of the trajectory.
+  auto end_time() -> rclcpp::Time;
+
+  /// Get the first point in the trajectory.
+  auto start_point() -> std::optional<geometry_msgs::msg::Pose>;
+
+  /// Get the last point in the trajectory.
+  auto end_point() -> std::optional<geometry_msgs::msg::Pose>;
+
+  /// Sample a point in the trajectory at the given time.
   auto sample(const rclcpp::Time & sample_time) -> std::expected<geometry_msgs::msg::Pose, SampleError>;
 
 private:
   std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> points_;
-
-  rclcpp::Time start_time_;
-  geometry_msgs::msg::Pose start_state_;
+  rclcpp::Time initial_time_;
+  geometry_msgs::msg::Pose initial_state_;
 };
 
 }  // namespace end_effector_trajectory_controller

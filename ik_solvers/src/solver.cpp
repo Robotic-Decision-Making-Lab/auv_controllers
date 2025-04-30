@@ -44,7 +44,7 @@ auto IKSolver::update_pinocchio(const Eigen::VectorXd & q) const -> void
   pinocchio::computeJointJacobians(*model_, *data_);
 }
 
-auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Isometry3d & goal, const Eigen::VectorXd & q)
   -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>
 {
   // update the pinocchio data and model to use the current joint configuration
