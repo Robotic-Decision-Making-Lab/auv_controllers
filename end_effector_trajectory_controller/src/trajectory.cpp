@@ -87,24 +87,24 @@ auto interpolate(
 }  // namespace
 
 Trajectory::Trajectory(
-  const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> & trajectory,
-  const geometry_msgs::msg::Pose & start_state)
+  const auv_control_msgs::msg::EndEffectorTrajectory & trajectory,
+  const geometry_msgs::msg::Pose & state)
 : points_(std::move(trajectory)),
-  initial_time_(static_cast<rclcpp::Time>(points_->header.stamp)),
-  initial_state_(start_state)
+  initial_time_(static_cast<rclcpp::Time>(trajectory.header.stamp)),
+  initial_state_(state)
 {
 }
 
-auto Trajectory::empty() const -> bool { return points_->points.empty(); }
+auto Trajectory::empty() const -> bool { return points_.points.empty(); }
 
 auto Trajectory::start_time() const -> rclcpp::Time
 {
-  return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.front().time_from_start;
+  return empty() ? rclcpp::Time(0) : initial_time_ + points_.points.front().time_from_start;
 }
 
 auto Trajectory::end_time() const -> rclcpp::Time
 {
-  return empty() ? rclcpp::Time(0) : initial_time_ + points_->points.back().time_from_start;
+  return empty() ? rclcpp::Time(0) : initial_time_ + points_.points.back().time_from_start;
 }
 
 auto Trajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
@@ -112,7 +112,7 @@ auto Trajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
   if (empty()) {
     return std::nullopt;
   }
-  return points_->points.front().point;
+  return points_.points.front().point;
 }
 
 auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
@@ -120,10 +120,10 @@ auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
   if (empty()) {
     return std::nullopt;
   }
-  return points_->points.back().point;
+  return points_.points.back().point;
 }
 
-auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>
+auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<SampleSolution, SampleError>
 {
   if (empty()) {
     return std::unexpected(SampleError::EMPTY_TRAJECTORY);
@@ -136,21 +136,25 @@ auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected
 
   // the sample time is before the first point in the trajectory, so we need to interpolate between the starting
   // state and the first point in the trajectory
-  if (sample_time < (start_time())) {
-    return interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
+  if (sample_time < start_time()) {
+    const auto sample = interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
+    return std::make_tuple(sample, std::pair(points_.points.front(), points_.points.front()));
   }
 
-  for (const auto [p1, p2] : std::views::zip(points_->points, points_->points | std::views::drop(1))) {
+  for (const auto [p1, p2] : std::views::zip(points_.points, points_.points | std::views::drop(1))) {
     const rclcpp::Time t0 = initial_time_ + p1.time_from_start;
     const rclcpp::Time t1 = initial_time_ + p2.time_from_start;
 
     if (sample_time >= t0 && sample_time <= t1) {
-      return interpolate(p1.point, p2.point, t0, t1, sample_time);
+      const auto sample = interpolate(p1.point, p2.point, t0, t1, sample_time);
+      return std::make_tuple(sample, std::pair(p1, p2));
     }
   }
 
   // the whole trajectory has been sampled
   return std::unexpected(SampleError::SAMPLE_TIME_AFTER_END);
 }
+
+auto Trajectory::reset_initial_state(const geometry_msgs::msg::Pose & state) -> void { initial_state_ = state; }
 
 }  // namespace end_effector_trajectory_controller

@@ -21,6 +21,8 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
 
 generate_parameter_library(end_effector_trajectory_controller_parameters
   src/end_effector_trajectory_controller_parameters.yaml
@@ -50,17 +52,21 @@ target_link_libraries(
         tf2_eigen::tf2_eigen
         tf2::tf2
         controller_interface::controller_interface
+        rclcpp_action::rclcpp_action
         ${geometry_msgs_TARGETS}
         ${auv_control_msgs_TARGETS}
+        ${lifecycle_msgs_TARGETS}
 )
 
 install(
-  TARGETS end_effector_trajectory_controller end_effector_trajectory_controller_parameters
-  EXPORT export_end_effector_trajectory_controller
-  LIBRARY DESTINATION lib/${PROJECT_NAME}
-  ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  RUNTIME DESTINATION bin/${PROJECT_NAME}
-  FILE_SET HEADERS
+    TARGETS
+        end_effector_trajectory_controller
+        end_effector_trajectory_controller_parameters
+    EXPORT export_end_effector_trajectory_controller
+    LIBRARY DESTINATION lib/${PROJECT_NAME}
+    ARCHIVE DESTINATION lib/${PROJECT_NAME}
+    RUNTIME DESTINATION bin/${PROJECT_NAME}
+    FILE_SET HEADERS
 )
 
 ament_export_targets(export_end_effector_trajectory_controller HAS_LIBRARY_TARGET)
@@ -76,6 +82,8 @@ ament_export_dependencies(
   "rclcpp"
   "rclcpp_lifecycle"
   "controller_interface"
+  "rclcpp_action"
+  "lifecycle_msgs"
 )
 
 ament_package()

@@ -9,23 +9,33 @@ end_effector_trajectory_controller:
     validation:
       fixed_size<>: 7 # position + orientation (quaternion)
 
-  error_tolerance:
+  path_tolerance:
     type: double
     default_value: 0.1
-    read_only: false
+    read_only: true
     description: >
-      The maximum error between the end effector pose and the terminal
-      pose in the trajectory at the end of execution.
-
-      If the end effector pose is within this threshold when the trajectory
-      ends, the controller will stop executing the trajectory and enter position
-      hold. If the end effector pose is outside this threshold, the controller
-      will continue executing the trajectory until the end of execution timeout
-      is reached.
+      The maximum error between the end effector pose and the reference
+      pose in the trajectory.
 
       The error threshold is measured in terms of the squared norm of the
       geodesic distance between the end effector pose and the terminal pose in
       the trajectory.
+    validation:
+      gt_eq<>: 0.0
+
+  goal_tolerance:
+    type: double
+    default_value: 0.1
+    read_only: true
+    description: >
+      The maximum error between the end effector pose and the terminal
+      pose in the trajectory at the end of execution.
+
+      The error threshold is measured in terms of the squared norm of the
+      geodesic distance between the end effector pose and the terminal pose in
+      the trajectory.
+    validation:
+      gt_eq<>: 0.0
 
   use_external_measured_states:
     type: bool
@@ -64,7 +74,6 @@ end_effector_trajectory_controller:
       The name of the inertial frame. This is used to lookup the end effector
       pose when using lookup_end_effector_transform.
 
-
   end_effector_frame_id:
     type: string
     default_value: tcp
@@ -72,3 +81,13 @@ end_effector_trajectory_controller:
     description: >
       The name of the end effector frame. This is used to lookup the end
       effector pose when using lookup_end_effector_transform.
+
+  action_monitor_rate:
+    type: int
+    default_value: 20
+    read_only: true
+    description: >
+      The rate (Hz) at which the action server will monitor the trajectory
+      execution.
+    validation:
+      gt<>: 0

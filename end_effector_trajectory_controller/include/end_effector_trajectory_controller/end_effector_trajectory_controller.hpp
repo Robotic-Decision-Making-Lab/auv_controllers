@@ -61,59 +61,69 @@ public:
 
   auto update(const rclcpp::Time & time, const rclcpp::Duration & period) -> controller_interface::return_type override;
 
-private:
+protected:
   auto update_parameters() -> void;
 
   auto configure_parameters() -> controller_interface::CallbackReturn;
 
   auto update_end_effector_state() -> controller_interface::return_type;
 
-  auto hold_position() -> void;
+  auto hold_position(bool continue_hold) -> void;
 
-  auto publish_controller_state(
-    const geometry_msgs::msg::Pose & reference,
-    const geometry_msgs::msg::Pose & feedback,
-    double error,
-    const geometry_msgs::msg::Pose & output) -> void;
+  [[nodiscard]] auto validate_trajectory(auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool;
 
-  // TODO(evan-palmer): add action server callback functions - might be lambdas... we'll see
+  // controller state
+  using ControllerState = auv_control_msgs::msg::EndEffectorTrajectoryControllerState;
+  std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
 
-  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::EndEffectorTrajectoryControllerState>>
-    rt_controller_state_pub_;
-
+  // the end effector states can be captured in one of three ways:
+  // 1. using the topic interface - when available, this is preferred over the tf2 interface
+  // 2. using the state interfaces - this is the default, but often not available
+  // 3. using tf2 - this is the most common interface, but requires a transform to be published and is not as robust
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> end_effector_state_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> end_effector_state_sub_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
+  // the end effector trajectories can be set using either the topic or action server
+  // the action server is preferred and easier to integrate into state-machines/behavior trees, but can be a bit
+  // cumbersome to interface with. on the other hand, the topic interface is easier to use, but doesn't integrate
+  // well with high-level coordination
   realtime_tools::RealtimeBuffer<Trajectory> rt_trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  // this is psychotic
   using FollowTrajectoryAction = auv_control_msgs::action::FollowEndEffectorTrajectory;
   using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectoryAction>;
   using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
   using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
 
   std::shared_ptr<rclcpp_action::Server<FollowTrajectoryAction>> action_server_;
-  RealtimeGoalHandleBuffer active_goal_;
-  realtime_tools::RealtimeBuffer<bool> rt_has_pending_goal_;
+  RealtimeGoalHandleBuffer rt_active_goal_;
+  realtime_tools::RealtimeBuffer<bool> rt_goal_in_progress_;
   std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
-  rclcpp::Duration action_monitor_period_ = rclcpp::Duration(std::chrono::milliseconds(50));
+  std::chrono::nanoseconds action_monitor_period_ = std::chrono::nanoseconds(50000000);  // 50ms
 
-  realtime_tools::RealtimeBuffer<bool> rt_first_sample_, rt_holding_position_;
+  realtime_tools::RealtimeBuffer<bool> rt_first_sample_;      // used to sample the trajectory for the first time
+  realtime_tools::RealtimeBuffer<bool> rt_holding_position_;  // used to hold the current end effector pose
+
+  // the update period is used to sample the "next" trajectory point
   rclcpp::Duration update_period_{0, 0};
 
   std::shared_ptr<end_effector_trajectory_controller::ParamListener> param_listener_;
   end_effector_trajectory_controller::Params params_;
+
+  // error tolerances
+  double default_path_tolerance_, default_goal_tolerance_;
+  realtime_tools::RealtimeBuffer<double> rt_goal_tolerance_, rt_path_tolerance_;
 
   std::vector<std::string> dofs_;
   std::size_t n_dofs_;
 
   rclcpp::Logger logger_{rclcpp::get_logger("end_effector_trajectory_controller")};
 
+private:
   template <typename T>
   auto write_command(T & interfaces, const geometry_msgs::msg::Pose & command) -> void
   {

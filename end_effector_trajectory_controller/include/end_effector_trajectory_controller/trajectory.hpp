@@ -42,10 +42,11 @@ enum class SampleError : std::uint8_t
 class Trajectory
 {
 public:
-  /// Constructor.
-  Trajectory(
-    const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> & trajectory,
-    const geometry_msgs::msg::Pose & start_state);
+  using TrajectoryPoint = auv_control_msgs::msg::EndEffectorTrajectoryPoint;
+  using SampleSolution = std::tuple<geometry_msgs::msg::Pose, std::pair<TrajectoryPoint, TrajectoryPoint>>;
+
+  /// Create a new trajectory given a trajectory message and the initial state.
+  Trajectory(const auv_control_msgs::msg::EndEffectorTrajectory & trajectory, const geometry_msgs::msg::Pose & state);
 
   /// Whether or not the trajectory is empty.
   auto empty() const -> bool;
@@ -63,10 +64,13 @@ public:
   auto end_point() const -> std::optional<geometry_msgs::msg::Pose>;
 
   /// Sample a point in the trajectory at the given time.
-  auto sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>;
+  auto sample(const rclcpp::Time & sample_time) const -> std::expected<SampleSolution, SampleError>;
+
+  /// Reset the initial end effector state and trajectory start time.
+  auto reset_initial_state(const geometry_msgs::msg::Pose & state) -> void;
 
 private:
-  std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> points_;
+  auv_control_msgs::msg::EndEffectorTrajectory points_;
   rclcpp::Time initial_time_;
   geometry_msgs::msg::Pose initial_state_;
 };
