@@ -24,6 +24,7 @@ find_package(Eigen3 REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 generate_parameter_library(end_effector_trajectory_controller_parameters
   src/end_effector_trajectory_controller_parameters.yaml
@@ -32,12 +33,13 @@ generate_parameter_library(end_effector_trajectory_controller_parameters
 add_library(end_effector_trajectory_controller SHARED)
 target_sources(
     end_effector_trajectory_controller
-    PRIVATE src/end_effector_trajectory_controller.cpp
+    PRIVATE src/end_effector_trajectory_controller.cpp src/trajectory.cpp
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
         FILES
             ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/end_effector_trajectory_controller.hpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/trajectory.hpp
 )
 target_compile_features(end_effector_trajectory_controller PUBLIC cxx_std_23)
 target_link_libraries(
@@ -54,6 +56,7 @@ target_link_libraries(
         tf2::tf2
         controller_interface::controller_interface
         rclcpp_action::rclcpp_action
+        tf2_geometry_msgs::tf2_geometry_msgs
         ${geometry_msgs_TARGETS}
         ${auv_control_msgs_TARGETS}
         ${lifecycle_msgs_TARGETS}
@@ -87,6 +90,7 @@ ament_export_dependencies(
   "controller_interface"
   "rclcpp_action"
   "lifecycle_msgs"
+  "tf2_geometry_msgs"
 )
 
 ament_package()
