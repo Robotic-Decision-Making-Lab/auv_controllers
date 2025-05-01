@@ -42,6 +42,8 @@ enum class SampleError : std::uint8_t
 class Trajectory
 {
 public:
+  Trajectory() = default;
+
   /// Create a new trajectory given a trajectory message and the initial state.
   Trajectory(const auv_control_msgs::msg::EndEffectorTrajectory & trajectory, const geometry_msgs::msg::Pose & state);
 
