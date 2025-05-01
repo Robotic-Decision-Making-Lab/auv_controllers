@@ -303,13 +303,11 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   const auto sampled_reference = trajectory->sample(sample_time);
   const auto sampled_command = trajectory->sample(sample_time + update_period_);
 
-  // const geometry_msgs::msg::Pose sampled_state = t->sample(sample_time).value_or(geometry_msgs::msg::Pose());
-  // const auto sampled_command = t->sample(sample_time + update_period_);
-
   if (sampled_command.has_value()) {
-    const auto [command, segment] = sampled_reference.value();
+    const auto [command, segment] = sampled_command.value();
     const auto [start, end] = segment;
 
+    // TODO(evan-palmer): is this going to be used?
     const rclcpp::Time segment_start_time = trajectory->start_time() + start.time_from_start;
     const double time_difference = sample_time.seconds() - segment_start_time.seconds();
 
@@ -340,6 +338,25 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
       rt_controller_state_pub_->msg_.error = error;
       rt_controller_state_pub_->msg_.output = command;
       rt_controller_state_pub_->unlockAndPublish();
+    }
+  } else {
+    switch (sampled_command.error()) {
+      case SampleError::SAMPLE_TIME_BEFORE_START:
+        // hold position without required a new trajectory to be sent
+        hold_position(false);
+        break;
+
+      case SampleError::SAMPLE_TIME_AFTER_END: {
+        const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
+        const double goal_error = geodesic_error(trajectory->end_point().value(), state);
+
+        if (goal_tolerance > 0.0 && goal_error > goal_tolerance) {
+          // TODO(evan-palmer): fix
+        }
+      } break;
+
+      default:
+        break;
     }
   }
 
@@ -393,31 +410,6 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   //   }
   //   return controller_interface::return_type::OK;
   // }
-
-  // check to see if the current state is too far from the sampled state
-  const double error = geodesic_error(sampled_state, state);
-  const double path_tolerance = *rt_path_tolerance_.readFromRT();
-  if (path_tolerance > 0.0) {
-    if (error > path_tolerance) {
-      RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error);  // NOLINT
-      RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");                        // NOLINT
-      hold_position();
-      return controller_interface::return_type::OK;
-    }
-  }
-
-  // we successfully sampled the trajectory
-  const geometry_msgs::msg::Pose command = sampled_command.value();
-  write_command(command_interfaces_, command);
-
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
-    rt_controller_state_pub_->msg_.reference = sampled_state;
-    rt_controller_state_pub_->msg_.feedback = state;
-    rt_controller_state_pub_->msg_.error = error;
-    rt_controller_state_pub_->msg_.output = command;
-    rt_controller_state_pub_->unlockAndPublish();
-  }
 
   return controller_interface::return_type::OK;
 }
