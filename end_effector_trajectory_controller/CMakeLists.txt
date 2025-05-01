@@ -23,6 +23,7 @@ find_package(controller_interface REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
+find_package(pluginlib REQUIRED)
 
 generate_parameter_library(end_effector_trajectory_controller_parameters
   src/end_effector_trajectory_controller_parameters.yaml
@@ -57,6 +58,8 @@ target_link_libraries(
         ${auv_control_msgs_TARGETS}
         ${lifecycle_msgs_TARGETS}
 )
+
+pluginlib_export_plugin_description_file(controller_interface end_effector_trajectory_controller.xml)
 
 install(
     TARGETS
