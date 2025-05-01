@@ -42,9 +42,6 @@ enum class SampleError : std::uint8_t
 class Trajectory
 {
 public:
-  using TrajectoryPoint = auv_control_msgs::msg::EndEffectorTrajectoryPoint;
-  using SampleSolution = std::tuple<geometry_msgs::msg::Pose, std::pair<TrajectoryPoint, TrajectoryPoint>>;
-
   /// Create a new trajectory given a trajectory message and the initial state.
   Trajectory(const auv_control_msgs::msg::EndEffectorTrajectory & trajectory, const geometry_msgs::msg::Pose & state);
 
@@ -64,7 +61,7 @@ public:
   auto end_point() const -> std::optional<geometry_msgs::msg::Pose>;
 
   /// Sample a point in the trajectory at the given time.
-  auto sample(const rclcpp::Time & sample_time) const -> std::expected<SampleSolution, SampleError>;
+  auto sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>;
 
   /// Reset the initial end effector state and trajectory start time.
   auto reset_initial_state(const geometry_msgs::msg::Pose & state) -> void;

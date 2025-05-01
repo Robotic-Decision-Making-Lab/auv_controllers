@@ -80,6 +80,44 @@ auto EndEffectorTrajectoryController::configure_parameters() -> controller_inter
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
+auto EndEffectorTrajectoryController::validate_trajectory(
+  auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool
+{
+  if (trajectory.points.empty()) {
+    RCLCPP_ERROR(logger_, "Received empty trajectory");  // NOLINT
+    return false;
+  }
+
+  for (const auto & point : trajectory.points) {
+    if (common::math::has_nan(common::messages::to_vector(point.point))) {
+      RCLCPP_ERROR(logger_, "Received trajectory point with NaN value");  // NOLINT
+      return false;
+    }
+  }
+
+  const rclcpp::Time start_time = trajectory.header.stamp;
+  if (start_time.seconds() != 0.0) {
+    const rclcpp::Time end_time = start_time + trajectory.points.back().time_from_start;
+    if (end_time < get_node()->now()) {
+      RCLCPP_ERROR(logger_, "Received trajectory with end time in the past");  // NOLINT
+      return false;
+    }
+  } else {
+    trajectory.header.stamp = get_node()->now();
+  }
+
+  for (const auto [p1, p2] : std::views::zip(trajectory.points, trajectory.points | std::views::drop(1))) {
+    const rclcpp::Duration p1_start = p1.time_from_start;
+    const rclcpp::Duration p2_start = p2.time_from_start;
+    if (p1_start >= p2_start) {
+      RCLCPP_ERROR(logger_, "Trajectory points are not in order");  // NOLINT
+      return false;
+    }
+  }
+
+  return true;
+}
+
 auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
@@ -113,6 +151,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
         return;
       }
       rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
+      rt_goal_tolerance_.writeFromNonRT(default_goal_tolerance_);
+      rt_path_tolerance_.writeFromNonRT(default_path_tolerance_);
       rt_first_sample_.writeFromNonRT(true);
       rt_holding_position_.writeFromNonRT(false);
     });
@@ -121,7 +161,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     [this](const rclcpp_action::GoalUUID & /*uuid*/, std::shared_ptr<const FollowTrajectoryAction::Goal> goal) {
       RCLCPP_INFO(logger_, "Received new trajectory goal");  // NOLINT
       if (get_lifecycle_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
-        RCLCPP_ERROR(logger_, "Can't accept new action goals. Controller is not running.");
+        RCLCPP_ERROR(logger_, "Can't accept new action goals. Controller is not running.");  // NOLINT
         return rclcpp_action::GoalResponse::REJECT;
       }
       auto updated_msg = goal->trajectory;  // make a non-const copy
@@ -163,7 +203,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
       rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
     }
 
-    // TODO(evan-palmer): update active tolerances
+    rt_goal_tolerance_.writeFromNonRT(gh->get_goal()->goal_tolerance);
+    rt_path_tolerance_.writeFromNonRT(gh->get_goal()->path_tolerance);
 
     RealtimeGoalHandlePtr rt_gh = std::make_shared<RealtimeGoalHandle>(gh);
     rt_gh->execute();
@@ -281,9 +322,27 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     return controller_interface::return_type::OK;
   }
 
+  const geometry_msgs::msg::Pose & end_effector_state = *end_effector_state_.readFromRT();
+  geometry_msgs::msg::Pose reference_state;
+  common::messages::reset_message(&reference_state);
+  geometry_msgs::msg::Pose command_state = end_effector_state;
+  double error = std::numeric_limits<double>::quiet_NaN();
+
+  auto publish_controller_state = [this, &reference_state, &end_effector_state, &error, &command_state]() {
+    if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
+      rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
+      rt_controller_state_pub_->msg_.reference = reference_state;
+      rt_controller_state_pub_->msg_.feedback = end_effector_state;
+      rt_controller_state_pub_->msg_.error = error;
+      rt_controller_state_pub_->msg_.output = command_state;
+      rt_controller_state_pub_->unlockAndPublish();
+    }
+  };
+
   // hold position until a new trajectory is received
   if (*rt_holding_position_.readFromRT()) {
-    hold_position(true);
+    write_command(command_interfaces_, end_effector_state);
+    publish_controller_state();
     return controller_interface::return_type::OK;
   }
 
@@ -295,182 +354,102 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     sample_time += period;
   }
 
-  const geometry_msgs::msg::Pose & state = *end_effector_state_.readFromRT();
-
   // we use the current sample to measure errors and the future sample as the command
   // the future sample should be used in order to prevent the controller from lagging
   const auto * trajectory = rt_trajectory_.readFromRT();
   const auto sampled_reference = trajectory->sample(sample_time);
   const auto sampled_command = trajectory->sample(sample_time + update_period_);
 
+  // get the reference state and error
+  // the scenarios where this will not have a value are when the reference time is before or after the trajectory
+  if (sampled_reference.has_value()) {
+    reference_state = sampled_reference.value();
+    error = geodesic_error(reference_state, end_effector_state);
+  }
+
+  bool path_tolerance_exceeded = false;
+  bool goal_tolerance_exceeded = false;
+  bool trajectory_suceeded = false;
+
   if (sampled_command.has_value()) {
-    const auto [command, segment] = sampled_command.value();
-    const auto [start, end] = segment;
-
-    // TODO(evan-palmer): is this going to be used?
-    const rclcpp::Time segment_start_time = trajectory->start_time() + start.time_from_start;
-    const double time_difference = sample_time.seconds() - segment_start_time.seconds();
-
-    geometry_msgs::msg::Pose sampled_state;
-    double error = std::numeric_limits<double>::quiet_NaN();
-
-    // check the path tolerance
-    if (sampled_reference.has_value()) {
-      const auto [reference, reference_segment] = sampled_reference.value();
+    command_state = sampled_command.value();
+    if (!std::isnan(error)) {
       const double path_tolerance = *rt_path_tolerance_.readFromRT();
-
-      error = geodesic_error(reference, state);
-      sampled_state = reference;
-
       if (path_tolerance > 0.0 && error > path_tolerance) {
+        path_tolerance_exceeded = true;
+        rt_holding_position_.writeFromNonRT(true);
+        command_state = end_effector_state;
         RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error);  // NOLINT
         RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");                        // NOLINT
-        hold_position(true);
-        return controller_interface::return_type::OK;
       }
-    }
-
-    write_command(command_interfaces_, command);
-    if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-      rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
-      rt_controller_state_pub_->msg_.reference = sampled_state;
-      rt_controller_state_pub_->msg_.feedback = state;
-      rt_controller_state_pub_->msg_.error = error;
-      rt_controller_state_pub_->msg_.output = command;
-      rt_controller_state_pub_->unlockAndPublish();
     }
   } else {
     switch (sampled_command.error()) {
       case SampleError::SAMPLE_TIME_BEFORE_START:
-        // hold position without required a new trajectory to be sent
-        hold_position(false);
+        RCLCPP_INFO_ONCE(logger_, "Trajectory sample time is before trajectory start time");  // NOLINT
+        RCLCPP_INFO_ONCE(logger_, "Holding position until the trajectory starts");            // NOLINT
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        const double goal_error = geodesic_error(trajectory->end_point().value(), state);
+        const double goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
+        RCLCPP_INFO_ONCE(logger_, "Trajectory sample time is after trajectory end time.");  // NOLINT
 
-        if (goal_tolerance > 0.0 && goal_error > goal_tolerance) {
-          // TODO(evan-palmer): fix
+        if (goal_tolerance > 0.0) {
+          if (goal_error > goal_tolerance) {
+            goal_tolerance_exceeded = true;
+            RCLCPP_WARN(logger_, "Aborting trajectory. Terminal error exceeded threshold: %f", goal_error);  // NOLINT
+          } else {
+            trajectory_suceeded = true;
+            RCLCPP_INFO(logger_, "Trajectory execution completed successfully");  // NOLINT
+          }
         }
+        rt_holding_position_.writeFromNonRT(true);
+        RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");  // NOLINT
       } break;
 
       default:
+        // default to position hold
+        rt_holding_position_.writeFromNonRT(true);
         break;
     }
   }
 
-  // if (!sampled_command.has_value()) {
-  //   // if we experience an error when sampling the trajectory, handle the error and enter position hold
-  //   switch (sampled_command.error()) {
-  //     case SampleError::SAMPLE_TIME_BEFORE_START:
-  //       // NOLINTNEXTLINE
-  //       RCLCPP_WARN_ONCE(logger_, "Sample time is before trajectory start time. Waiting for trajectory start");
-  //       // TODO(evan-palmer): write feedback here?
-  //       // hold position but don't require a new trajectory
-  //       hold_position();
-  //       rt_holding_position_.writeFromNonRT(false);
-  //       break;
+  if (active_goal) {
+    // write feedback to the action server
+    auto feedback = std::make_shared<FollowTrajectoryAction::Feedback>();
+    feedback->header.stamp = time;
+    feedback->desired = reference_state;
+    feedback->actual = end_effector_state;
+    feedback->error = error;
+    active_goal->setFeedback(feedback);
 
-  //     case SampleError::SAMPLE_TIME_AFTER_END:
-  //       RCLCPP_DEBUG(logger_, "Sample time is after trajectory end time");  // NOLINT
-  //       {
-  //         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-  //         if (goal_tolerance > 0.0) {
-  //           const double terminal_error = geodesic_error(t->end_point().value(), state);
-  //           if (terminal_error <= goal_tolerance) {
-  //             if (active_goal) {
-  //               auto result = std::make_shared<FollowTrajectoryAction::Result>();
-  //               result->error_code = FollowTrajectoryAction::Result::SUCCESSFUL;
-  //               result->error_string = "Trajectory execution completed successfully";
-  //               active_goal->setSucceeded(result);
-  //               rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
-  //               rt_goal_in_progress_.writeFromNonRT(false);
-  //             }
-  //             RCLCPP_INFO(logger_, "Successfully executed the trajectory");  // NOLINT
-  //           } else {
-  //             if (active_goal) {
-  //               auto result = std::make_shared<FollowTrajectoryAction::Result>();
-  //               result->error_code = FollowTrajectoryAction::Result::GOAL_TOLERANCE_VIOLATED;
-  //               result->error_string = "Trajectory execution completed with end effector pose outside of tolerance";
-  //               active_goal->setAborted(result);
-  //               rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
-  //               rt_goal_in_progress_.writeFromNonRT(false);
-  //             }
-  //             // NOLINTNEXTLINE
-  //             RCLCPP_WARN(logger_, "Trajectory execution failed. Reached trajectory end with error %f",
-  //             terminal_error);
-  //           }
-  //         }
-  //       }
-  //       // NOLINTNEXTLINE
-  //       RCLCPP_INFO(logger_, "Trajectory execution complete. Holding position until a new trajectory is received");
-  //       hold_position();
-  //       break;
-  //   }
-  //   return controller_interface::return_type::OK;
-  // }
+    // check terminal conditions
+    if (goal_tolerance_exceeded) {
+      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
+      action_result->error_code = FollowTrajectoryAction::Result::PATH_TOLERANCE_VIOLATED;
+      action_result->error_string = "Trajectory execution aborted. Goal tolerance exceeded.";
+      active_goal->setAborted(action_result);
+      rt_holding_position_.writeFromNonRT(true);
+    } else if (trajectory_suceeded) {
+      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
+      action_result->error_code = FollowTrajectoryAction::Result::SUCCESSFUL;
+      action_result->error_string = "Trajectory execution completed successfully!";
+      active_goal->setSucceeded(action_result);
+      rt_holding_position_.writeFromNonRT(true);
+    } else if (path_tolerance_exceeded) {
+      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
+      action_result->error_code = FollowTrajectoryAction::Result::PATH_TOLERANCE_VIOLATED;
+      action_result->error_string = "Trajectory execution aborted. Path tolerance exceeded.";
+      active_goal->setAborted(action_result);
+      rt_holding_position_.writeFromNonRT(true);
+    }
+  }
+
+  write_command(command_interfaces_, command_state);
+  publish_controller_state();
 
   return controller_interface::return_type::OK;
-}
-
-auto EndEffectorTrajectoryController::hold_position(bool continue_hold) -> void
-{
-  // this is called only after the end effector state has been updated and validated, so we can assume that the state
-  // command will be valid
-  rt_holding_position_.writeFromNonRT(continue_hold);
-  const geometry_msgs::msg::Pose state = *end_effector_state_.readFromRT();
-  write_command(command_interfaces_, state);
-  geometry_msgs::msg::Pose reference;
-  common::messages::reset_message(&reference);
-
-  // publish the controller state here so that we don't have to do it every time this is called in the update function
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
-    rt_controller_state_pub_->msg_.reference = reference;
-    rt_controller_state_pub_->msg_.feedback = state;
-    rt_controller_state_pub_->msg_.error = std::numeric_limits<double>::quiet_NaN();
-    rt_controller_state_pub_->msg_.output = state;
-    rt_controller_state_pub_->unlockAndPublish();
-  }
-}
-
-auto EndEffectorTrajectoryController::validate_trajectory(
-  auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool
-{
-  if (trajectory.points.empty()) {
-    RCLCPP_ERROR(logger_, "Received empty trajectory");  // NOLINT
-    return false;
-  }
-
-  for (const auto & point : trajectory.points) {
-    if (common::math::has_nan(common::messages::to_vector(point.point))) {
-      RCLCPP_ERROR(logger_, "Received trajectory point with NaN value");  // NOLINT
-      return false;
-    }
-  }
-
-  const rclcpp::Time start_time = trajectory.header.stamp;
-  if (start_time.seconds() != 0.0) {
-    const rclcpp::Time end_time = start_time + trajectory.points.back().time_from_start;
-    if (end_time < get_node()->now()) {
-      RCLCPP_ERROR(logger_, "Received trajectory with end time in the past");  // NOLINT
-      return false;
-    }
-  } else {
-    trajectory.header.stamp = get_node()->now();
-  }
-
-  for (const auto [p1, p2] : std::views::zip(trajectory.points, trajectory.points | std::views::drop(1))) {
-    const rclcpp::Duration p1_start = p1.time_from_start;
-    const rclcpp::Duration p2_start = p2.time_from_start;
-    if (p1_start >= p2_start) {
-      RCLCPP_ERROR(logger_, "Trajectory points are not in order");  // NOLINT
-      return false;
-    }
-  }
-
-  return true;
 }
 
 }  // namespace end_effector_trajectory_controller

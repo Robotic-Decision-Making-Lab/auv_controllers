@@ -123,7 +123,7 @@ auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
   return points_.points.back().point;
 }
 
-auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<SampleSolution, SampleError>
+auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>
 {
   if (empty()) {
     return std::unexpected(SampleError::EMPTY_TRAJECTORY);
@@ -137,8 +137,7 @@ auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected
   // the sample time is before the first point in the trajectory, so we need to interpolate between the starting
   // state and the first point in the trajectory
   if (sample_time < start_time()) {
-    const auto sample = interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
-    return std::make_tuple(sample, std::pair(points_.points.front(), points_.points.front()));
+    return interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
   }
 
   for (const auto [p1, p2] : std::views::zip(points_.points, points_.points | std::views::drop(1))) {
@@ -146,8 +145,7 @@ auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected
     const rclcpp::Time t1 = initial_time_ + p2.time_from_start;
 
     if (sample_time >= t0 && sample_time <= t1) {
-      const auto sample = interpolate(p1.point, p2.point, t0, t1, sample_time);
-      return std::make_tuple(sample, std::pair(p1, p2));
+      return interpolate(p1.point, p2.point, t0, t1, sample_time);
     }
   }
 

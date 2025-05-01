@@ -68,8 +68,6 @@ protected:
 
   auto update_end_effector_state() -> controller_interface::return_type;
 
-  auto hold_position(bool continue_hold) -> void;
-
   [[nodiscard]] auto validate_trajectory(auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool;
 
   // controller state
