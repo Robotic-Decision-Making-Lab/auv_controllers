@@ -453,3 +453,8 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 }
 
 }  // namespace end_effector_trajectory_controller
+
+#include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(
+  end_effector_trajectory_controller::EndEffectorTrajectoryController,
+  controller_interface::ControllerInterface)
