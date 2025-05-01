@@ -1,6 +1,6 @@
 <library path="end_effector_trajectory_controller">
   <class name="end_effector_trajectory_controller/EndEffectorTrajectoryController"
-         type="velocity_controllers::EndEffectorTrajectoryController"
+         type="end_effector_trajectory_controller::EndEffectorTrajectoryController"
          base_class_type="controller_interface::ControllerInterface">
     <description>
       End effector trajectory controller for UVMS whole-body control
