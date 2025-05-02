@@ -27,6 +27,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
+#include "tf2_eigen/tf2_eigen.hpp"
 
 namespace end_effector_trajectory_controller
 {
@@ -364,7 +365,12 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   // the scenarios where this will not have a value are when the reference time is before or after the trajectory
   if (sampled_reference.has_value()) {
     reference_state = sampled_reference.value();
-    error = geodesic_error(reference_state, end_effector_state);
+    try {
+      error = geodesic_error(reference_state, end_effector_state);
+    }
+    catch (const std::exception & e) {
+      RCLCPP_ERROR(logger_, "Error calculating geodesic distance: %s", e.what());  // NOLINT
+    }
   }
 
   bool path_tolerance_exceeded = false;
@@ -392,9 +398,14 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        const double goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
+        double goal_error = std::numeric_limits<double>::quiet_NaN();
+        try {
+          goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
+        }
+        catch (const std::exception & e) {
+          RCLCPP_ERROR(logger_, "Error calculating terminal geodesic distance: %s", e.what());  // NOLINT
+        }
         RCLCPP_INFO_ONCE(logger_, "Trajectory sample time is after trajectory end time.");  // NOLINT
-
         if (goal_tolerance > 0.0) {
           if (goal_error > goal_tolerance) {
             goal_tolerance_exceeded = true;
