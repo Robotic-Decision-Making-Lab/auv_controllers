@@ -150,6 +150,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
         RCLCPP_ERROR(logger_, "Ignoring invalid trajectory message");  // NOLINT
         return;
       }
+      RCLCPP_INFO(logger_, "Received new trajectory message");  // NOLINT
       rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
       rt_goal_tolerance_.writeFromNonRT(default_goal_tolerance_);
       rt_path_tolerance_.writeFromNonRT(default_path_tolerance_);
@@ -273,16 +274,15 @@ auto EndEffectorTrajectoryController::update_end_effector_state() -> controller_
     const auto to_frame = params_.end_effector_frame_id;
     const auto from_frame = params_.odom_frame_id;
     try {
-      const auto t = tf_buffer_->lookupTransform(to_frame, from_frame, tf2::TimePointZero);
-
+      const auto transform = tf_buffer_->lookupTransform(from_frame, to_frame, tf2::TimePointZero);
       auto * pose = end_effector_state_.readFromNonRT();
-      pose->position.x = t.transform.translation.x;
-      pose->position.y = t.transform.translation.y;
-      pose->position.z = t.transform.translation.z;
-      pose->orientation = t.transform.rotation;
+      pose->position.x = transform.transform.translation.x;
+      pose->position.y = transform.transform.translation.y;
+      pose->position.z = transform.transform.translation.z;
+      pose->orientation = transform.transform.rotation;
     }
     catch (const tf2::TransformException & ex) {
-      const auto err = std::format("Failed to get transform from {} to {}: {}", to_frame, from_frame, ex.what());
+      const auto err = std::format("Failed to get transform from {} to {}: {}", from_frame, to_frame, ex.what());
       RCLCPP_DEBUG(logger_, err.c_str());  // NOLINT
       return controller_interface::return_type::ERROR;
     }
