@@ -23,6 +23,7 @@
 #include <optional>
 #include <ranges>
 
+#include "controller_common/common.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
@@ -33,7 +34,7 @@ namespace
 {
 
 /// Linear interpolation between two positions.
-auto lerp(double start_pos, double end_pos, double t) -> double { return start_pos + ((end_pos - start_pos) * t); }
+auto lerp(double start_pos, double end_pos, double t) -> double { return start_pos + t * (end_pos - start_pos); }
 
 /// Spherical linear interpolation between two quaternions.
 ///
@@ -41,8 +42,18 @@ auto lerp(double start_pos, double end_pos, double t) -> double { return start_p
 /// https://www.mathworks.com/help/fusion/ref/quaternion.slerp.html
 auto slerp(Eigen::Quaterniond q1, Eigen::Quaterniond q2, double t) -> Eigen::Quaterniond
 {
+  Eigen::Quaterniond result;
+
   q1.normalize();
   q2.normalize();
+
+  // if the quaternions are very close, just linearly interpolate between them to avoid numerical instability
+  const double dot = q1.dot(q2);
+  if (common::math::isclose(dot, 1.0, 1e-5, 5e-5)) {
+    result.coeffs() = q1.coeffs() + t * (q2.coeffs() - q1.coeffs());
+    result.normalize();
+    return result;
+  }
 
   const Eigen::Vector4d q1_vec(q1.w(), q1.x(), q1.y(), q1.z());
   const Eigen::Vector4d q2_vec(q2.w(), q2.x(), q2.y(), q2.z());
@@ -53,7 +64,10 @@ auto slerp(Eigen::Quaterniond q1, Eigen::Quaterniond q2, double t) -> Eigen::Qua
 
   const Eigen::Vector4d q_vec = (coeff0 * q1_vec) + (coeff1 * q2_vec);
 
-  return {q_vec(0), q_vec(1), q_vec(2), q_vec(3)};
+  result.coeffs() = q_vec;
+  result.normalize();
+
+  return result;
 }
 
 auto interpolate(
