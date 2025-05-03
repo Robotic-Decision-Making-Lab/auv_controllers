@@ -107,6 +107,7 @@ auto EndEffectorTrajectoryController::validate_trajectory(
     trajectory.header.stamp = get_node()->now();
   }
 
+  // NOLINTNEXTLINE(readability-use-anyofallof)
   for (const auto [p1, p2] : std::views::zip(trajectory.points, trajectory.points | std::views::drop(1))) {
     const rclcpp::Duration p1_start = p1.time_from_start;
     const rclcpp::Duration p2_start = p2.time_from_start;
@@ -160,8 +161,8 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     });
 
   auto handle_goal =
-    [this](const rclcpp_action::GoalUUID & /*uuid*/, std::shared_ptr<const FollowTrajectoryAction::Goal> goal) {
-      RCLCPP_INFO(logger_, "Received new trajectory goal");  // NOLINT
+    [this](const rclcpp_action::GoalUUID & /*uuid*/, std::shared_ptr<const FollowTrajectory::Goal> goal) {  // NOLINT
+      RCLCPP_INFO(logger_, "Received new trajectory goal");                                                 // NOLINT
       if (get_lifecycle_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
         RCLCPP_ERROR(logger_, "Can't accept new action goals. Controller is not running.");  // NOLINT
         return rclcpp_action::GoalResponse::REJECT;
@@ -178,12 +179,12 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     };
 
-  auto handle_cancel = [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectoryAction>> gh) {
-    RCLCPP_INFO(logger_, "Received cancel action goal");  // NOLINT
+  auto handle_cancel = [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectory>> gh) {  // NOLINT
+    RCLCPP_INFO(logger_, "Received cancel action goal");                                                      // NOLINT
     const auto active_goal = *rt_active_goal_.readFromNonRT();
     if (active_goal && active_goal->gh_ == gh) {
       RCLCPP_INFO(logger_, "Canceling active goal");  // NOLINT
-      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
+      auto action_result = std::make_shared<FollowTrajectory::Result>();
       active_goal->setCanceled(action_result);
       rt_holding_position_.writeFromNonRT(true);
       rt_first_sample_.writeFromNonRT(true);
@@ -192,14 +193,14 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     return rclcpp_action::CancelResponse::ACCEPT;
   };
 
-  auto handle_accepted = [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectoryAction>> gh) {
-    RCLCPP_INFO(logger_, "Received accepted action goal");  // NOLINT
+  auto handle_accepted = [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectory>> gh) {  // NOLINT
+    RCLCPP_INFO(logger_, "Received accepted action goal");                                                // NOLINT
     rt_goal_in_progress_.writeFromNonRT(true);
     const auto active_goal = *rt_active_goal_.readFromNonRT();
     if (active_goal) {
       RCLCPP_INFO(logger_, "Canceling active goal");  // NOLINT
-      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
-      action_result->error_code = FollowTrajectoryAction::Result::INVALID_GOAL;
+      auto action_result = std::make_shared<FollowTrajectory::Result>();
+      action_result->error_code = FollowTrajectory::Result::INVALID_GOAL;
       action_result->error_string = "Current goal cancelled by a new incoming action.";
       active_goal->setCanceled(action_result);
       rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
@@ -208,7 +209,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     rt_goal_tolerance_.writeFromNonRT(gh->get_goal()->goal_tolerance);
     rt_path_tolerance_.writeFromNonRT(gh->get_goal()->path_tolerance);
 
-    RealtimeGoalHandlePtr rt_gh = std::make_shared<RealtimeGoalHandle>(gh);
+    const RealtimeGoalHandlePtr rt_gh = std::make_shared<RealtimeGoalHandle>(gh);
     rt_gh->execute();
     rt_active_goal_.writeFromNonRT(rt_gh);
 
@@ -392,7 +393,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        double goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
+        const double goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
         RCLCPP_INFO(logger_, "Trajectory sample time is after trajectory end time.");  // NOLINT
         if (goal_tolerance > 0.0) {
           if (goal_error > goal_tolerance) {
@@ -416,7 +417,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
   if (active_goal) {
     // write feedback to the action server
-    auto feedback = std::make_shared<FollowTrajectoryAction::Feedback>();
+    auto feedback = std::make_shared<FollowTrajectory::Feedback>();
     feedback->header.stamp = time;
     feedback->desired = reference_state;
     feedback->actual = end_effector_state;
@@ -425,20 +426,20 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
     // check terminal conditions
     if (goal_tolerance_exceeded) {
-      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
-      action_result->error_code = FollowTrajectoryAction::Result::PATH_TOLERANCE_VIOLATED;
+      auto action_result = std::make_shared<FollowTrajectory::Result>();
+      action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
       action_result->error_string = "Trajectory execution aborted. Goal tolerance exceeded.";
       active_goal->setAborted(action_result);
       rt_holding_position_.writeFromNonRT(true);
     } else if (trajectory_suceeded) {
-      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
-      action_result->error_code = FollowTrajectoryAction::Result::SUCCESSFUL;
+      auto action_result = std::make_shared<FollowTrajectory::Result>();
+      action_result->error_code = FollowTrajectory::Result::SUCCESSFUL;
       action_result->error_string = "Trajectory execution completed successfully!";
       active_goal->setSucceeded(action_result);
       rt_holding_position_.writeFromNonRT(true);
     } else if (path_tolerance_exceeded) {
-      auto action_result = std::make_shared<FollowTrajectoryAction::Result>();
-      action_result->error_code = FollowTrajectoryAction::Result::PATH_TOLERANCE_VIOLATED;
+      auto action_result = std::make_shared<FollowTrajectory::Result>();
+      action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
       action_result->error_string = "Trajectory execution aborted. Path tolerance exceeded.";
       active_goal->setAborted(action_result);
       rt_holding_position_.writeFromNonRT(true);

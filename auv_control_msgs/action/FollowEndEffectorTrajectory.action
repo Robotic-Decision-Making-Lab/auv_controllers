@@ -1,7 +1,16 @@
+# The end effector trajectory to follow.
+#
+# The trajectory header stamp is used to set the trajectory start time. This can be
+# set to zero to indicate that the controller should start following the trajectory
+# now.
 auv_control_msgs/EndEffectorTrajectory trajectory
 
+# The maximum error that the controller is allowed when following the trajectory.
+# When this is set to 0, the tolerance will not be applied during control.
 float64 path_tolerance
 
+# The maximum terminal error that the controller is allowed.
+# When this is set to 0, the tolerance will not affect the success of the action.
 float64 goal_tolerance
 
 ---
@@ -12,10 +21,20 @@ int32 OLD_HEADER_TIMESTAMP = -2
 int32 PATH_TOLERANCE_VIOLATED = -3
 int32 GOAL_TOLERANCE_VIOLATED = -4
 
+# A human-readable error description.
 string error_string
 
 ---
 std_msgs/Header header
+
+# The reference pose for the controller at the current time instance.
+# This is distinct from the sample, which is retrieved at the next time
+# instance.
 geometry_msgs/Pose desired
+
+# The current end effector state.
 geometry_msgs/Pose actual
+
+# The squared Euclidean norm of the geodesic distance between the desired
+# and actual states.
 float64 error

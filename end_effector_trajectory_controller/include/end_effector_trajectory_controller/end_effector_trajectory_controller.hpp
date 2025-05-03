@@ -88,16 +88,16 @@ protected:
   // the end effector trajectories can be set using either the topic or action server
   // the action server is preferred and easier to integrate into state-machines/behavior trees, but can be a bit
   // cumbersome to interface with. on the other hand, the topic interface is easier to use, but doesn't integrate
-  // well with high-level coordination
+  // well with high-level coordinators
   realtime_tools::RealtimeBuffer<Trajectory> rt_trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  using FollowTrajectoryAction = auv_control_msgs::action::FollowEndEffectorTrajectory;
-  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectoryAction>;
+  using FollowTrajectory = auv_control_msgs::action::FollowEndEffectorTrajectory;
+  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectory>;
   using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
   using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
 
-  std::shared_ptr<rclcpp_action::Server<FollowTrajectoryAction>> action_server_;
+  std::shared_ptr<rclcpp_action::Server<FollowTrajectory>> action_server_;
   RealtimeGoalHandleBuffer rt_active_goal_;
   realtime_tools::RealtimeBuffer<bool> rt_goal_in_progress_;
   std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
@@ -113,6 +113,8 @@ protected:
   end_effector_trajectory_controller::Params params_;
 
   // error tolerances
+  // the default tolerances are extracted from the parameters and applied when the action interface is not used
+  // if the action interface is being used, then the tolerances set in the goal are applied
   double default_path_tolerance_, default_goal_tolerance_;
   realtime_tools::RealtimeBuffer<double> rt_goal_tolerance_, rt_path_tolerance_;
 

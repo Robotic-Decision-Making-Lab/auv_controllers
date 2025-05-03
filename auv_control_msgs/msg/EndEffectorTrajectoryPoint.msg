@@ -1,5 +1,5 @@
 # The sequence of end effector poses.
 geometry_msgs/Pose point
 
-# The duration of the trajectory.
+# The time that this point should be reached, measured from the start of the trajectory.
 builtin_interfaces/Duration time_from_start

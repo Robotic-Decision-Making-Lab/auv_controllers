@@ -96,7 +96,7 @@ auto interpolate(
 Trajectory::Trajectory(
   const auv_control_msgs::msg::EndEffectorTrajectory & trajectory,
   const geometry_msgs::msg::Pose & state)
-: points_(std::move(trajectory)),
+: points_(trajectory),
   initial_time_(static_cast<rclcpp::Time>(trajectory.header.stamp)),
   initial_state_(state)
 {
