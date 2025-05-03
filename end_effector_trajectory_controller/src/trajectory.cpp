@@ -34,45 +34,38 @@ namespace
 {
 
 /// Linear interpolation between two positions.
-auto lerp(double start_pos, double end_pos, double t) -> double { return start_pos + t * (end_pos - start_pos); }
+auto lerp(double start, double end, double t) -> double { return start + (t * (end - start)); }
 
 /// Spherical linear interpolation between two quaternions.
 ///
 /// See the following for more information:
 /// https://www.mathworks.com/help/fusion/ref/quaternion.slerp.html
-auto slerp(Eigen::Quaterniond q1, Eigen::Quaterniond q2, double t) -> Eigen::Quaterniond
+auto slerp(Eigen::Quaterniond start, Eigen::Quaterniond end, double t) -> Eigen::Quaterniond
 {
   Eigen::Quaterniond result;
 
-  q1.normalize();
-  q2.normalize();
+  start.normalize();
+  end.normalize();
 
-  // if the quaternions are very close, just linearly interpolate between them to avoid numerical instability
-  const double dot = q1.dot(q2);
+  const double dot = start.dot(end);
   if (common::math::isclose(dot, 1.0, 1e-5, 5e-5)) {
-    result.coeffs() = q1.coeffs() + t * (q2.coeffs() - q1.coeffs());
-    result.normalize();
-    return result;
+    // if the quaternions are very close, just linearly interpolate between them to avoid numerical instability
+    result.coeffs() = start.coeffs() + t * (end.coeffs() - start.coeffs());
+  } else {
+    // otherwise, use spherical linear interpolation
+    const double theta = std::acos(dot);
+    const double coeff0 = std::sin((1 - t) * theta) / std::sin(theta);
+    const double coeff1 = std::sin(t * theta) / std::sin(theta);
+    result.coeffs() = (coeff0 * start.coeffs()) + (coeff1 * end.coeffs());
   }
 
-  const Eigen::Vector4d q1_vec(q1.w(), q1.x(), q1.y(), q1.z());
-  const Eigen::Vector4d q2_vec(q2.w(), q2.x(), q2.y(), q2.z());
-
-  const double theta = std::acos(q1.dot(q2));
-  const double coeff0 = std::sin((1 - t) * theta) / std::sin(theta);
-  const double coeff1 = std::sin(t * theta) / std::sin(theta);
-
-  const Eigen::Vector4d q_vec = (coeff0 * q1_vec) + (coeff1 * q2_vec);
-
-  result.coeffs() = q_vec;
   result.normalize();
-
   return result;
 }
 
 auto interpolate(
-  const geometry_msgs::msg::Pose & p1,
-  const geometry_msgs::msg::Pose & p2,
+  const geometry_msgs::msg::Pose & start,
+  const geometry_msgs::msg::Pose & end,
   const rclcpp::Time & t0,
   const rclcpp::Time & t1,
   const rclcpp::Time & sample_time) -> geometry_msgs::msg::Pose
@@ -83,13 +76,13 @@ auto interpolate(
 
   // linearly interpolate between the positions
   geometry_msgs::msg::Pose out;
-  out.position.x = lerp(p1.position.x, p2.position.x, t);
-  out.position.y = lerp(p1.position.y, p2.position.y, t);
-  out.position.z = lerp(p1.position.z, p2.position.z, t);
+  out.position.x = lerp(start.position.x, end.position.x, t);
+  out.position.y = lerp(start.position.y, end.position.y, t);
+  out.position.z = lerp(start.position.z, end.position.z, t);
 
   Eigen::Quaterniond q1, q2;  // NOLINT
-  tf2::fromMsg(p1.orientation, q1);
-  tf2::fromMsg(p2.orientation, q2);
+  tf2::fromMsg(start.orientation, q1);
+  tf2::fromMsg(end.orientation, q2);
 
   // spherical linear interpolation between the orientations
   const Eigen::Quaterniond q_out = slerp(q1, q2, t);
