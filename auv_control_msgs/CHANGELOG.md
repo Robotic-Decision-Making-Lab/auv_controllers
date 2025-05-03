@@ -1,6 +1,6 @@
 # Changelog for package auv_control_msgs
 
-## 0.2.0 (2025-04-28)
+## 0.2.0 (2025-05-03)
 
 - Implements the EndEffectorTrajectory message
 - Implements the EndEffectorTrajectoryPoint message

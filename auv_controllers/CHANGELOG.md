@@ -1,6 +1,6 @@
 # Changelog for package auv_controllers
 
-## 0.2.0 (??)
+## 0.2.0 (2025-05-03)
 
 - Adds the end effector trajectory controller
 
