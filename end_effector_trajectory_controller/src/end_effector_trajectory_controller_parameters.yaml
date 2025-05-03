@@ -11,7 +11,7 @@ end_effector_trajectory_controller:
 
   path_tolerance:
     type: double
-    default_value: 0.1
+    default_value: 0.0
     read_only: true
     description: >
       The maximum error between the end effector pose and the reference
@@ -25,7 +25,7 @@ end_effector_trajectory_controller:
 
   goal_tolerance:
     type: double
-    default_value: 0.1
+    default_value: 0.0
     read_only: true
     description: >
       The maximum error between the end effector pose and the terminal
