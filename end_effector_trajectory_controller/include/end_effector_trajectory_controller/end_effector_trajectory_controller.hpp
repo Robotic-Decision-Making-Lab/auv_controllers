@@ -68,7 +68,7 @@ protected:
 
   auto update_end_effector_state() -> controller_interface::return_type;
 
-  [[nodiscard]] auto validate_trajectory(auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool;
+  [[nodiscard]] auto validate_trajectory(const auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool;
 
   // controller state
   using ControllerState = auv_control_msgs::msg::EndEffectorTrajectoryControllerState;
@@ -92,12 +92,12 @@ protected:
   realtime_tools::RealtimeBuffer<Trajectory> rt_trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  using FollowTrajectory = auv_control_msgs::action::FollowEndEffectorTrajectory;
-  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectory>;
+  using FollowTrajectoryAction = auv_control_msgs::action::FollowEndEffectorTrajectory;
+  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectoryAction>;
   using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
   using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
 
-  std::shared_ptr<rclcpp_action::Server<FollowTrajectory>> action_server_;
+  std::shared_ptr<rclcpp_action::Server<FollowTrajectoryAction>> action_server_;
   RealtimeGoalHandleBuffer rt_active_goal_;
   realtime_tools::RealtimeBuffer<bool> rt_goal_in_progress_;
   std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
