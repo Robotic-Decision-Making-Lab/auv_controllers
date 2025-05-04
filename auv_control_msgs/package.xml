@@ -2,7 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>auv_control_msgs</name>
+<<<<<<< HEAD
   <version>0.0.1</version>
+=======
+  <version>0.2.0</version>
+>>>>>>> d197fc7 (Port end effector trajectory controller from Angler (#54))
   <description>Custom messages for AUV controllers</description>
 
   <maintainer email="rakeshvivek97@gmail.com">Rakesh Vivekanandan</maintainer>
