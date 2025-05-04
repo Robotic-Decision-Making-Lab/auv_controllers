@@ -92,12 +92,12 @@ protected:
   realtime_tools::RealtimeBuffer<Trajectory> rt_trajectory_;
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::EndEffectorTrajectory>> trajectory_sub_;
 
-  using FollowTrajectoryAction = auv_control_msgs::action::FollowEndEffectorTrajectory;
-  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectoryAction>;
+  using FollowTrajectory = auv_control_msgs::action::FollowEndEffectorTrajectory;
+  using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectory>;
   using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
   using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
 
-  std::shared_ptr<rclcpp_action::Server<FollowTrajectoryAction>> action_server_;
+  std::shared_ptr<rclcpp_action::Server<FollowTrajectory>> action_server_;
   RealtimeGoalHandleBuffer rt_active_goal_;
   realtime_tools::RealtimeBuffer<bool> rt_goal_in_progress_;
   std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
