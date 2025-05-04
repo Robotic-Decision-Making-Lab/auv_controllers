@@ -57,6 +57,7 @@ target_link_libraries(
         tf2_eigen::tf2_eigen
         message_transforms::message_transforms
         controller_common::controller_common
+        Eigen3::Eigen
         ${geometry_msgs_TARGETS}
         ${nav_msgs_TARGETS}
         ${std_msgs_TARGETS}
@@ -92,6 +93,7 @@ ament_export_dependencies(
     "controller_common"
     "ik_solvers"
     "auv_control_msgs"
+    "Eigen3"
 )
 
 ament_package()

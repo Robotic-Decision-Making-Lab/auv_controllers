@@ -171,6 +171,11 @@ auto all_nan(const std::vector<double> & vec) -> bool
   return std::ranges::all_of(vec, [](double x) { return std::isnan(x); });
 }
 
+auto isclose(double a, double b, double rtol, double atol) -> bool
+{
+  return std::abs(a - b) <= (atol + rtol * std::abs(b));
+}
+
 }  // namespace math
 
 }  // namespace common

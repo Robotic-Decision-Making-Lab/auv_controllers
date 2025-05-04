@@ -37,7 +37,7 @@ namespace whole_body_controllers
 namespace
 {
 
-auto to_eigen(const std::vector<double> & vec) -> Eigen::Affine3d
+auto to_eigen(const std::vector<double> & vec) -> Eigen::Isometry3d
 {
   if (vec.size() != 7) {
     throw std::invalid_argument("Invalid size for pose vector");
@@ -319,7 +319,7 @@ auto IKController::update_system_state_values() -> controller_interface::return_
       });
     };
 
-    // retrieve the vehicle  position and velocity state interfaces
+    // retrieve the vehicle position and velocity state interfaces
     const auto position_interfaces_end = state_interfaces_.begin() + free_flyer_pos_dofs_.size();
     const auto velocity_interfaces_start = position_interfaces_end + params_.controlled_joints.size();
     const auto velocity_interfaces_end = velocity_interfaces_start + free_flyer_vel_dofs_.size();
@@ -386,11 +386,27 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   return controller_interface::return_type::OK;
 }
 
+auto IKController::update_chained_reference_values() -> controller_interface::return_type
+{
+  // the reference interfaces in chained mode are parsed directly from the command interfaces
+  //
+  // because the command interfaces expect the commands to be in the maritime coordinate frame standard, we need
+  // this extra method to transform the values into a frame suitable for pinocchio
+  geometry_msgs::msg::Pose reference_transformed;
+  common::messages::to_msg(reference_interfaces_, &reference_transformed);
+  m2m::transform_message(reference_transformed);
+  std::ranges::copy(common::messages::to_vector(reference_transformed), reference_interfaces_.begin());
+  return controller_interface::return_type::OK;
+}
+
 auto IKController::update_and_validate_interfaces() -> controller_interface::return_type
 {
   if (update_system_state_values() != controller_interface::return_type::OK) {
     RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
+  }
+  if (is_in_chained_mode()) {
+    update_chained_reference_values();
   }
   if (common::math::has_nan(reference_interfaces_)) {
     RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
@@ -411,7 +427,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   configure_parameters();
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
-  const Eigen::Affine3d goal = to_eigen(reference_interfaces_);
+  const Eigen::Isometry3d goal = to_eigen(reference_interfaces_);
 
   // TODO(anyone): add solver support for velocity states
   // right now we only use the positions for the solver

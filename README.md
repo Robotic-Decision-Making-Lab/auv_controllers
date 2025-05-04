@@ -1,9 +1,15 @@
 # auv_controllers
 
 auv_controllers is a collection of controllers for autonomous underwater
-vehicles (AUVs) implemented using ros2_control. The controllers have
-been designed to support the complete AUV control hierarchy and to enable
-benchmarking against other commonly-used control algorithms.
+vehicles (AUVs) and underwater vehicle manipulator systems (UVMS) implemented
+using ros2_control. The controllers have been designed to support the complete
+system control hierarchy and to enable benchmarking against other commonly-used
+control algorithms.
+
+<p align="center">
+  <img src="media/uvms.gif" alt="UVMS whole-body control" width="49%" />
+  <img src="media/teleop.gif" alt="AUV control" width="49%" />
+</p>
 
 ## Installation
 
@@ -28,10 +34,11 @@ rosdep update && \
 rosdep install -y --from-paths src --ignore-src
 ```
 
-## Quick start
+## Getting started
 
 To learn more about how to use the controllers provided in this project, please
 refer to the [examples package](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/auv_control_demos).
+You can also find integration tutorials in the [Blue documentation](https://robotic-decision-making-lab.github.io/blue).
 
 ## Getting help
 

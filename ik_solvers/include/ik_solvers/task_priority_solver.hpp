@@ -136,8 +136,8 @@ public:
   PoseConstraint(
     const std::shared_ptr<pinocchio::Model> & model,
     const std::shared_ptr<pinocchio::Data> & data,
-    const Eigen::Affine3d & primal,
-    const Eigen::Affine3d & constraint,
+    const Eigen::Isometry3d & primal,
+    const Eigen::Isometry3d & constraint,
     const std::string & frame,
     double gain,
     int priority = 2);
@@ -218,7 +218,7 @@ public:
     const std::string & prefix) -> void override;
 
 protected:
-  [[nodiscard]] auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+  [[nodiscard]] auto solve_ik(const Eigen::Isometry3d & goal, const Eigen::VectorXd & q)
     -> std::expected<Eigen::VectorXd, SolverError> override;
 
   /// Update the dynamic ROS 2 parameters.

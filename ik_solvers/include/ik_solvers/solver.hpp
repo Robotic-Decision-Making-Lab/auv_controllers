@@ -56,7 +56,7 @@ public:
     const std::string & prefix) -> void;
 
   /// Solve the IK problem for a target pose given the integration period and current joint configuration.
-  [[nodiscard]] auto solve(const rclcpp::Duration & period, const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+  [[nodiscard]] auto solve(const rclcpp::Duration & period, const Eigen::Isometry3d & goal, const Eigen::VectorXd & q)
     -> std::expected<trajectory_msgs::msg::JointTrajectoryPoint, SolverError>;
 
 protected:
@@ -64,7 +64,7 @@ protected:
   ///
   /// This is wrapped by the public API. The public API handles updating pinocchio for Jacobian calculation and converts
   /// of the result into a `JointTrajectoryPoint`. This method only needs to compute the IK solution.
-  [[nodiscard]] virtual auto solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+  [[nodiscard]] virtual auto solve_ik(const Eigen::Isometry3d & goal, const Eigen::VectorXd & q)
     -> std::expected<Eigen::VectorXd, SolverError> = 0;
 
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> node_;

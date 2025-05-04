@@ -71,6 +71,8 @@ protected:
 
   auto update_system_state_values() -> controller_interface::return_type;
 
+  auto update_chained_reference_values() -> controller_interface::return_type;
+
   auto update_parameters() -> void;
 
   auto configure_parameters() -> controller_interface::CallbackReturn;

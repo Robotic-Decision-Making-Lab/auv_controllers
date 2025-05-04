@@ -132,8 +132,8 @@ auto TaskHierarchy::hierarchies() const -> std::vector<ConstraintSet>
 PoseConstraint::PoseConstraint(
   const std::shared_ptr<pinocchio::Model> & model,
   const std::shared_ptr<pinocchio::Data> & data,
-  const Eigen::Affine3d & primal,
-  const Eigen::Affine3d & constraint,
+  const Eigen::Isometry3d & primal,
+  const Eigen::Isometry3d & constraint,
   const std::string & frame,
   double gain,
   int priority)
@@ -275,9 +275,9 @@ auto search_solutions(
   return *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
 }
 
-auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Affine3d
+auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Isometry3d
 {
-  Eigen::Affine3d result;
+  Eigen::Isometry3d result;
   result.translation() = pose.translation();
   result.linear() = pose.rotation();
   return result;
@@ -314,15 +314,15 @@ auto TaskPriorityIKSolver::configure_parameters() -> void
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto TaskPriorityIKSolver::solve_ik(const Eigen::Affine3d & goal, const Eigen::VectorXd & q)
+auto TaskPriorityIKSolver::solve_ik(const Eigen::Isometry3d & goal, const Eigen::VectorXd & q)
   -> std::expected<Eigen::VectorXd, SolverError>
 {
   configure_parameters();
 
   hierarchy_.clear();
 
-  // get the end effector pose as an Eigen Affine3d
-  const Eigen::Affine3d ee_pose = pinocchio_to_eigen(data_->oMf[model_->getFrameId(ee_frame_)]);
+  // get the end effector pose as an Eigen Isometry3d
+  const Eigen::Isometry3d ee_pose = pinocchio_to_eigen(data_->oMf[model_->getFrameId(ee_frame_)]);
 
   // insert the pose constraint
   const double gain = params_.end_effector_pose_task.gain;

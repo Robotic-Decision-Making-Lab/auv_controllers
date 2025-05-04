@@ -64,6 +64,8 @@ auto has_nan(const std::vector<double> & vec) -> bool;
 
 auto all_nan(const std::vector<double> & vec) -> bool;
 
+auto isclose(double a, double b, double rtol = 1e-05, double atol = 1e-08) -> bool;
+
 }  // namespace math
 
 }  // namespace common
