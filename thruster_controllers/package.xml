@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>thruster_controllers</name>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <description>A collection of thruster controllers for AUV control</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

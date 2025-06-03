@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>velocity_controllers</name>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <description>A collection of velocity controllers for underwater vehicles</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

@@ -1,5 +1,7 @@
 # Changelog for package controller_common
 
+## 0.2.1 (2025-06-03)
+
 ## 0.2.0 (2025-05-03)
 
 - Adds the common::math::isclose method for comparing doubles

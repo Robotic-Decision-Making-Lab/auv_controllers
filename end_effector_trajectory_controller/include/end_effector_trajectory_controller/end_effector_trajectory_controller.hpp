@@ -32,7 +32,7 @@
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "realtime_tools/realtime_server_goal_handle.hpp"
-#include "tf2/exceptions.h"
+#include "tf2/exceptions.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
