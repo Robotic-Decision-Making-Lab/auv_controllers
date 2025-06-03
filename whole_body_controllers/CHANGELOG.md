@@ -1,5 +1,7 @@
 # Changelog for package whole_body_controllers
 
+## 0.2.1 (2025-06-03)
+
 ## 0.2.0 (2025-05-03)
 
 - Replaces instances of `Eigen::Affine3d` with `Eigen::Isometry3d`

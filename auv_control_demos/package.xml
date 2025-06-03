@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>auv_control_demos</name>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
   <description>Example package that includes demos for using auv_controllers in individual and chained modes</description>
 
   <maintainer email="mitchcol@oregonstate.edu">Colin Mitchell</maintainer>

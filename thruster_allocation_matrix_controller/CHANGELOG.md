@@ -1,5 +1,7 @@
 # Changelog for package thruster_allocation_matrix_controller
 
+## 0.2.1 (2025-06-03)
+
 ## 0.2.0 (2025-05-03)
 
 ## 0.1.0 (2025-04-27)
