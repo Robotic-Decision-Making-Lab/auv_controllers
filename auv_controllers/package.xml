@@ -3,7 +3,11 @@
 <package format="3">
 
   <name>auv_controllers</name>
+<<<<<<< HEAD
   <version>0.0.1</version>
+=======
+  <version>0.2.1</version>
+>>>>>>> c8d798e (Update auv_control_demos configurations (#60))
   <description>Meta package for auv_controllers</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

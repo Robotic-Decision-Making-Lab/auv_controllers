@@ -20,6 +20,7 @@
   "files.trimTrailingWhitespace": true,
   "editor.formatOnSave": true,
   "editor.tabSize": 2,
+  "editor.detectIndentation": false,
   "autoDocstring.startOnNewLine": false,
   "autoDocstring.docstringFormat": "google-notypes",
   "python.autoComplete.extraPaths": [

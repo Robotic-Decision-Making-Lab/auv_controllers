@@ -2,13 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>velocity_controllers</name>
-<<<<<<< HEAD
-  <version>0.0.1</version>
-=======
+  <name>end_effector_trajectory_controller</name>
   <version>0.2.1</version>
->>>>>>> c8d798e (Update auv_control_demos configurations (#60))
-  <description>A collection of velocity controllers for underwater vehicles</description>
+  <description>End effector trajectory tracking controller for UVMS control</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
@@ -24,21 +20,16 @@
   <depend>eigen</depend>
   <depend>rclcpp</depend>
   <depend>ros2_control</depend>
-  <depend>ros2_controllers</depend>
-  <depend>pluginlib</depend>
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
   <depend>control_msgs</depend>
-  <depend>tf2_eigen</depend>
-  <depend>hydrodynamics</depend>
   <depend>geometry_msgs</depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
-
-  <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
+  <depend>controller_common</depend>
+  <depend>auv_control_msgs</depend>
+  <depend>rclcpp_action</depend>
+  <depend>lifecycle_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
