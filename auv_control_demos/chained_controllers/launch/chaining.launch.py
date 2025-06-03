@@ -40,7 +40,7 @@ def generate_launch_description():
                 [
                     FindPackageShare("auv_control_demos"),
                     "xacro",
-                    "chained_config.xacro",
+                    "chained.config.xacro",
                 ]
             ),
         ]
@@ -51,7 +51,7 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=[
-            "integral_sliding_mode_controller",
+            "adaptive_integral_terminal_sliding_mode_controller",
             "--controller-manager",
             ["", "controller_manager"],
         ],
