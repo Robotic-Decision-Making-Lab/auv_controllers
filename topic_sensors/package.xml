@@ -2,13 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>auv_controllers</name>
-<<<<<<< HEAD
-  <version>0.0.1</version>
-=======
+  <name>topic_sensors</name>
   <version>0.3.0</version>
->>>>>>> 289f6e0 (Implemented a controller coordinator (#63))
-  <description>Meta package for auv_controllers</description>
+  <description>Sensor plugins used to write ROS 2 messages to state interfaces</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
@@ -16,14 +12,20 @@
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
   <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
 
+  <author>Akshaya Agrawal</author>
   <author>Evan Palmer</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>thruster_allocation_matrix_controller</exec_depend>
-  <exec_depend>thruster_controllers</exec_depend>
-  <exec_depend>velocity_controllers</exec_depend>
-  <exec_depend>auv_control_msgs</exec_depend>
+  <depend>rclcpp</depend>
+  <depend>ros2_control</depend>
+  <depend>pluginlib</depend>
+  <depend>hardware_interface</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>controller_common</depend>
+  <depend>message_transforms</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

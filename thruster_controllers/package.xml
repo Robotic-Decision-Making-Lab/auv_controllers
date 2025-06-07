@@ -2,7 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>thruster_controllers</name>
+<<<<<<< HEAD
   <version>0.0.1</version>
+=======
+  <version>0.3.0</version>
+>>>>>>> 289f6e0 (Implemented a controller coordinator (#63))
   <description>A collection of thruster controllers for AUV control</description>
 
   <maintainer email="evanp922@gmail.com">ros</maintainer>
