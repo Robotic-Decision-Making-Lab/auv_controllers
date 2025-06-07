@@ -4,13 +4,13 @@
 
   <name>controller_coordinator</name>
   <version>0.3.0</version>
-  <description>A high-level node used to load and activate/deactivate controllers</description>
+  <description>A high-level node used to load and activate/deactivate control systems</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 
-  <url type="repository">https://github.com/Robotic-Decision-Making-Lab/ardusub_driver.git</url>
-  <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/ardusub_driver/issues</url>
+  <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
+  <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
 
   <author>Evan Palmer</author>
 
