@@ -1,5 +1,9 @@
 # Changelog for package auv_controllers
 
+## 0.3.0 (2025-06-07)
+
+- Implements the controller coordinator
+
 ## 0.2.1 (2025-06-03)
 
 - Fixes the auv_control_demos configurations

@@ -1,5 +1,7 @@
 # Changelog for package velocity_controllers
 
+## 0.3.0 (2025-06-07)
+
 ## 0.2.1 (2025-06-03)
 
 ## 0.2.0 (2025-05-03)
