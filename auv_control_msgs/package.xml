@@ -1,8 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
+
   <name>auv_control_msgs</name>
+<<<<<<< HEAD
   <version>0.0.1</version>
+=======
+  <version>0.3.0</version>
+>>>>>>> 289f6e0 (Implemented a controller coordinator (#63))
   <description>Custom messages for AUV controllers</description>
 
   <maintainer email="rakeshvivek97@gmail.com">Rakesh Vivekanandan</maintainer>

@@ -2,13 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>auv_controllers</name>
-<<<<<<< HEAD
-  <version>0.0.1</version>
-=======
+  <name>controller_common</name>
   <version>0.3.0</version>
->>>>>>> 289f6e0 (Implemented a controller coordinator (#63))
-  <description>Meta package for auv_controllers</description>
+  <description>Common interfaces for controllers used in this project</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
@@ -20,10 +16,9 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>thruster_allocation_matrix_controller</exec_depend>
-  <exec_depend>thruster_controllers</exec_depend>
-  <exec_depend>velocity_controllers</exec_depend>
-  <exec_depend>auv_control_msgs</exec_depend>
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

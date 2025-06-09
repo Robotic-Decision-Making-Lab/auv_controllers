@@ -1,0 +1,21 @@
+controller_coordinator:
+  hardware_interface:
+    type: string
+    description: The name of the hardware interface to activate/deactivate.
+    default_value: ""
+
+  controller_sequence:
+    type: string_array
+    description: An ordered list of controllers to activate/deactivate.
+    default_value: []
+
+  timeout:
+    type: double
+    description: The timeout (s) for activating/deactivating controllers.
+    default_value: 5.0
+
+  max_attempts:
+    type: int
+    description: >
+      The maximum number of attempts to activate/deactivate the controllers.
+    default_value: 3
