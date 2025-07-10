@@ -92,7 +92,7 @@ ControllerCoordinator::ControllerCoordinator()
         // activate the hardware interface
         hardware_client_->async_send_request(
           activate_hardware_request_,
-          [this, &response](
+          [this, response](
             rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture result_response) {
             const auto & result = result_response.get();
             if (result->ok) {
@@ -108,7 +108,7 @@ ControllerCoordinator::ControllerCoordinator()
         switch_controller_client_->async_send_request(
           activate_controllers_request_,
           [this,
-           &response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
+           response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully activated controllers");  // NOLINT
@@ -124,7 +124,7 @@ ControllerCoordinator::ControllerCoordinator()
         // deactivate the hardware interface
         hardware_client_->async_send_request(
           deactivate_hardware_request_,
-          [this, &response](
+          [this, response](
             rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture result_response) {
             const auto & result = result_response.get();
             if (result->ok) {
@@ -140,7 +140,7 @@ ControllerCoordinator::ControllerCoordinator()
         switch_controller_client_->async_send_request(
           deactivate_controllers_request_,
           [this,
-           &response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
+           response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully deactivated controllers");  // NOLINT
