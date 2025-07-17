@@ -23,8 +23,9 @@ target_sources(
     PRIVATE src/odom_sensor.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/topic_sensors/odom_sensor.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/topic_sensors/odom_sensor.hpp
 )
 target_compile_features(topic_sensors PUBLIC cxx_std_23)
 target_link_libraries(

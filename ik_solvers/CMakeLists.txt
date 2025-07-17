@@ -30,8 +30,8 @@ target_sources(
     PRIVATE src/solver.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/solver.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/solver.hpp
 )
 target_link_libraries(
     solver_base
@@ -52,9 +52,9 @@ target_sources(
     PRIVATE src/task_priority_solver.cpp src/pseudoinverse.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/task_priority_solver.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/ik_solvers/task_priority_solver.hpp
 )
 target_compile_features(ik_solvers PUBLIC cxx_std_23)
 target_link_libraries(

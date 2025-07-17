@@ -42,10 +42,10 @@ target_sources(
         src/adaptive_integral_terminal_sliding_mode_controller.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/integral_sliding_mode_controller.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/integral_sliding_mode_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
 )
 target_compile_features(velocity_controllers PUBLIC cxx_std_23)
 target_link_libraries(
