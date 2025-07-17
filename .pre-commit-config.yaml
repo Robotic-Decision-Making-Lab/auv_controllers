@@ -17,7 +17,7 @@ repos:
         types_or: [c++, c]
 
   - repo: https://github.com/BlankSpruce/gersemi
-    rev: 0.13.5
+    rev: 0.21.0
     hooks:
     - id: gersemi
 

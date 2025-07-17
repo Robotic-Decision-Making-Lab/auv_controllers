@@ -82,9 +82,9 @@ ControllerCoordinator::ControllerCoordinator()
   activate_system_service_ = this->create_service<std_srvs::srv::SetBool>(
     "~/activate",
     [this](
-      const std::shared_ptr<rmw_request_id_t> /*request_header*/,
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+      const std::shared_ptr<rmw_request_id_t> /*request_header*/,          // NOLINT
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,      // NOLINT
+      const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {  // NOLINT
       response->success = true;
       if (request->data) {
         RCLCPP_INFO(this->get_logger(), "Activating thruster hardware interface and controllers");  // NOLINT
@@ -92,8 +92,8 @@ ControllerCoordinator::ControllerCoordinator()
         // activate the hardware interface
         hardware_client_->async_send_request(
           activate_hardware_request_,
-          [this, &response](
-            rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture result_response) {
+          [this, response](rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
+                             result_response) {  // NOLINT
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully activated thruster hardware interface");  // NOLINT
@@ -108,7 +108,8 @@ ControllerCoordinator::ControllerCoordinator()
         switch_controller_client_->async_send_request(
           activate_controllers_request_,
           [this,
-           &response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
+           response](
+            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {  // NOLINT
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully activated controllers");  // NOLINT
@@ -124,8 +125,8 @@ ControllerCoordinator::ControllerCoordinator()
         // deactivate the hardware interface
         hardware_client_->async_send_request(
           deactivate_hardware_request_,
-          [this, &response](
-            rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture result_response) {
+          [this, response](rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
+                             result_response) {  // NOLINT
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully deactivated thruster hardware interface");  // NOLINT
@@ -140,7 +141,8 @@ ControllerCoordinator::ControllerCoordinator()
         switch_controller_client_->async_send_request(
           deactivate_controllers_request_,
           [this,
-           &response](rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {
+           response](
+            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {  // NOLINT
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully deactivated controllers");  // NOLINT

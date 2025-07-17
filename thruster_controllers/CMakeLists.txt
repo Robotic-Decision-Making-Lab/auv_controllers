@@ -37,11 +37,11 @@ target_sources(
         src/gz_passthrough_controller.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/polynomial_thrust_curve_controller.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/rotation_rate_controller.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/gz_passthrough_controller.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/polynomial_thrust_curve_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/rotation_rate_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_controllers/gz_passthrough_controller.hpp
 )
 target_compile_features(thruster_controllers PUBLIC cxx_std_23)
 target_link_libraries(

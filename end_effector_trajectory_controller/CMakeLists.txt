@@ -36,10 +36,10 @@ target_sources(
     PRIVATE src/end_effector_trajectory_controller.cpp src/trajectory.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/end_effector_trajectory_controller.hpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/trajectory.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/end_effector_trajectory_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/trajectory.hpp
 )
 target_compile_features(end_effector_trajectory_controller PUBLIC cxx_std_23)
 target_link_libraries(

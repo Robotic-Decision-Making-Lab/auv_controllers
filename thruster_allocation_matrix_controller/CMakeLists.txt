@@ -33,9 +33,9 @@ target_sources(
     PRIVATE src/thruster_allocation_matrix_controller.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp
 )
 target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 target_link_libraries(
