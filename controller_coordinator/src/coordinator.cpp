@@ -82,8 +82,8 @@ ControllerCoordinator::ControllerCoordinator()
   activate_system_service_ = this->create_service<std_srvs::srv::SetBool>(
     "~/activate",
     [this](
-      const std::shared_ptr<rmw_request_id_t> /*request_header*/,
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+      const std::shared_ptr<rmw_request_id_t> /*request_header*/,          // NOLINT
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,      // NOLINT
       const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {  // NOLINT
       response->success = true;
       if (request->data) {
