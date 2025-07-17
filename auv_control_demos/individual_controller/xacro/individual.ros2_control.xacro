@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="control">
+  <ros2_control name="demo_hardware"
+                type="system">
+
+    <hardware>
+      <plugin>mock_components/GenericSystem</plugin>
+      <param name="calculate_dynamics">false</param>
+    </hardware>
+
+    <joint name="x">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+    <joint name="y">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+    <joint name="z">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+    <joint name="rx">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+    <joint name="ry">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+    <joint name="rz">
+      <state_interface name="velocity">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <command_interface name="effort" />
+    </joint>
+
+  </ros2_control>
+
+</robot>

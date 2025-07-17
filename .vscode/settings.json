@@ -3,10 +3,11 @@
     "*.repos": "yaml",
     "*.world": "xml",
     "*.xacro": "xml",
-    "*.srdf": "xml",
     "*.rviz": "yaml",
     "*.config": "xml",
-    "*.sdf": "xml"
+    "*.sdf": "xml",
+    "limits": "cpp",
+    "format": "cpp"
   },
   "terminal.integrated.defaultProfile.linux": "bash",
   "terminal.integrated.profiles.linux": {
@@ -20,6 +21,7 @@
   "files.trimTrailingWhitespace": true,
   "editor.formatOnSave": true,
   "editor.tabSize": 2,
+  "editor.detectIndentation": false,
   "autoDocstring.startOnNewLine": false,
   "autoDocstring.docstringFormat": "google-notypes",
   "python.autoComplete.extraPaths": [

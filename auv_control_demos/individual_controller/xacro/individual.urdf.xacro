@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"
+       name="auv">
+
+  <link name="odom" />
+
+  <link name="base_link">
+    <origin xyz="0 0 0"
+            rpy="0 0 0" />
+  </link>
+
+  <!-- Cartesian Joints -->
+  <joint name="x"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+  <joint name="y"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+  <joint name="z"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+  <joint name="rx"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+  <joint name="ry"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+  <joint name="rz"
+         type="continuous">
+    <parent link="odom" />
+    <child link="base_link" />
+  </joint>
+
+</robot>

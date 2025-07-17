@@ -3,7 +3,7 @@ polynomial_thrust_curve_controller:
     type: string
     default_value: ""
     read_only: true
-    description: "The name of the thruster."
+    description: The name of the thruster.
     validation:
       not_empty<>: null
 
@@ -11,7 +11,9 @@ polynomial_thrust_curve_controller:
     type: double_array
     default_value: []
     read_only: true
-    description: "The thrust-to-PWM curve polynomial coefficients. These should be provided in the order of the lowest degree to the highest degree."
+    description: >
+      The thrust-to-PWM curve polynomial coefficients. These should be provided
+      in the order of the lowest degree to the highest degree.
     validation:
       not_empty<>: null
 
@@ -19,28 +21,28 @@ polynomial_thrust_curve_controller:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The minimum thrust that can be produced by the thruster."
+    description: The minimum thrust that can be produced by the thruster.
 
   max_thrust:
     type: double
     default_value: 0.0
     read_only: true
-    description: "The maximum thrust that can be produced by the thruster."
+    description: The maximum thrust that can be produced by the thruster.
 
   min_deadband_pwm:
     type: int
     default_value: 0
     read_only: true
-    description: "The minimum PWM value in the deadband range for the thruster."
+    description: The minimum PWM value in the deadband range for the thruster.
 
   max_deadband_pwm:
     type: int
     default_value: 0
     read_only: true
-    description: "The maximum PWM value in the deadband range for the thruster."
+    description: The maximum PWM value in the deadband range for the thruster.
 
   neutral_pwm:
     type: int
     default_value: 0
     read_only: true
-    description: "A safe PWM value that is known to apply zero thrust."
+    description: A safe PWM value that is known to apply zero thrust.

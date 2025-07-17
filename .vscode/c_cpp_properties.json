@@ -11,7 +11,7 @@
       "defines": [],
       "compilerPath": "/usr/bin/clang",
       "cStandard": "c99",
-      "cppStandard": "c++20",
+      "cppStandard": "c++23",
       "intelliSenseMode": "linux-clang-x64"
     }
   ],

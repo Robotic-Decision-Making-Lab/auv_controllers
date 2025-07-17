@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>auv_controllers</name>
-  <version>0.0.1</version>
+  <version>0.3.1</version>
   <description>Meta package for auv_controllers</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -16,10 +16,14 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <exec_depend>auv_control_msgs</exec_depend>
+  <exec_depend>controller_common</exec_depend>
+  <exec_depend>ik_solvers</exec_depend>
   <exec_depend>thruster_allocation_matrix_controller</exec_depend>
   <exec_depend>thruster_controllers</exec_depend>
+  <exec_depend>topic_sensors</exec_depend>
   <exec_depend>velocity_controllers</exec_depend>
-  <exec_depend>auv_control_msgs</exec_depend>
+  <exec_depend>whole_body_controllers</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

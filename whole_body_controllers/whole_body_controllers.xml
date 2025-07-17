@@ -1,0 +1,11 @@
+<library path="whole_body_controllers">
+
+  <class name="whole_body_controllers/IKController"
+         type="whole_body_controllers::IKController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Inverse kinematics controller for whole body control of UVMS
+    </description>
+  </class>
+
+</library>

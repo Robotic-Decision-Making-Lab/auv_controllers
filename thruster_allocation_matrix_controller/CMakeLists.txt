@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.23)
 project(thruster_allocation_matrix_controller)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
@@ -7,24 +7,17 @@ endif()
 
 include(GNUInstallDirs)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-    rclcpp
-    rclcpp_lifecycle
-    controller_interface
-    hardware_interface
-    realtime_tools
-    eigen3_cmake_module
-    Eigen3
-    geometry_msgs
-    auv_control_msgs
-    control_msgs
-    hydrodynamics
-)
-
-foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-    find_package(${Dependency} REQUIRED)
-endforeach()
-
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(controller_interface REQUIRED)
+find_package(hardware_interface REQUIRED)
+find_package(realtime_tools REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(auv_control_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(hydrodynamics REQUIRED)
+find_package(controller_common REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -40,28 +33,30 @@ target_sources(
     PRIVATE src/thruster_allocation_matrix_controller.cpp
     PUBLIC
         FILE_SET HEADERS
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp
+            BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp
 )
+target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_23)
 target_link_libraries(
     thruster_allocation_matrix_controller
-    PRIVATE thruster_allocation_matrix_controller_parameters
+    PUBLIC
+        thruster_allocation_matrix_controller_parameters
+        controller_interface::controller_interface
+        hardware_interface::hardware_interface
+        hardware_interface::mock_components
+        rclcpp::rclcpp
+        hydrodynamics::hydrodynamics
+        rclcpp_lifecycle::rclcpp_lifecycle
+        realtime_tools::realtime_tools
+        realtime_tools::thread_priority
+        controller_common::controller_common
+        ${control_msgs_TARGETS}
+        ${std_msgs_TARGETS}
+        ${auv_control_msgs_TARGETS}
 )
-ament_target_dependencies(thruster_allocation_matrix_controller PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
-target_compile_features(thruster_allocation_matrix_controller PUBLIC cxx_std_20)
 
 pluginlib_export_plugin_description_file(controller_interface thruster_allocation_matrix_controller.xml)
-
-if(BUILD_TESTING)
-    find_package(ament_lint_auto REQUIRED)
-
-    set(ament_cmake_copyright_FOUND TRUE)
-    set(ament_cmake_uncrustify_FOUND TRUE)
-    set(ament_cmake_cpplint_FOUND TRUE)
-
-    ament_lint_auto_find_test_dependencies()
-endif()
 
 install(
     TARGETS
@@ -75,6 +70,18 @@ install(
 )
 
 ament_export_targets(export_thruster_allocation_matrix_controller HAS_LIBRARY_TARGET)
-ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_export_dependencies(
+    "rclcpp"
+    "rclcpp_lifecycle"
+    "controller_interface"
+    "hardware_interface"
+    "realtime_tools"
+    "Eigen3"
+    "geometry_msgs"
+    "auv_control_msgs"
+    "control_msgs"
+    "hydrodynamics"
+    "controller_common"
+)
 
 ament_package()
