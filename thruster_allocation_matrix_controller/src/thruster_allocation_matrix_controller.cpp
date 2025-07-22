@@ -31,24 +31,6 @@
 namespace thruster_allocation_matrix_controller
 {
 
-<<<<<<< HEAD
-namespace
-{
-
-auto reset_wrench_msg(geometry_msgs::msg::Wrench * wrench_msg) -> void  // NOLINT
-{
-  wrench_msg->force.x = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->force.y = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->force.z = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.x = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.y = std::numeric_limits<double>::quiet_NaN();
-  wrench_msg->torque.z = std::numeric_limits<double>::quiet_NaN();
-}
-
-}  // namespace
-
-=======
->>>>>>> origin/main
 auto ThrusterAllocationMatrixController::on_init() -> controller_interface::CallbackReturn
 {
   param_listener_ = std::make_shared<thruster_allocation_matrix_controller::ParamListener>(get_node());
@@ -120,12 +102,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
   }
 
   reference_.writeFromNonRT(geometry_msgs::msg::Wrench());
-<<<<<<< HEAD
-
-  command_interfaces_.reserve(num_thrusters_);
-=======
   command_interfaces_.reserve(n_thrusters_);
->>>>>>> origin/main
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
     "~/reference",
@@ -150,11 +127,7 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
 auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-<<<<<<< HEAD
-  reset_wrench_msg(reference_.readFromNonRT());
-=======
   common::messages::reset_message(reference_.readFromNonRT());
->>>>>>> origin/main
   reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -208,33 +181,14 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
-<<<<<<< HEAD
-
-  const std::vector<double> wrench = {
-    current_reference->force.x,
-    current_reference->force.y,
-    current_reference->force.z,
-    current_reference->torque.x,
-    current_reference->torque.y,
-    current_reference->torque.z};
-
-  for (std::size_t i = 0; i < wrench.size(); ++i) {
-    if (!std::isnan(wrench[i])) {
-      reference_interfaces_[i] = wrench[i];
-    }
-  }
-
-  reset_wrench_msg(current_reference);
-
-=======
   const std::vector<double> wrench = common::messages::to_vector(*current_reference);
   for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
     if (!std::isnan(ref)) {
       interface = ref;
     }
   }
+
   common::messages::reset_message(current_reference);
->>>>>>> origin/main
   return controller_interface::return_type::OK;
 }
 

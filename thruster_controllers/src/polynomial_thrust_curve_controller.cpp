@@ -71,16 +71,7 @@ auto PolynomialThrustCurveController::configure_parameters() -> controller_inter
 auto PolynomialThrustCurveController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-<<<<<<< HEAD
-  auto ret = configure_parameters();
-  if (ret != controller_interface::CallbackReturn::SUCCESS) {
-    return ret;
-  }
-
-  reference_.writeFromNonRT(std_msgs::msg::Float64());
-=======
   configure_parameters();
->>>>>>> origin/main
 
   reference_.writeFromNonRT(std_msgs::msg::Float64());
   command_interfaces_.reserve(1);
@@ -147,10 +138,6 @@ auto PolynomialThrustCurveController::update_reference_from_subscribers(
   auto * current_reference = reference_.readFromNonRT();
   reference_interfaces_[0] = current_reference->data;
   current_reference->data = std::numeric_limits<double>::quiet_NaN();
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
   return controller_interface::return_type::OK;
 }
 
