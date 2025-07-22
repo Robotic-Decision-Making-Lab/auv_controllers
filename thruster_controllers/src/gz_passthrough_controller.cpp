@@ -137,7 +137,6 @@ auto GazeboPassthroughController::update_and_write_commands(const rclcpp::Time &
   controller_state_.dof_state.reference = reference_interfaces_[0];
   controller_state_.dof_state.time_step = period.seconds();
   controller_state_.dof_state.output = reference;
-
   rt_controller_state_pub_->try_publish(controller_state_);
 
   return controller_interface::return_type::OK;
