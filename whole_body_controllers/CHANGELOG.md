@@ -1,5 +1,9 @@
 # Changelog for package whole_body_controllers
 
+## 0.3.2 (2025-07-22)
+
+- Replaces the deprecated `unlockAndPublish` API with `try_publish`
+
 ## 0.3.1 (2025-07-09)
 
 ## 0.3.0 (2025-06-07)
