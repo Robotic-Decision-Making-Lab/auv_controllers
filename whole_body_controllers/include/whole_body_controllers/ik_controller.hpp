@@ -98,9 +98,10 @@ protected:
   std::unique_ptr<ik_controller::ParamListener> param_listener_;
   ik_controller::Params params_;
 
-  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::IKControllerStateStamped>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::IKControllerStateStamped>>
-    rt_controller_state_pub_;
+  using ControllerState = auv_control_msgs::msg::IKControllerStateStamped;
+  std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
+  ControllerState controller_state_;
 
   // store the names of the base joints
   std::vector<std::string> free_flyer_pos_dofs_, free_flyer_vel_dofs_;

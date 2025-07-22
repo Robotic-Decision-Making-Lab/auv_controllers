@@ -69,16 +69,11 @@ auto GazeboPassthroughController::on_configure(const rclcpp_lifecycle::State & /
       reference_.writeFromNonRT(*msg);
     });
 
-  controller_state_pub_ =
-    get_node()->create_publisher<control_msgs::msg::SingleDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
-
+  controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
-    std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::SingleDOFStateStamped>>(
-      controller_state_pub_);
+    std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
 
-  rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_state.name = thruster_name_;
-  rt_controller_state_pub_->unlock();
+  controller_state_.dof_state.name = thruster_name_;
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -138,13 +133,12 @@ auto GazeboPassthroughController::update_and_write_commands(const rclcpp::Time &
   msg.data = reference;
   passthrough_pub_->publish(msg);
 
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = time;
-    rt_controller_state_pub_->msg_.dof_state.reference = reference_interfaces_[0];
-    rt_controller_state_pub_->msg_.dof_state.time_step = period.seconds();
-    rt_controller_state_pub_->msg_.dof_state.output = reference;
-    rt_controller_state_pub_->unlockAndPublish();
-  }
+  controller_state_.header.stamp = time;
+  controller_state_.dof_state.reference = reference_interfaces_[0];
+  controller_state_.dof_state.time_step = period.seconds();
+  controller_state_.dof_state.output = reference;
+
+  rt_controller_state_pub_->try_publish(controller_state_);
 
   return controller_interface::return_type::OK;
 }

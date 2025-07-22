@@ -74,6 +74,7 @@ protected:
   using ControllerState = auv_control_msgs::msg::EndEffectorTrajectoryControllerState;
   std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
   std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
+  ControllerState controller_state_;
 
   // the end effector states can be captured in one of three ways:
   // 1. using the topic interface - when available, this is preferred over the tf2 interface

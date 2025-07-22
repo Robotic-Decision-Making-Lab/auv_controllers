@@ -182,17 +182,13 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
   solver_->initialize(get_node(), model_, data_, params_.ik_solver);
   RCLCPP_INFO(logger_, "Configured the IK controller with solver %s", params_.ik_solver.c_str());  // NOLINT
 
-  controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::IKControllerStateStamped>(
-    "~/status", rclcpp::SystemDefaultsQoS());
+  controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
-    std::make_unique<realtime_tools::RealtimePublisher<auv_control_msgs::msg::IKControllerStateStamped>>(
-      controller_state_pub_);
+    std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
 
-  rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.solver_name = params_.ik_solver;
-  std::ranges::copy(position_interface_names_, std::back_inserter(rt_controller_state_pub_->msg_.position_joint_names));
-  std::ranges::copy(velocity_interface_names_, std::back_inserter(rt_controller_state_pub_->msg_.velocity_joint_names));
-  rt_controller_state_pub_->unlock();
+  controller_state_.solver_name = params_.ik_solver;
+  std::ranges::copy(position_interface_names_, std::back_inserter(controller_state_.position_joint_names));
+  std::ranges::copy(velocity_interface_names_, std::back_inserter(controller_state_.velocity_joint_names));
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -474,13 +470,11 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
     }
   }
 
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
-    rt_controller_state_pub_->msg_.time_step = period.seconds();
-    common::messages::to_msg(reference_interfaces_, &rt_controller_state_pub_->msg_.reference);
-    rt_controller_state_pub_->msg_.solution = point;
-    rt_controller_state_pub_->unlockAndPublish();
-  }
+  controller_state_.header.stamp = get_node()->now();
+  controller_state_.time_step = period.seconds();
+  common::messages::to_msg(reference_interfaces_, &controller_state_.reference);
+  controller_state_.solution = point;
+  rt_controller_state_pub_->try_publish(controller_state_);
 
   return controller_interface::return_type::OK;
 }

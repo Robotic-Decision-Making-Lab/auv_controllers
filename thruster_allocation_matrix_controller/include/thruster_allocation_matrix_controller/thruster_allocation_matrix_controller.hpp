@@ -76,9 +76,10 @@ protected:
   realtime_tools::RealtimeBuffer<geometry_msgs::msg::Wrench> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Wrench>> reference_sub_;
 
-  std::shared_ptr<rclcpp::Publisher<auv_control_msgs::msg::MultiActuatorStateStamped>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>
-    rt_controller_state_pub_;
+  using ControllerState = auv_control_msgs::msg::MultiActuatorStateStamped;
+  std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
+  ControllerState controller_state_;
 
   std::shared_ptr<thruster_allocation_matrix_controller::ParamListener> param_listener_;
   thruster_allocation_matrix_controller::Params params_;
