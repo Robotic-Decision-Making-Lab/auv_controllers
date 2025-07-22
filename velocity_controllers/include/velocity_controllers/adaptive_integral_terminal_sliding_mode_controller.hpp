@@ -95,8 +95,10 @@ protected:
   std::string vehicle_frame_id_, inertial_frame_id_;
   realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
 
-  std::shared_ptr<rclcpp::Publisher<control_msgs::msg::MultiDOFStateStamped>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>> rt_controller_state_pub_;
+  using ControllerState = control_msgs::msg::MultiDOFStateStamped;
+  std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
+  ControllerState controller_state_;
 
   std::shared_ptr<adaptive_integral_terminal_sliding_mode_controller::ParamListener> param_listener_;
   adaptive_integral_terminal_sliding_mode_controller::Params params_;

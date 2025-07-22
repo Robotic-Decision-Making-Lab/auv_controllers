@@ -129,17 +129,14 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   }
 
-  controller_state_pub_ =
-    get_node()->create_publisher<control_msgs::msg::MultiDOFStateStamped>("~/status", rclcpp::SystemDefaultsQoS());
+  controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
-    std::make_unique<realtime_tools::RealtimePublisher<control_msgs::msg::MultiDOFStateStamped>>(controller_state_pub_);
+    std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
 
-  rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.dof_states.resize(n_dofs_);
-  for (auto && [state, dof] : std::views::zip(rt_controller_state_pub_->msg_.dof_states, dofs_)) {
+  controller_state_.dof_states.resize(n_dofs_);
+  for (auto && [state, dof] : std::views::zip(controller_state_.dof_states, dofs_)) {
     state.name = dof;
   }
-  rt_controller_state_pub_->unlock();
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -318,18 +315,16 @@ auto IntegralSlidingModeController::update_and_write_commands(
     }
   }
 
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = time;
-    for (auto && [i, state] : std::views::enumerate(rt_controller_state_pub_->msg_.dof_states)) {
-      const auto out = command_interfaces_[i].get_optional();
-      state.reference = reference_interfaces_[i];
-      state.feedback = system_state_values_[i];
-      state.error = error_values[i];
-      state.time_step = period.seconds();
-      state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
-    }
-    rt_controller_state_pub_->unlockAndPublish();
+  controller_state_.header.stamp = time;
+  for (auto && [i, state] : std::views::enumerate(controller_state_.dof_states)) {
+    const auto out = command_interfaces_[i].get_optional();
+    state.reference = reference_interfaces_[i];
+    state.feedback = system_state_values_[i];
+    state.error = error_values[i];
+    state.time_step = period.seconds();
+    state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
+  rt_controller_state_pub_->try_publish(controller_state_);
 
   return controller_interface::return_type::OK;
 }
