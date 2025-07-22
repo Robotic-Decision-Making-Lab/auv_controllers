@@ -71,8 +71,10 @@ protected:
   realtime_tools::RealtimeBuffer<std_msgs::msg::Float64> reference_;
   std::shared_ptr<rclcpp::Subscription<std_msgs::msg::Float64>> reference_sub_;
 
-  std::shared_ptr<rclcpp::Publisher<control_msgs::msg::SingleDOFStateStamped>> controller_state_pub_;
-  std::unique_ptr<realtime_tools::RealtimePublisher<control_msgs::msg::SingleDOFStateStamped>> rt_controller_state_pub_;
+  using ControllerState = control_msgs::msg::SingleDOFStateStamped;
+  std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
+  std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
+  ControllerState controller_state_;
 
   std::shared_ptr<polynomial_thrust_curve_controller::ParamListener> param_listener_;
   polynomial_thrust_curve_controller::Params params_;

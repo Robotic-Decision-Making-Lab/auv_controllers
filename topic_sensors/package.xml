@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>topic_sensors</name>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
   <description>Sensor plugins used to write ROS 2 messages to state interfaces</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

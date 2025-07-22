@@ -338,14 +338,12 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   double error = std::numeric_limits<double>::quiet_NaN();
 
   auto publish_controller_state = [this, &reference_state, &end_effector_state, &error, &command_state]() {
-    if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-      rt_controller_state_pub_->msg_.header.stamp = get_node()->now();
-      rt_controller_state_pub_->msg_.reference = reference_state;
-      rt_controller_state_pub_->msg_.feedback = end_effector_state;
-      rt_controller_state_pub_->msg_.error = error;
-      rt_controller_state_pub_->msg_.output = command_state;
-      rt_controller_state_pub_->unlockAndPublish();
-    }
+    controller_state_.header.stamp = get_node()->now();
+    controller_state_.reference = reference_state;
+    controller_state_.feedback = end_effector_state;
+    controller_state_.error = error;
+    controller_state_.output = command_state;
+    rt_controller_state_pub_->try_publish(controller_state_);
   };
 
   // hold position until a new trajectory is received

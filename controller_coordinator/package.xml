@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>controller_coordinator</name>
-  <version>0.3.1</version>
+  <version>0.3.2</version>
   <description>A high-level node used to load and activate/deactivate control systems</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

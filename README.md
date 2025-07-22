@@ -40,6 +40,20 @@ To learn more about how to use the controllers provided in this project, please
 refer to the [examples package](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/auv_control_demos).
 You can also find integration tutorials in the [Blue documentation](https://robotic-decision-making-lab.github.io/blue).
 
+## Citation
+
+If you find this code to be useful in your research, please consider citing our
+relevant paper:
+
+```
+@inproceedings{palmer2024angler,
+  author={Palmer, Evan and Holm, Christopher and Hollinger, Geoffrey},
+  title={{Angler: An Autonomy Framework for Intervention Tasks with Lightweight Underwater Vehicle Manipulator Systems}},
+  booktitle={IEEE International Conference on Robotics and Automation},
+  year={2024}
+}
+```
+
 ## Getting help
 
 If you have questions regarding usage of auv_controllers or regarding

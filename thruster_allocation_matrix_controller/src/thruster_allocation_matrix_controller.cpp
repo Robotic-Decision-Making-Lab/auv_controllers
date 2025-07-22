@@ -134,19 +134,15 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
       reference_.writeFromNonRT(*msg);
     });
 
-  controller_state_pub_ = get_node()->create_publisher<auv_control_msgs::msg::MultiActuatorStateStamped>(
-    "~/status", rclcpp::SystemDefaultsQoS());
+  controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
 
   rt_controller_state_pub_ =
-    std::make_unique<realtime_tools::RealtimePublisher<auv_control_msgs::msg::MultiActuatorStateStamped>>(
-      controller_state_pub_);
+    std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
 
-  rt_controller_state_pub_->lock();
-  rt_controller_state_pub_->msg_.output_names = thruster_names_;
-  rt_controller_state_pub_->msg_.reference_names.assign(dofs_.begin(), dofs_.end());
-  rt_controller_state_pub_->msg_.reference.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
-  rt_controller_state_pub_->msg_.output.resize(n_thrusters_, std::numeric_limits<double>::quiet_NaN());
-  rt_controller_state_pub_->unlock();
+  controller_state_.output_names = thruster_names_;
+  controller_state_.reference_names.assign(dofs_.begin(), dofs_.end());
+  controller_state_.reference.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
+  controller_state_.output.resize(n_thrusters_, std::numeric_limits<double>::quiet_NaN());
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -257,18 +253,16 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
     }
   }
 
-  if (rt_controller_state_pub_ && rt_controller_state_pub_->trylock()) {
-    rt_controller_state_pub_->msg_.header.stamp = time;
-    rt_controller_state_pub_->msg_.time_step = period.seconds();
-    rt_controller_state_pub_->msg_.reference = reference_interfaces_;
+  controller_state_.header.stamp = time;
+  controller_state_.time_step = period.seconds();
+  controller_state_.reference = reference_interfaces_;
 
-    for (std::size_t i = 0; i < n_thrusters_; i++) {
-      const auto out = command_interfaces_[i].get_optional();
-      rt_controller_state_pub_->msg_.output[i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
-    }
-
-    rt_controller_state_pub_->unlockAndPublish();
+  for (std::size_t i = 0; i < n_thrusters_; i++) {
+    const auto out = command_interfaces_[i].get_optional();
+    controller_state_.output[i] = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
+
+  rt_controller_state_pub_->try_publish(controller_state_);
 
   return controller_interface::return_type::OK;
 }
