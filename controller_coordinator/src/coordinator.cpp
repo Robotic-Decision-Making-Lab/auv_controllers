@@ -29,10 +29,8 @@ namespace coordinator
 
 ControllerCoordinator::ControllerCoordinator()
 : rclcpp::Node("controller_coordinator"),
-  activate_hardware_request_(std::make_shared<controller_manager_msgs::srv::SetHardwareComponentState::Request>()),
-  deactivate_hardware_request_(std::make_shared<controller_manager_msgs::srv::SetHardwareComponentState::Request>()),
-  activate_controllers_request_(std::make_shared<controller_manager_msgs::srv::SwitchController::Request>()),
-  deactivate_controllers_request_(std::make_shared<controller_manager_msgs::srv::SwitchController::Request>())
+  activate_controllers_request_(std::make_shared<ControllerRequest>()),
+  deactivate_controllers_request_(std::make_shared<ControllerRequest>())
 {
   param_listener_ = std::make_shared<controller_coordinator::ParamListener>(this->get_node_parameters_interface());
   params_ = param_listener_->get_params();
@@ -60,11 +58,23 @@ ControllerCoordinator::ControllerCoordinator()
   wait_for_service(switch_controller_client_, switch_controller_name);
 
   // pre-configure the hardware activation/deactivation requests
-  activate_hardware_request_->name = params_.hardware_interface;
-  activate_hardware_request_->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE;
+  activate_hardware_requests_.reserve(params_.hardware_sequence.size());
+  std::ranges::transform(
+    params_.hardware_sequence, std::back_inserter(activate_hardware_requests_), [](const std::string & name) {
+      auto request = std::make_shared<HardwareRequest>();
+      request->name = name;
+      request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE;
+      return request;
+    });
 
-  deactivate_hardware_request_->name = params_.hardware_interface;
-  deactivate_hardware_request_->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE;
+  deactivate_hardware_requests_.reserve(params_.hardware_sequence.size());
+  std::ranges::transform(
+    params_.hardware_sequence, std::back_inserter(deactivate_hardware_requests_), [](const std::string & name) {
+      auto request = std::make_shared<HardwareRequest>();
+      request->name = name;
+      request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE;
+      return request;
+    });
 
   // pre-configure the controller activation/deactivation requests
   activate_controllers_request_->activate_controllers = params_.controller_sequence;
@@ -87,22 +97,25 @@ ControllerCoordinator::ControllerCoordinator()
       const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {  // NOLINT
       response->success = true;
       if (request->data) {
-        RCLCPP_INFO(this->get_logger(), "Activating thruster hardware interface and controllers");  // NOLINT
+        RCLCPP_INFO(this->get_logger(), "Activating hardware interfaces and controllers");  // NOLINT
 
-        // activate the hardware interface
-        hardware_client_->async_send_request(
-          activate_hardware_request_,
-          [this, response](rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
-                             result_response) {  // NOLINT
-            const auto & result = result_response.get();
-            if (result->ok) {
-              RCLCPP_INFO(this->get_logger(), "Successfully activated thruster hardware interface");  // NOLINT
-            } else {
-              RCLCPP_ERROR(this->get_logger(), "Failed to activate thruster hardware interface");  // NOLINT
-              response->success = false;
-              response->message = "Failed to activate thruster hardware interface";
-            }
-          });
+        // activate the hardware interfaces
+        for (const auto & activate_request : activate_hardware_requests_) {
+          hardware_client_->async_send_request(
+            activate_request,
+            [this, response, activate_request](
+              rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
+                result_response) {  // NOLINT
+              const auto & result = result_response.get();
+              if (result->ok) {
+                RCLCPP_INFO(this->get_logger(), "Successfully activated %s", activate_request->name.c_str());  // NOLINT
+              } else {
+                RCLCPP_ERROR(this->get_logger(), "Failed to activate %s", activate_request->name.c_str());  // NOLINT
+                response->success = false;
+                response->message = "Failed to activate " + activate_request->name;
+              }
+            });
+        }
 
         // activate the controllers
         switch_controller_client_->async_send_request(
@@ -120,22 +133,27 @@ ControllerCoordinator::ControllerCoordinator()
             }
           });
       } else {
-        RCLCPP_INFO(this->get_logger(), "Deactivating controllers and thruster hardware interface");  // NOLINT
+        RCLCPP_INFO(this->get_logger(), "Deactivating controllers and hardware interfaces");  // NOLINT
 
-        // deactivate the hardware interface
-        hardware_client_->async_send_request(
-          deactivate_hardware_request_,
-          [this, response](rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
-                             result_response) {  // NOLINT
-            const auto & result = result_response.get();
-            if (result->ok) {
-              RCLCPP_INFO(this->get_logger(), "Successfully deactivated thruster hardware interface");  // NOLINT
-            } else {
-              RCLCPP_ERROR(this->get_logger(), "Failed to deactivate thruster hardware interface");  // NOLINT
-              response->success = false;
-              response->message = "Failed to deactivate thruster hardware interface";
-            }
-          });
+        // deactivate the hardware interfaces
+        for (const auto & deactivate_request : deactivate_hardware_requests_) {
+          hardware_client_->async_send_request(
+            deactivate_request,
+            [this, response, deactivate_request](
+              rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
+                result_response) {  // NOLINT
+              const auto & result = result_response.get();
+              if (result->ok) {
+                RCLCPP_INFO(
+                  this->get_logger(), "Successfully deactivated %s", deactivate_request->name.c_str());  // NOLINT
+              } else {
+                RCLCPP_ERROR(
+                  this->get_logger(), "Failed to deactivate %s", deactivate_request->name.c_str());  // NOLINT
+                response->success = false;
+                response->message = "Failed to deactivate " + deactivate_request->name;
+              }
+            });
+        }
 
         // deactivate the controllers
         switch_controller_client_->async_send_request(
