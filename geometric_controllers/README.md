@@ -7,7 +7,7 @@ interpolation.
 
 ## Plugin Library
 
-end_effector_trajectory_controller/EndEffectorTrajectoryController
+geometric_trajectory_controller/GeometricTrajectoryController
 
 ## References
 
@@ -19,12 +19,12 @@ The output of this controller is a sampled end effector pose.
 
 ## Subscribers
 
-- end_effector_trajectory_controller/trajectory [auv_control_msgs::msg::EndEffectorTrajectory]
+- geometric_trajectory_controller/trajectory [auv_control_msgs::msg::GeometricTrajectory]
 
 ## Action Servers
 
-- end_effector_trajectory_controller/follow_trajectory [auv_control_msgs::action::FollowEndEffectorTrajectory]
+- geometric_trajectory_controller/follow_trajectory [auv_control_msgs::action::FollowGeometricTrajectory]
 
 ## Publishers
 
-- end_effector_trajectory_controller/status [auv_control_msgs::msg::EndEffectorTrajectoryControllerState]
+- geometric_trajectory_controller/status [auv_control_msgs::msg::GeometricTrajectoryControllerState]

@@ -3,7 +3,7 @@
 # The trajectory header stamp is used to set the trajectory start time. This can be
 # set to zero to indicate that the controller should start following the trajectory
 # now.
-auv_control_msgs/EndEffectorTrajectory trajectory
+auv_control_msgs/GeometricTrajectory trajectory
 
 # The maximum error that the controller is allowed when following the trajectory.
 # When this is set to 0, the tolerance will not be applied during control.

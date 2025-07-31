@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "end_effector_trajectory_controller/trajectory.hpp"
+#include "geometric_trajectory_controller/trajectory.hpp"
 
 #include <optional>
 #include <ranges>
@@ -27,7 +27,7 @@
 #include "tf2_eigen/tf2_eigen.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
-namespace end_effector_trajectory_controller
+namespace geometric_trajectory_controller
 {
 
 namespace
@@ -94,7 +94,7 @@ auto interpolate(
 }  // namespace
 
 Trajectory::Trajectory(
-  const auv_control_msgs::msg::EndEffectorTrajectory & trajectory,
+  const auv_control_msgs::msg::GeometricTrajectory & trajectory,
   const geometry_msgs::msg::Pose & state)
 : points_(trajectory),
   initial_time_(static_cast<rclcpp::Time>(trajectory.header.stamp)),
@@ -162,4 +162,4 @@ auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected
 
 auto Trajectory::reset_initial_state(const geometry_msgs::msg::Pose & state) -> void { initial_state_ = state; }
 
-}  // namespace end_effector_trajectory_controller
+}  // namespace geometric_trajectory_controller

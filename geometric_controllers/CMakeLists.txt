@@ -30,20 +30,20 @@ generate_parameter_library(geometric_trajectory_controller_parameters
   src/geometric_trajectory_controller_parameters.yaml
 )
 
-add_library(geometric_trajectory_controller SHARED)
+add_library(geometric_controllers SHARED)
 target_sources(
-    geometric_trajectory_controller
-    PRIVATE src/geometric_trajectory_controller.cpp src/trajectory.cpp
+    geometric_controllers
+    PRIVATE src/trajectory_controller.cpp src/trajectory.cpp
     PUBLIC
         FILE_SET HEADERS
             BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_trajectory_controller/geometric_trajectory_controller.hpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_trajectory_controller/trajectory.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_controllers/trajectory_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_controllers/trajectory.hpp
 )
-target_compile_features(geometric_trajectory_controller PUBLIC cxx_std_23)
+target_compile_features(geometric_controllers PUBLIC cxx_std_23)
 target_link_libraries(
-    geometric_trajectory_controller
+    geometric_controllers
     PUBLIC
         geometric_trajectory_controller_parameters
         realtime_tools::realtime_tools
@@ -62,20 +62,20 @@ target_link_libraries(
         ${lifecycle_msgs_TARGETS}
 )
 
-pluginlib_export_plugin_description_file(controller_interface geometric_trajectory_controller.xml)
+pluginlib_export_plugin_description_file(controller_interface geometric_controllers.xml)
 
 install(
     TARGETS
-        geometric_trajectory_controller
+        geometric_controllers
         geometric_trajectory_controller_parameters
-    EXPORT export_geometric_trajectory_controller
+    EXPORT export_geometric_controllers
     LIBRARY DESTINATION lib/${PROJECT_NAME}
     ARCHIVE DESTINATION lib/${PROJECT_NAME}
     RUNTIME DESTINATION bin/${PROJECT_NAME}
     FILE_SET HEADERS
 )
 
-ament_export_targets(export_geometric_trajectory_controller HAS_LIBRARY_TARGET)
+ament_export_targets(export_geometric_controllers HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   "geometry_msgs"
   "realtime_tools"

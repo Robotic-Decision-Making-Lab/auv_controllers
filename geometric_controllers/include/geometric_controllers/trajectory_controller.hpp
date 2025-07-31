@@ -76,7 +76,7 @@ protected:
   std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
   ControllerState controller_state_;
 
-  // the states can be captured in one of three ways:
+  // the state can be captured in one of three ways:
   // 1. using the topic interface - when available, this is preferred over the tf2 interface
   // 2. using the state interfaces - this is the default, but often not available
   // 3. using tf2 - this is the most common interface, but requires a transform to be published and is not as robust
@@ -105,7 +105,7 @@ protected:
   std::chrono::nanoseconds action_monitor_period_ = std::chrono::nanoseconds(50000000);  // 50ms
 
   realtime_tools::RealtimeBuffer<bool> rt_first_sample_;      // used to sample the trajectory for the first time
-  realtime_tools::RealtimeBuffer<bool> rt_holding_position_;  // used to hold the current end effector pose
+  realtime_tools::RealtimeBuffer<bool> rt_holding_position_;  // used to maintain the current pose
 
   // the update period is used to sample the "next" trajectory point
   rclcpp::Duration update_period_{0, 0};

@@ -15,10 +15,10 @@
 
 ## 0.2.0 (2025-05-03)
 
-- Implements the EndEffectorTrajectory message
-- Implements the EndEffectorTrajectoryPoint message
-- Implements the EndEffectorTrajectoryControllerState message
-- Adds the FollowEndEffectorTrajectory action
+- Implements the GeometricTrajectory message
+- Implements the GeometricTrajectoryPoint message
+- Implements the GeometricTrajectoryControllerState message
+- Adds the FollowGeometricTrajectory action
 
 ## 0.1.0 (2025-04-27)
 
