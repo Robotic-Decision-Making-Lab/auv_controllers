@@ -2,9 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>end_effector_trajectory_controller</name>
+  <name>geometric_controllers</name>
   <version>0.3.3</version>
-  <description>End effector trajectory tracking controller for UVMS control</description>
+  <description>Geometrically consistent controllers for AUVs and UVMS</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>

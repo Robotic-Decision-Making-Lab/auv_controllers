@@ -2,6 +2,9 @@
 
 ## 0.3.3 (2025-07-29)
 
+- Re-names the EndEffector- messages to Geometric- to match changes to the
+  end effectory trajectory controller.
+
 ## 0.3.2 (2025-07-22)
 
 ## 0.3.1 (2025-07-09)

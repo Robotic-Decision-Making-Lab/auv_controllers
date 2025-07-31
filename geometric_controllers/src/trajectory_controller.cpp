@@ -18,18 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "end_effector_trajectory_controller/end_effector_trajectory_controller.hpp"
-
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "controller_common/common.hpp"
+#include "geometric_trajectory_controller/geometric_trajectory_controller.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
-namespace end_effector_trajectory_controller
+namespace geometric_controllers
 {
 
 namespace
@@ -45,16 +44,16 @@ auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::
 
 }  // namespace
 
-auto EndEffectorTrajectoryController::on_init() -> controller_interface::CallbackReturn
+auto GeometricTrajectoryController::on_init() -> controller_interface::CallbackReturn
 {
-  param_listener_ = std::make_shared<end_effector_trajectory_controller::ParamListener>(get_node());
+  param_listener_ = std::make_shared<geometric_trajectory_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
   logger_ = get_node()->get_logger();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto EndEffectorTrajectoryController::update_parameters() -> void
+auto GeometricTrajectoryController::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -63,7 +62,7 @@ auto EndEffectorTrajectoryController::update_parameters() -> void
   params_ = param_listener_->get_params();
 }
 
-auto EndEffectorTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
+auto GeometricTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
 
@@ -82,7 +81,7 @@ auto EndEffectorTrajectoryController::configure_parameters() -> controller_inter
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::validate_trajectory(
+auto GeometricTrajectoryController::validate_trajectory(
   const auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool
 {
   if (trajectory.points.empty()) {
@@ -119,21 +118,21 @@ auto EndEffectorTrajectoryController::validate_trajectory(
   return true;
 }
 
-auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+auto GeometricTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
 
-  end_effector_state_.writeFromNonRT(geometry_msgs::msg::Pose());
+  state_.writeFromNonRT(geometry_msgs::msg::Pose());
   command_interfaces_.reserve(n_dofs_);
   update_period_ = rclcpp::Duration(0.0, static_cast<uint32_t>(1.0e9 / static_cast<double>(get_update_rate())));
 
   if (params_.use_external_measured_states) {
-    end_effector_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+    state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
       "~/end_effector_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
-        end_effector_state_.writeFromNonRT(*msg);
+        state_.writeFromNonRT(*msg);
       });
   } else {
     if (params_.lookup_end_effector_transform) {
@@ -156,7 +155,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
         updated_msg.header.stamp = get_node()->now();
       }
       RCLCPP_INFO(logger_, "Received new trajectory message");  // NOLINT
-      rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
+      rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *state_.readFromNonRT()));
       rt_goal_tolerance_.writeFromNonRT(default_goal_tolerance_);
       rt_path_tolerance_.writeFromNonRT(default_path_tolerance_);
       rt_first_sample_.writeFromNonRT(true);
@@ -180,7 +179,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     if (common::math::isclose(start_time.seconds(), 0.0)) {
       updated_msg.header.stamp = get_node()->now();
     }
-    rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
+    rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *state_.readFromNonRT()));
     rt_first_sample_.writeFromNonRT(true);
     rt_holding_position_.writeFromNonRT(false);
     RCLCPP_INFO(logger_, "Accepted new trajectory goal");  // NOLINT
@@ -235,16 +234,16 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+auto GeometricTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   rt_first_sample_.writeFromNonRT(true);
   rt_holding_position_.writeFromNonRT(true);  // hold position until a trajectory is received
-  common::messages::reset_message(end_effector_state_.readFromNonRT());
+  common::messages::reset_message(state_.readFromNonRT());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::command_interface_configuration() const
+auto GeometricTrajectoryController::command_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
@@ -260,7 +259,7 @@ auto EndEffectorTrajectoryController::command_interface_configuration() const
   return config;
 }
 
-auto EndEffectorTrajectoryController::state_interface_configuration() const
+auto GeometricTrajectoryController::state_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
@@ -278,9 +277,9 @@ auto EndEffectorTrajectoryController::state_interface_configuration() const
   return config;
 }
 
-auto EndEffectorTrajectoryController::update_end_effector_state() -> controller_interface::return_type
+auto GeometricTrajectoryController::update_system_state() -> controller_interface::return_type
 {
-  auto * end_effector_state = end_effector_state_.readFromRT();
+  auto * end_effector_state = state_.readFromRT();
   if (params_.lookup_end_effector_transform) {
     const auto to_frame = params_.end_effector_frame_id;
     const auto from_frame = params_.odom_frame_id;
@@ -316,10 +315,10 @@ auto EndEffectorTrajectoryController::update_end_effector_state() -> controller_
   return controller_interface::return_type::OK;
 }
 
-auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
+auto GeometricTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
-  if (update_end_effector_state() != controller_interface::return_type::OK) {
+  if (update_system_state() != controller_interface::return_type::OK) {
     RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
@@ -331,7 +330,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     return controller_interface::return_type::OK;
   }
 
-  const geometry_msgs::msg::Pose end_effector_state = *end_effector_state_.readFromRT();
+  const geometry_msgs::msg::Pose end_effector_state = *state_.readFromRT();
   geometry_msgs::msg::Pose reference_state;
   common::messages::reset_message(&reference_state);
   auto command_state = end_effector_state;
@@ -458,9 +457,9 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   return controller_interface::return_type::OK;
 }
 
-}  // namespace end_effector_trajectory_controller
+}  // namespace geometric_controllers
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
-  end_effector_trajectory_controller::EndEffectorTrajectoryController,
+  geometric_trajectory_controller::GeometricTrajectoryController,
   controller_interface::ControllerInterface)
