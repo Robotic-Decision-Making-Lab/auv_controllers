@@ -1,4 +1,6 @@
-# Changelog for package controller_common
+# Changelog for package end_effector_trajectory_controller
+
+## 0.3.3 (2025-07-29)
 
 ## 0.3.2 (2025-07-22)
 
