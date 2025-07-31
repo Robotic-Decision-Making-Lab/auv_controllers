@@ -1,7 +1,7 @@
 controller_coordinator:
-  hardware_sequence:
+  hardware_interfaces:
     type: string_array
-    description: An ordered list of hardware interfaces to activate/deactivate.
+    description: A list of hardware interfaces to activate/deactivate.
     default_value: []
 
   controller_sequence:

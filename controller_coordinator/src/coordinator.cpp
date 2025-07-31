@@ -58,18 +58,18 @@ ControllerCoordinator::ControllerCoordinator()
   wait_for_service(switch_controller_client_, switch_controller_name);
 
   // pre-configure the hardware activation/deactivation requests
-  activate_hardware_requests_.reserve(params_.hardware_sequence.size());
+  activate_hardware_requests_.reserve(params_.hardware_interfaces.size());
   std::ranges::transform(
-    params_.hardware_sequence, std::back_inserter(activate_hardware_requests_), [](const std::string & name) {
+    params_.hardware_interfaces, std::back_inserter(activate_hardware_requests_), [](const std::string & name) {
       auto request = std::make_shared<HardwareRequest>();
       request->name = name;
       request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE;
       return request;
     });
 
-  deactivate_hardware_requests_.reserve(params_.hardware_sequence.size());
+  deactivate_hardware_requests_.reserve(params_.hardware_interfaces.size());
   std::ranges::transform(
-    params_.hardware_sequence, std::back_inserter(deactivate_hardware_requests_), [](const std::string & name) {
+    params_.hardware_interfaces, std::back_inserter(deactivate_hardware_requests_), [](const std::string & name) {
       auto request = std::make_shared<HardwareRequest>();
       request->name = name;
       request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE;
@@ -98,10 +98,8 @@ ControllerCoordinator::ControllerCoordinator()
       response->success = true;
       if (request->data) {
         RCLCPP_INFO(this->get_logger(), "Activating hardware interfaces and controllers");  // NOLINT
-
-        // sequentially activate the hardware interfaces
         for (const auto & activate_request : activate_hardware_requests_) {
-          auto hardware_future = hardware_client_->async_send_request(
+          hardware_client_->async_send_request(
             activate_request,
             [logger = this->get_logger(), response, activate_request](
               rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
@@ -115,10 +113,7 @@ ControllerCoordinator::ControllerCoordinator()
                 response->message = "Failed to activate " + activate_request->name;
               }
             });
-          rclcpp::spin_until_future_complete(this->get_node_base_interface(), hardware_future);
         }
-
-        // activate the controllers
         switch_controller_client_->async_send_request(
           activate_controllers_request_,
           [this,
@@ -135,10 +130,8 @@ ControllerCoordinator::ControllerCoordinator()
           });
       } else {
         RCLCPP_INFO(this->get_logger(), "Deactivating controllers and hardware interfaces");  // NOLINT
-
-        // sequentially deactivate the hardware interfaces
         for (const auto & deactivate_request : deactivate_hardware_requests_) {
-          auto hardware_future = hardware_client_->async_send_request(
+          hardware_client_->async_send_request(
             deactivate_request,
             [this, response, deactivate_request](
               rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
@@ -154,10 +147,7 @@ ControllerCoordinator::ControllerCoordinator()
                 response->message = "Failed to deactivate " + deactivate_request->name;
               }
             });
-          rclcpp::spin_until_future_complete(this->get_node_base_interface(), hardware_future);
         }
-
-        // deactivate the controllers
         switch_controller_client_->async_send_request(
           deactivate_controllers_request_,
           [this,
