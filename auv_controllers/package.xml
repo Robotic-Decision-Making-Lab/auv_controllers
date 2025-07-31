@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>auv_controllers</name>
-  <version>0.3.2</version>
+  <version>0.3.3</version>
   <description>Meta package for auv_controllers</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

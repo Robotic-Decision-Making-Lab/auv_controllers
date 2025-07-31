@@ -1,5 +1,7 @@
 # Changelog for package thruster_controllers
 
+## 0.3.3 (2025-07-29)
+
 ## 0.3.2 (2025-07-22)
 
 - Replaces the deprecated `unlockAndPublish` API with `try_publish`
