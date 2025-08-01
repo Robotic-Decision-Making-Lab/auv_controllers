@@ -11,7 +11,7 @@ thruster_allocation_matrix_controller/ThrusterAllocationMatrixController
 
 ## References
 
-The input to this controller is a wrench with force components $F_\text{x}$, $F_\text{y}$,
+The input to this controller is a wrench with force components $\text{F}_\text{x}$, $F_\text{y}$,
 $F_\text{z}$, and torque components $T_\text{rx}$, $T_\text{ry}$, $T_\text{rz}$ in N and Nm, respectively.
 
 ## Commands
