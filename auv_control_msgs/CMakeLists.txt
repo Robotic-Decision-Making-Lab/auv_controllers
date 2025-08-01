@@ -11,11 +11,11 @@ find_package(trajectory_msgs REQUIRED)
 rosidl_generate_interfaces(auv_control_msgs
   "msg/MultiActuatorStateStamped.msg"
   "msg/IKControllerStateStamped.msg"
-  "msg/TrajectoryPoint.msg"
-  "msg/Trajectory.msg"
-  "msg/TrajectoryControllerStateStamped.msg"
+  "msg/CartesianTrajectoryPoint.msg"
+  "msg/CartesianTrajectory.msg"
+  "msg/CartesianTrajectoryControllerStateStamped.msg"
   "msg/ImpedanceCommand.msg"
-  "action/FollowTrajectory.action"
+  "action/FollowCartesianTrajectory.action"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs trajectory_msgs
 )
 

@@ -20,6 +20,9 @@
 
 #include "impedance_controller/impedance_controller.hpp"
 
+#include <ranges>
+#include <unsupported/Eigen/MatrixFunctions>
+
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
@@ -30,12 +33,18 @@ namespace impedance_controller
 namespace
 {
 
+auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
+{
+  return {mat(0, 3), mat(1, 3), mat(2, 3), mat(2, 1), mat(0, 2), mat(1, 0)};
+}
+
 auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::msg::Pose & state) -> Eigen::Vector6d
 {
   Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
   tf2::fromMsg(goal, goal_mat);
   tf2::fromMsg(state, state_mat);
-  return (goal_mat.inverse() * state_mat).matrix().log();
+  const Eigen::Matrix4d error = (goal_mat.inverse() * state_mat).matrix().log();
+  return vee(error);
 }
 
 }  // namespace
@@ -66,6 +75,7 @@ auto ImpedanceController::configure_parameters() -> controller_interface::Callba
 
   state_dofs_ = params_.state_joints;
   n_state_dofs_ = state_dofs_.size();
+  n_reference_dofs_ = n_command_dofs_ + n_state_dofs_;
 
   auto get_gains = [this](auto field) {
     auto gains = command_dofs_ |
@@ -84,7 +94,7 @@ auto ImpedanceController::configure_parameters() -> controller_interface::Callba
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & previous_state)
+auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
@@ -94,6 +104,7 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & previous_
 
   command_interfaces_.reserve(n_command_dofs_);
   state_interfaces_.reserve(n_state_dofs_);
+
   system_state_values_.resize(n_state_dofs_, std::numeric_limits<double>::quiet_NaN());
 
   if (params_.use_external_measured_states) {
@@ -118,7 +129,7 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & previous_
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto ImpedanceController::on_activate(const rclcpp_lifecycle::State & previous_state)
+auto ImpedanceController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   common::messages::reset_message(reference_.readFromNonRT());
@@ -154,10 +165,11 @@ auto ImpedanceController::state_interface_configuration() const -> controller_in
   } else {
     config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
     config.names.reserve(n_state_dofs_);
-    for (std::size_t i = 0; i < 7; ++i) {
+    const std::size_t n_pose_dofs = 7;
+    for (std::size_t i = 0; i < n_pose_dofs; ++i) {
       config.names.emplace_back(std::format("{}/{}", state_dofs_[i], hardware_interface::HW_IF_POSITION));
     }
-    for (std::size_t i = 7; i < n_state_dofs_; ++i) {
+    for (std::size_t i = n_pose_dofs; i < n_state_dofs_; ++i) {
       config.names.emplace_back(std::format("{}/{}", state_dofs_[i], hardware_interface::HW_IF_VELOCITY));
     }
   }
@@ -167,17 +179,19 @@ auto ImpedanceController::state_interface_configuration() const -> controller_in
 auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
 {
   // the reference command includes the desired pose, velocity, and force/torque
-  reference_interfaces_.resize(n_command_dofs_ + n_state_dofs_, std::numeric_limits<double>::quiet_NaN());
+  reference_interfaces_.resize(n_reference_dofs_, std::numeric_limits<double>::quiet_NaN());
   std::vector<hardware_interface::CommandInterface> interfaces;
   interfaces.reserve(reference_interfaces_.size());
 
   // add the pose & velocity interfaces
+  // this uses the same position/velocity joint names as the state interfaces
   for (const auto [i, dof] : std::views::enumerate(state_dofs_)) {
     interfaces.emplace_back(
       get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
   }
 
   // add the force/torque interfaces
+  // this uses the same effort joint names as the command interfaces
   for (const auto [i, dof] : std::views::enumerate(command_dofs_)) {
     interfaces.emplace_back(
       get_node()->get_name(),
@@ -188,8 +202,9 @@ auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardwa
   return interfaces;
 }
 
-auto ImpedanceController::update_reference_from_subscribers(const rclcpp::Time & time, const rclcpp::Duration & period)
-  -> controller_interface::return_type
+auto ImpedanceController::update_reference_from_subscribers(
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
   auto * current_reference = reference_.readFromNonRT();
   const std::vector<double> reference = common::messages::to_vector(*current_reference);
@@ -205,8 +220,8 @@ auto ImpedanceController::update_reference_from_subscribers(const rclcpp::Time &
 auto ImpedanceController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
-    auto * current_state = system_state_.readFromNonRT();
-    std::ranges::copy(common::messages::to_vector(current_state), system_state_values_.begin());
+    auto * current_state = system_state_.readFromRT();
+    std::ranges::copy(common::messages::to_vector(*current_state), system_state_values_.begin());
   } else {
     std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
@@ -247,7 +262,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   // get the reference pose, twist, and wrench values
   const auto pose_end = reference_interfaces_.begin() + 7;
   const auto twist_end = pose_end + 6;
-  const int wrench_end = twist_end + 6;
+  const auto wrench_end = twist_end + 6;
 
   const std::vector<double> ref_pose_values(reference_interfaces_.begin(), pose_end);
   const std::vector<double> ref_twist_values(pose_end, twist_end);
@@ -282,7 +297,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
     return controller_interface::return_type::OK;
   }
 
-  // convert the reference wrench values to an Eigen vector
+  // convert the reference wrench values into an Eigen vector
   Eigen::Vector6d reference_wrench(ref_wrench_values.data());
 
   // calculate the control command
@@ -307,7 +322,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   for (std::size_t i = 0; i < n_state_dofs_; ++i) {
     controller_state_.dof_states[i].feedback = system_state_values_[i];
   }
-  for (std::size_t i = n_state_dofs_; i < n_command_dofs_ + n_state_dofs_; ++i) {
+  for (std::size_t i = n_state_dofs_; i < n_reference_dofs_; ++i) {
     controller_state_.dof_states[i].reference = reference_interfaces_[i];
   }
 

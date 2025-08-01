@@ -1,5 +1,9 @@
 # Changelog for package controller_common
 
+## 0.4.0 (2025-08-01)
+
+- Adds API support for the ImpedanceCommand message type
+
 ## 0.3.3 (2025-07-29)
 
 ## 0.3.2 (2025-07-22)

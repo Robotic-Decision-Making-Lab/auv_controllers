@@ -1,0 +1,93 @@
+cartesian_trajectory_controller:
+  joints:
+    type: string_array
+    default_value: ["x", "y", "z", "qx", "qy", "qz", "qw"]
+    read_only: true
+    description: >
+      The list of position joints to use for the end effector position
+      interfaces. This can be used to configure a prefix for the interfaces.
+    validation:
+      fixed_size<>: 7 # position + orientation (quaternion)
+
+  path_tolerance:
+    type: double
+    default_value: 0.0
+    read_only: true
+    description: >
+      The maximum error between the end effector pose and the reference
+      pose in the trajectory.
+
+      The error threshold is measured in terms of the squared norm of the
+      geodesic distance between the end effector pose and the terminal pose in
+      the trajectory.
+    validation:
+      gt_eq<>: 0.0
+
+  goal_tolerance:
+    type: double
+    default_value: 0.0
+    read_only: true
+    description: >
+      The maximum error between the end effector pose and the terminal
+      pose in the trajectory at the end of execution.
+
+      The error threshold is measured in terms of the squared norm of the
+      geodesic distance between the end effector pose and the terminal pose in
+      the trajectory.
+    validation:
+      gt_eq<>: 0.0
+
+  use_external_measured_states:
+    type: bool
+    default_value: false
+    read_only: true
+    description: >
+      Use states provided via a topic instead of state interfaces or tf2. If
+      both this and lookup_transform are set to true, the controller will use
+      the states provided via a topic.
+
+  lookup_transform:
+    type: bool
+    default_value: false
+    read_only: true
+    description: >
+      Use tf2 to look up the state transform instead of using state
+      interfaces or a topic. This is useful in scenarios where the pose
+      is determined only by using tf2 to perform forward kinematics.
+
+      If both this and use_external_measured_states are set to true, the
+      controller will use the states provided via a topic.
+
+  reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: >
+      The prefix of the reference controller to send commands to. This can be
+      used to configure command interfaces in chained mode.
+
+  frame_id:
+    type: string
+    default_value: odom_ned
+    read_only: true
+    description: >
+      The name of the parent frame. This is used to lookup the body pose when
+      using lookup_transform.
+
+  child_frame_id:
+    type: string
+    default_value: base_link_frd
+    read_only: true
+    description: >
+      The name of the body frame. This is used to lookup the body pose when
+      using lookup_transform.
+
+  action_monitor_rate:
+    type: int
+    default_value: 20
+    read_only: true
+    description: >
+      The rate (Hz) at which the action server will monitor the trajectory
+      execution.
+    validation:
+      gt<>: 0

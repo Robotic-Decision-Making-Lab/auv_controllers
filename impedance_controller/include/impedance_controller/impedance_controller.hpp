@@ -95,7 +95,7 @@ protected:
   // the dofs are passed as a parameter to the controller
   // we could make these static, but there may be scenarios where users want to rename the interfaces
   std::vector<std::string> command_dofs_, state_dofs_;
-  std::size_t n_command_dofs_, n_state_dofs_;
+  std::size_t n_command_dofs_, n_state_dofs_, n_reference_dofs_;
 
   // controller gains
   Eigen::Matrix6d kp_, kd_;
