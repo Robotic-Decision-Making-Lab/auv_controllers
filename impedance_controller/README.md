@@ -7,7 +7,7 @@ the implemented control law is given as follows
 \tau = \tau_{\text{ref}} + \textbf{K}_{\text{p}}(g_\text{ref}^\top g)^{\vee} + \textbf{K}_{\text{d}}(\nu_\text{ref} - \nu)
 ```
 
-where $\mathbf{K}_{\text{p}}$ is the desired stiffness, and $\mathbf{K}_{\text{d}}$ is the desired damping.
+where $\text{\textbf{K}}_{\text{p}}$ is the desired stiffness, and $\mathbf{K}_{\text{d}}$ is the desired damping.
 
 This control law is commonly used as an inner-loop controller in an MPC
 framework. [^1] [^2]
