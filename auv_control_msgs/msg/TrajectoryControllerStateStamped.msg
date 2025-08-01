@@ -4,10 +4,10 @@ std_msgs/Header header
 # for error calculation.
 geometry_msgs/Pose reference
 
-# The current end effector state.
+# The current state.
 geometry_msgs/Pose feedback
 
-# The squared Euclidean norm of the geodesic distance between the reference state and end effector state.
+# The squared Euclidean norm of the geodesic distance between the reference state and state.
 float64 error
 
 # The trajectory controller command. This is the trajectory sample from the next time instance.

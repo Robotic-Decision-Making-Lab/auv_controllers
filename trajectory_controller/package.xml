@@ -2,9 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>geometric_controllers</name>
+  <name>trajectory_controller</name>
   <version>0.3.3</version>
-  <description>Geometrically consistent controllers for AUVs and UVMS</description>
+  <description>Trajectory controller for single-link rigid-body systems</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>

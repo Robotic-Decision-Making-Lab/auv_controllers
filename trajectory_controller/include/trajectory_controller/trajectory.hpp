@@ -25,11 +25,11 @@
 #include <expected>
 #include <optional>
 
-#include "auv_control_msgs/msg/geometric_trajectory.hpp"
+#include "auv_control_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-namespace geometric_trajectory_controller
+namespace trajectory_controller
 {
 
 enum class SampleError : std::uint8_t
@@ -45,7 +45,7 @@ public:
   Trajectory() = default;
 
   /// Create a new trajectory given a trajectory message and the initial state.
-  Trajectory(const auv_control_msgs::msg::GeometricTrajectory & trajectory, const geometry_msgs::msg::Pose & state);
+  Trajectory(const auv_control_msgs::msg::Trajectory & trajectory, const geometry_msgs::msg::Pose & state);
 
   /// Whether or not the trajectory is empty.
   [[nodiscard]] auto empty() const -> bool;
@@ -70,9 +70,9 @@ public:
   auto reset_initial_state(const geometry_msgs::msg::Pose & state) -> void;
 
 private:
-  auv_control_msgs::msg::GeometricTrajectory points_;
+  auv_control_msgs::msg::Trajectory points_;
   rclcpp::Time initial_time_;
   geometry_msgs::msg::Pose initial_state_;
 };
 
-}  // namespace geometric_trajectory_controller
+}  // namespace trajectory_controller

@@ -1,4 +1,4 @@
-geometric_trajectory_controller:
+trajectory_controller:
   joints:
     type: string_array
     default_value: ["x", "y", "z", "qx", "qy", "qz", "qw"]

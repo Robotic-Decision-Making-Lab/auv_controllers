@@ -18,17 +18,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include "trajectory_controller/trajectory_controller.hpp"
+
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "controller_common/common.hpp"
-#include "geometric_trajectory_controller/geometric_trajectory_controller.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
-namespace geometric_controllers
+namespace trajectory_controller
 {
 
 namespace
@@ -44,16 +45,16 @@ auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::
 
 }  // namespace
 
-auto GeometricTrajectoryController::on_init() -> controller_interface::CallbackReturn
+auto TrajectoryController::on_init() -> controller_interface::CallbackReturn
 {
-  param_listener_ = std::make_shared<geometric_trajectory_controller::ParamListener>(get_node());
+  param_listener_ = std::make_shared<trajectory_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
   logger_ = get_node()->get_logger();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto GeometricTrajectoryController::update_parameters() -> void
+auto TrajectoryController::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -62,7 +63,7 @@ auto GeometricTrajectoryController::update_parameters() -> void
   params_ = param_listener_->get_params();
 }
 
-auto GeometricTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
+auto TrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
 
@@ -81,8 +82,7 @@ auto GeometricTrajectoryController::configure_parameters() -> controller_interfa
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto GeometricTrajectoryController::validate_trajectory(
-  const auv_control_msgs::msg::GeometricTrajectory & trajectory) const -> bool
+auto TrajectoryController::validate_trajectory(const auv_control_msgs::msg::Trajectory & trajectory) const -> bool
 {
   if (trajectory.points.empty()) {
     RCLCPP_ERROR(logger_, "Received empty trajectory");  // NOLINT
@@ -118,7 +118,7 @@ auto GeometricTrajectoryController::validate_trajectory(
   return true;
 }
 
-auto GeometricTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+auto TrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
@@ -141,10 +141,10 @@ auto GeometricTrajectoryController::on_configure(const rclcpp_lifecycle::State &
     }
   }
 
-  trajectory_sub_ = get_node()->create_subscription<auv_control_msgs::msg::GeometricTrajectory>(
+  trajectory_sub_ = get_node()->create_subscription<auv_control_msgs::msg::Trajectory>(
     "~/trajectory",
     rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<auv_control_msgs::msg::GeometricTrajectory> msg) {  // NOLINT
+    [this](const std::shared_ptr<auv_control_msgs::msg::Trajectory> msg) {  // NOLINT
       auto updated_msg = *msg;
       if (!validate_trajectory(updated_msg)) {
         RCLCPP_ERROR(logger_, "Ignoring invalid trajectory message");  // NOLINT
@@ -224,7 +224,7 @@ auto GeometricTrajectoryController::on_configure(const rclcpp_lifecycle::State &
     goal_handle_timer_ = get_node()->create_wall_timer(action_monitor_period_, [rt_gh]() { rt_gh->runNonRealtime(); });
   };
 
-  action_server_ = rclcpp_action::create_server<auv_control_msgs::action::FollowGeometricTrajectory>(
+  action_server_ = rclcpp_action::create_server<auv_control_msgs::action::FollowTrajectory>(
     get_node(), "~/follow_trajectory", handle_goal, handle_cancel, handle_accepted);
 
   controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
@@ -234,7 +234,7 @@ auto GeometricTrajectoryController::on_configure(const rclcpp_lifecycle::State &
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto GeometricTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+auto TrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   rt_first_sample_.writeFromNonRT(true);
@@ -243,8 +243,7 @@ auto GeometricTrajectoryController::on_activate(const rclcpp_lifecycle::State & 
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto GeometricTrajectoryController::command_interface_configuration() const
-  -> controller_interface::InterfaceConfiguration
+auto TrajectoryController::command_interface_configuration() const -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
@@ -259,8 +258,7 @@ auto GeometricTrajectoryController::command_interface_configuration() const
   return config;
 }
 
-auto GeometricTrajectoryController::state_interface_configuration() const
-  -> controller_interface::InterfaceConfiguration
+auto TrajectoryController::state_interface_configuration() const -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
   if (params_.use_external_measured_states || params_.lookup_transform) {
@@ -277,7 +275,7 @@ auto GeometricTrajectoryController::state_interface_configuration() const
   return config;
 }
 
-auto GeometricTrajectoryController::update_system_state() -> controller_interface::return_type
+auto TrajectoryController::update_system_state() -> controller_interface::return_type
 {
   auto * system_state = state_.readFromRT();
   if (params_.lookup_transform) {
@@ -315,7 +313,7 @@ auto GeometricTrajectoryController::update_system_state() -> controller_interfac
   return controller_interface::return_type::OK;
 }
 
-auto GeometricTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
+auto TrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
   if (update_system_state() != controller_interface::return_type::OK) {
@@ -457,9 +455,7 @@ auto GeometricTrajectoryController::update(const rclcpp::Time & time, const rclc
   return controller_interface::return_type::OK;
 }
 
-}  // namespace geometric_controllers
+}  // namespace trajectory_controller
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(
-  geometric_trajectory_controller::GeometricTrajectoryController,
-  controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(trajectory_controller::TrajectoryController, controller_interface::ControllerInterface)

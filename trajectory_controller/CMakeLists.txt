@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(geometric_controllers)
+project(trajectory_controller)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -26,26 +26,26 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
-generate_parameter_library(geometric_trajectory_controller_parameters
-  src/geometric_trajectory_controller_parameters.yaml
+generate_parameter_library(trajectory_controller_parameters
+  src/trajectory_controller_parameters.yaml
 )
 
-add_library(geometric_controllers SHARED)
+add_library(trajectory_controller SHARED)
 target_sources(
-    geometric_controllers
+    trajectory_controller
     PRIVATE src/trajectory_controller.cpp src/trajectory.cpp
     PUBLIC
         FILE_SET HEADERS
             BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_controllers/trajectory_controller.hpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/geometric_controllers/trajectory.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/trajectory_controller/trajectory_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/trajectory_controller/trajectory.hpp
 )
-target_compile_features(geometric_controllers PUBLIC cxx_std_23)
+target_compile_features(trajectory_controller PUBLIC cxx_std_23)
 target_link_libraries(
-    geometric_controllers
+    trajectory_controller
     PUBLIC
-        geometric_trajectory_controller_parameters
+        trajectory_controller_parameters
         realtime_tools::realtime_tools
         controller_common::controller_common
         hardware_interface::hardware_interface
@@ -62,20 +62,20 @@ target_link_libraries(
         ${lifecycle_msgs_TARGETS}
 )
 
-pluginlib_export_plugin_description_file(controller_interface geometric_controllers.xml)
+pluginlib_export_plugin_description_file(controller_interface trajectory_controller.xml)
 
 install(
     TARGETS
-        geometric_controllers
-        geometric_trajectory_controller_parameters
-    EXPORT export_geometric_controllers
+        trajectory_controller
+        trajectory_controller_parameters
+    EXPORT export_trajectory_controller
     LIBRARY DESTINATION lib/${PROJECT_NAME}
     ARCHIVE DESTINATION lib/${PROJECT_NAME}
     RUNTIME DESTINATION bin/${PROJECT_NAME}
     FILE_SET HEADERS
 )
 
-ament_export_targets(export_geometric_controllers HAS_LIBRARY_TARGET)
+ament_export_targets(export_trajectory_controller HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   "geometry_msgs"
   "realtime_tools"
