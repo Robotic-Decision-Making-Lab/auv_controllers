@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>controller_common</name>
-  <version>0.3.3</version>
+  <version>0.4.0</version>
   <description>Common interfaces for controllers used in this project</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -19,6 +19,7 @@
   <depend>rclcpp</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
+  <depend>auv_control_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

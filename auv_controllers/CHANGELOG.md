@@ -1,5 +1,11 @@
 # Changelog for package auv_controllers
 
+## 0.4.0 (2025-08-01)
+
+- Implements the impedance controller
+- Refactors the `end_effector_trajectory_controller` to be `cartesian_trajectory_controller`
+- Implements the trajectory controllers package
+
 ## 0.3.3 (2025-07-29)
 
 ## 0.3.2 (2025-07-22)

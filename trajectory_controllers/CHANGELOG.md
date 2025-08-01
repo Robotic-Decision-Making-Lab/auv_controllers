@@ -1,4 +1,9 @@
-# Changelog for package end_effector_trajectory_controller
+# Changelog for package trajectory_controllers
+
+## 0.4.0 (2025-08-01)
+
+- Renames the package to be trajectory_controllers
+- Renames the end_effector_trajectory_controller to be cartesian_trajectory_controller
 
 ## 0.3.3 (2025-07-29)
 

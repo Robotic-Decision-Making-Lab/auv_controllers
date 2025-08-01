@@ -2,9 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>end_effector_trajectory_controller</name>
-  <version>0.3.3</version>
-  <description>End effector trajectory tracking controller for UVMS control</description>
+  <name>impedance_controller</name>
+  <version>0.4.0</version>
+  <description>An impedance controller for underwater vehicles</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
@@ -20,16 +20,22 @@
   <depend>eigen</depend>
   <depend>rclcpp</depend>
   <depend>ros2_control</depend>
+  <depend>pluginlib</depend>
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>generate_parameter_library</depend>
   <depend>control_msgs</depend>
+  <depend>tf2_eigen</depend>
   <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
   <depend>controller_common</depend>
-  <depend>auv_control_msgs</depend>
-  <depend>rclcpp_action</depend>
-  <depend>lifecycle_msgs</depend>
+  <depend>hydrodynamics</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

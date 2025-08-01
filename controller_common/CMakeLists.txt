@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(auv_control_msgs REQUIRED)
 
 add_library(controller_common SHARED)
 target_sources(
@@ -25,7 +26,11 @@ target_sources(
 target_compile_features(controller_common PUBLIC cxx_std_23)
 target_link_libraries(
     controller_common
-    PUBLIC rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS}
+    PUBLIC
+        rclcpp::rclcpp
+        ${geometry_msgs_TARGETS}
+        ${nav_msgs_TARGETS}
+        ${auv_control_msgs_TARGETS}
 )
 
 install(
@@ -38,6 +43,6 @@ install(
 )
 
 ament_export_targets(export_controller_common HAS_LIBRARY_TARGET)
-ament_export_dependencies("rclcpp" "geometry_msgs" "nav_msgs")
+ament_export_dependencies("rclcpp" "geometry_msgs" "nav_msgs" "auv_control_msgs")
 
 ament_package()
