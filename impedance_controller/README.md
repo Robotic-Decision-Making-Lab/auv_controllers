@@ -4,10 +4,10 @@ A chainable impedance controller. Given an AUV pose $g$ with velocity $\nu$,
 the implemented control law is given as follows
 
 ```math
-\tau = \tau_{\text{ref}} + \textbf{K}_{\text{p}}(g_\text{ref}^\top g)^{\vee} + \textbf{K}_{\text{d}}(\nu_\text{ref} - \nu)
+\tau = \tau_{\text{ref}} + \textbf{K}_\text{p}(g_\text{ref}^\top g)^{\vee} + \textbf{K}_\text{d}(\nu_\text{ref} - \nu)
 ```
 
-where ```math \textbf{K}_{\text{p}}``` is the desired stiffness, and $\mathbf{K}_{\text{d}}$ is the desired damping.
+where $\textbf{K}_p$ is the desired stiffness, and $\textbf{K}_d$ is the desired damping.
 
 This control law is commonly used as an inner-loop controller in an MPC
 framework. [^1] [^2]
