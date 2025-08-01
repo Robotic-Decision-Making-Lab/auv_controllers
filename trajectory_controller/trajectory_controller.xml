@@ -1,9 +1,0 @@
-<library path="trajectory_controller">
-  <class name="trajectory_controller/TrajectoryController"
-         type="trajectory_controller::TrajectoryController"
-         base_class_type="controller_interface::ControllerInterface">
-    <description>
-      Trajectory controller for AUVs and UVMS that uses geometric methods to compute the desired trajectory.
-    </description>
-  </class>
-</library>
