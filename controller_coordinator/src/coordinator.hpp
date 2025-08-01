@@ -44,7 +44,7 @@ public:
 
 private:
   // we need clients to:
-  // 1. activate/deactivate the hardware
+  // 1. activate/deactivate the hardware interfaces
   // 2. activate/deactivate the controllers
   std::shared_ptr<rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>> hardware_client_;
   std::shared_ptr<rclcpp::Client<controller_manager_msgs::srv::SwitchController>> switch_controller_client_;
@@ -54,10 +54,13 @@ private:
 
   // pre-configure the activate/deactivate service messages
   // these won't change, so we can set them up once
-  std::shared_ptr<controller_manager_msgs::srv::SetHardwareComponentState::Request> activate_hardware_request_;
-  std::shared_ptr<controller_manager_msgs::srv::SetHardwareComponentState::Request> deactivate_hardware_request_;
-  std::shared_ptr<controller_manager_msgs::srv::SwitchController::Request> activate_controllers_request_;
-  std::shared_ptr<controller_manager_msgs::srv::SwitchController::Request> deactivate_controllers_request_;
+  using HardwareRequest = controller_manager_msgs::srv::SetHardwareComponentState::Request;
+  std::vector<std::shared_ptr<HardwareRequest>> activate_hardware_requests_;
+  std::vector<std::shared_ptr<HardwareRequest>> deactivate_hardware_requests_;
+
+  using ControllerRequest = controller_manager_msgs::srv::SwitchController::Request;
+  std::shared_ptr<ControllerRequest> activate_controllers_request_;
+  std::shared_ptr<ControllerRequest> deactivate_controllers_request_;
 
   std::shared_ptr<controller_coordinator::ParamListener> param_listener_;
   controller_coordinator::Params params_;
