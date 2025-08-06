@@ -26,6 +26,7 @@
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
+#include "pluginlib/class_list_macros.hpp"
 
 namespace impedance_controller
 {
@@ -186,8 +187,8 @@ auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardwa
   // add the pose & velocity interfaces
   // this uses the same position/velocity joint names as the state interfaces
   for (const auto [i, dof] : std::views::enumerate(state_dofs_)) {
-    interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
+    const std::string type = i < 7 ? hardware_interface::HW_IF_POSITION : hardware_interface::HW_IF_VELOCITY;
+    interfaces.emplace_back(get_node()->get_name(), std::format("{}/{}", dof, type), &reference_interfaces_[i]);
   }
 
   // add the force/torque interfaces
@@ -332,3 +333,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
 }
 
 }  // namespace impedance_controller
+
+PLUGINLIB_EXPORT_CLASS(
+  impedance_controller::ImpedanceController,
+  controller_interface::ChainableControllerInterface)
