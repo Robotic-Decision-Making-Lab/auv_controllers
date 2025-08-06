@@ -1,0 +1,11 @@
+<library path="impedance_controller">
+
+  <class name="impedance_controller/ImpedanceController"
+         type="impedance_controller::ImpedanceController"
+         base_class_type="controller_interface::ChainableControllerInterface">
+    <description>
+      Impedance controller used to apply a reference pose, velocity, and feedforward force to a robot.
+    </description>
+  </class>
+
+</library>

@@ -77,6 +77,19 @@ auto to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>
     odom.twist.twist.angular.z};
 }
 
+auto to_vector(const auv_control_msgs::msg::ImpedanceCommand & command) -> std::vector<double>
+{
+  std::vector<double> data;
+  auto pose = to_vector(command.pose);
+  auto twist = to_vector(command.twist);
+  auto wrench = to_vector(command.wrench);
+  data.reserve(pose.size() + twist.size() + wrench.size());
+  std::ranges::copy(pose, std::back_inserter(data));
+  std::ranges::copy(twist, std::back_inserter(data));
+  std::ranges::copy(wrench, std::back_inserter(data));
+  return data;
+}
+
 auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Pose * msg) -> void
 {
   msg->position.x = data[0];
@@ -96,6 +109,16 @@ auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Twist * msg) -
   msg->angular.x = data[3];
   msg->angular.y = data[4];
   msg->angular.z = data[5];
+}
+
+auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Wrench * msg) -> void
+{
+  msg->force.x = data[0];
+  msg->force.y = data[1];
+  msg->force.z = data[2];
+  msg->torque.x = data[3];
+  msg->torque.y = data[4];
+  msg->torque.z = data[5];
 }
 
 auto reset_message(geometry_msgs::msg::Pose * msg) -> void
@@ -144,6 +167,13 @@ auto reset_message(nav_msgs::msg::Odometry * msg) -> void
   msg->twist.twist.angular.x = nan;
   msg->twist.twist.angular.y = nan;
   msg->twist.twist.angular.z = nan;
+}
+
+auto reset_message(auv_control_msgs::msg::ImpedanceCommand * msg) -> void
+{
+  reset_message(&msg->pose);
+  reset_message(&msg->twist);
+  reset_message(&msg->wrench);
 }
 
 }  // namespace messages

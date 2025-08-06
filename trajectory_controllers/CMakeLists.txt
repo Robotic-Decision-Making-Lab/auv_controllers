@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(end_effector_trajectory_controller)
+project(trajectory_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -26,26 +26,26 @@ find_package(lifecycle_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
-generate_parameter_library(end_effector_trajectory_controller_parameters
-  src/end_effector_trajectory_controller_parameters.yaml
+generate_parameter_library(cartesian_trajectory_controller_parameters
+  src/cartesian_trajectory_controller_parameters.yaml
 )
 
-add_library(end_effector_trajectory_controller SHARED)
+add_library(trajectory_controllers SHARED)
 target_sources(
-    end_effector_trajectory_controller
-    PRIVATE src/end_effector_trajectory_controller.cpp src/trajectory.cpp
+    trajectory_controllers
+    PRIVATE src/cartesian_trajectory_controller.cpp src/cartesian_trajectory.cpp
     PUBLIC
         FILE_SET HEADERS
             BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/end_effector_trajectory_controller.hpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/end_effector_trajectory_controller/trajectory.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/trajectory_controllers/cartesian_trajectory_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/trajectory_controllers/cartesian_trajectory.hpp
 )
-target_compile_features(end_effector_trajectory_controller PUBLIC cxx_std_23)
+target_compile_features(trajectory_controllers PUBLIC cxx_std_23)
 target_link_libraries(
-    end_effector_trajectory_controller
+    trajectory_controllers
     PUBLIC
-        end_effector_trajectory_controller_parameters
+        cartesian_trajectory_controller_parameters
         realtime_tools::realtime_tools
         controller_common::controller_common
         hardware_interface::hardware_interface
@@ -62,20 +62,18 @@ target_link_libraries(
         ${lifecycle_msgs_TARGETS}
 )
 
-pluginlib_export_plugin_description_file(controller_interface end_effector_trajectory_controller.xml)
+pluginlib_export_plugin_description_file(controller_interface trajectory_controllers.xml)
 
 install(
-    TARGETS
-        end_effector_trajectory_controller
-        end_effector_trajectory_controller_parameters
-    EXPORT export_end_effector_trajectory_controller
+    TARGETS trajectory_controllers cartesian_trajectory_controller_parameters
+    EXPORT export_trajectory_controllers
     LIBRARY DESTINATION lib/${PROJECT_NAME}
     ARCHIVE DESTINATION lib/${PROJECT_NAME}
     RUNTIME DESTINATION bin/${PROJECT_NAME}
     FILE_SET HEADERS
 )
 
-ament_export_targets(export_end_effector_trajectory_controller HAS_LIBRARY_TARGET)
+ament_export_targets(export_trajectory_controllers HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   "geometry_msgs"
   "realtime_tools"

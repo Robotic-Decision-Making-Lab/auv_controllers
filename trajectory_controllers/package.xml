@@ -2,29 +2,34 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>auv_control_msgs</name>
+  <name>trajectory_controllers</name>
   <version>0.4.0</version>
-  <description>Custom messages for AUV controllers</description>
+  <description>Trajectory controllers for underwater vehicles and manipulator systems</description>
 
-  <maintainer email="rakeshvivek97@gmail.com">Rakesh Vivekanandan</maintainer>
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 
   <url type="repository">https://github.com/Robotic-Decision-Making-Lab/auv_controllers.git</url>
   <url type="bugtracker">https://github.com/Robotic-Decision-Making-Lab/auv_controllers/issues</url>
 
-  <author>Rakesh Vivekanandan</author>
   <author>Evan Palmer</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
-  <depend>std_msgs</depend>
+  <depend>eigen</depend>
+  <depend>rclcpp</depend>
+  <depend>ros2_control</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>control_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>trajectory_msgs</depend>
-
-  <exec_depend>rosidl_default_runtime</exec_depend>
-  <member_of_group>rosidl_interface_packages</member_of_group>
+  <depend>controller_common</depend>
+  <depend>auv_control_msgs</depend>
+  <depend>rclcpp_action</depend>
+  <depend>lifecycle_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
