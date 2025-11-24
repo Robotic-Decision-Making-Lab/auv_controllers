@@ -22,7 +22,7 @@ jobs:
           - ROS_DISTRO: rolling
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run ROS Industrial CI
         uses: ros-industrial/industrial_ci@master
