@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "end_effector_trajectory_controller/end_effector_trajectory_controller.hpp"
+#include "trajectory_controllers/cartesian_trajectory_controller.hpp"
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -29,32 +29,40 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
-namespace end_effector_trajectory_controller
+namespace trajectory_controllers
 {
 
 namespace
 {
+
+auto vee(const Eigen::Matrix4d & mat) -> Eigen::VectorXd
+{
+  Eigen::VectorXd result(6);
+  result << mat(0, 3), mat(1, 3), mat(2, 3), mat(2, 1), mat(0, 2), mat(1, 0);
+  return result;
+}
 
 auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::msg::Pose & state) -> double
 {
   Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
   tf2::fromMsg(goal, goal_mat);
   tf2::fromMsg(state, state_mat);
-  return std::pow((goal_mat.inverse() * state_mat).matrix().log().norm(), 2);
+  const Eigen::Matrix4d error = (goal_mat.inverse() * state_mat).matrix().log();
+  return std::pow(vee(error).norm(), 2);
 }
 
 }  // namespace
 
-auto EndEffectorTrajectoryController::on_init() -> controller_interface::CallbackReturn
+auto CartesianTrajectoryController::on_init() -> controller_interface::CallbackReturn
 {
-  param_listener_ = std::make_shared<end_effector_trajectory_controller::ParamListener>(get_node());
+  param_listener_ = std::make_shared<cartesian_trajectory_controller::ParamListener>(get_node());
   params_ = param_listener_->get_params();
   logger_ = get_node()->get_logger();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto EndEffectorTrajectoryController::update_parameters() -> void
+auto CartesianTrajectoryController::update_parameters() -> void
 {
   if (!param_listener_->is_old(params_)) {
     return;
@@ -63,7 +71,7 @@ auto EndEffectorTrajectoryController::update_parameters() -> void
   params_ = param_listener_->get_params();
 }
 
-auto EndEffectorTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
+auto CartesianTrajectoryController::configure_parameters() -> controller_interface::CallbackReturn
 {
   update_parameters();
 
@@ -82,8 +90,8 @@ auto EndEffectorTrajectoryController::configure_parameters() -> controller_inter
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::validate_trajectory(
-  const auv_control_msgs::msg::EndEffectorTrajectory & trajectory) const -> bool
+auto CartesianTrajectoryController::validate_trajectory(
+  const auv_control_msgs::msg::CartesianTrajectory & trajectory) const -> bool
 {
   if (trajectory.points.empty()) {
     RCLCPP_ERROR(logger_, "Received empty trajectory");  // NOLINT
@@ -111,7 +119,7 @@ auto EndEffectorTrajectoryController::validate_trajectory(
     const rclcpp::Duration p1_start = p1.time_from_start;
     const rclcpp::Duration p2_start = p2.time_from_start;
     if (p1_start >= p2_start) {
-      RCLCPP_ERROR(logger_, "Trajectory points are not in order");  // NOLINT
+      RCLCPP_ERROR(logger_, "CartesianTrajectory points are not in order");  // NOLINT
       return false;
     }
   }
@@ -119,33 +127,33 @@ auto EndEffectorTrajectoryController::validate_trajectory(
   return true;
 }
 
-auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
+auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
 
-  end_effector_state_.writeFromNonRT(geometry_msgs::msg::Pose());
+  state_.writeFromNonRT(geometry_msgs::msg::Pose());
   command_interfaces_.reserve(n_dofs_);
   update_period_ = rclcpp::Duration(0.0, static_cast<uint32_t>(1.0e9 / static_cast<double>(get_update_rate())));
 
   if (params_.use_external_measured_states) {
-    end_effector_state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
-      "~/end_effector_state",
+    state_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
+      "~/state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
-        end_effector_state_.writeFromNonRT(*msg);
+        state_.writeFromNonRT(*msg);
       });
   } else {
-    if (params_.lookup_end_effector_transform) {
+    if (params_.lookup_transform) {
       tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
       tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
     }
   }
 
-  trajectory_sub_ = get_node()->create_subscription<auv_control_msgs::msg::EndEffectorTrajectory>(
+  trajectory_sub_ = get_node()->create_subscription<auv_control_msgs::msg::CartesianTrajectory>(
     "~/trajectory",
     rclcpp::SystemDefaultsQoS(),
-    [this](const std::shared_ptr<auv_control_msgs::msg::EndEffectorTrajectory> msg) {  // NOLINT
+    [this](const std::shared_ptr<auv_control_msgs::msg::CartesianTrajectory> msg) {  // NOLINT
       auto updated_msg = *msg;
       if (!validate_trajectory(updated_msg)) {
         RCLCPP_ERROR(logger_, "Ignoring invalid trajectory message");  // NOLINT
@@ -156,7 +164,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
         updated_msg.header.stamp = get_node()->now();
       }
       RCLCPP_INFO(logger_, "Received new trajectory message");  // NOLINT
-      rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
+      rt_trajectory_.writeFromNonRT(CartesianTrajectory(updated_msg, *state_.readFromNonRT()));
       rt_goal_tolerance_.writeFromNonRT(default_goal_tolerance_);
       rt_path_tolerance_.writeFromNonRT(default_path_tolerance_);
       rt_first_sample_.writeFromNonRT(true);
@@ -180,7 +188,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     if (common::math::isclose(start_time.seconds(), 0.0)) {
       updated_msg.header.stamp = get_node()->now();
     }
-    rt_trajectory_.writeFromNonRT(Trajectory(updated_msg, *end_effector_state_.readFromNonRT()));
+    rt_trajectory_.writeFromNonRT(CartesianTrajectory(updated_msg, *state_.readFromNonRT()));
     rt_first_sample_.writeFromNonRT(true);
     rt_holding_position_.writeFromNonRT(false);
     RCLCPP_INFO(logger_, "Accepted new trajectory goal");  // NOLINT
@@ -225,7 +233,7 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
     goal_handle_timer_ = get_node()->create_wall_timer(action_monitor_period_, [rt_gh]() { rt_gh->runNonRealtime(); });
   };
 
-  action_server_ = rclcpp_action::create_server<auv_control_msgs::action::FollowEndEffectorTrajectory>(
+  action_server_ = rclcpp_action::create_server<auv_control_msgs::action::FollowCartesianTrajectory>(
     get_node(), "~/follow_trajectory", handle_goal, handle_cancel, handle_accepted);
 
   controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
@@ -235,16 +243,16 @@ auto EndEffectorTrajectoryController::on_configure(const rclcpp_lifecycle::State
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
+auto CartesianTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   rt_first_sample_.writeFromNonRT(true);
   rt_holding_position_.writeFromNonRT(true);  // hold position until a trajectory is received
-  common::messages::reset_message(end_effector_state_.readFromNonRT());
+  common::messages::reset_message(state_.readFromNonRT());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
-auto EndEffectorTrajectoryController::command_interface_configuration() const
+auto CartesianTrajectoryController::command_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
@@ -260,11 +268,11 @@ auto EndEffectorTrajectoryController::command_interface_configuration() const
   return config;
 }
 
-auto EndEffectorTrajectoryController::state_interface_configuration() const
+auto CartesianTrajectoryController::state_interface_configuration() const
   -> controller_interface::InterfaceConfiguration
 {
   controller_interface::InterfaceConfiguration config;
-  if (params_.use_external_measured_states || params_.lookup_end_effector_transform) {
+  if (params_.use_external_measured_states || params_.lookup_transform) {
     config.type = controller_interface::interface_configuration_type::NONE;
     return config;
   }
@@ -278,18 +286,18 @@ auto EndEffectorTrajectoryController::state_interface_configuration() const
   return config;
 }
 
-auto EndEffectorTrajectoryController::update_end_effector_state() -> controller_interface::return_type
+auto CartesianTrajectoryController::update_system_state() -> controller_interface::return_type
 {
-  auto * end_effector_state = end_effector_state_.readFromRT();
-  if (params_.lookup_end_effector_transform) {
-    const auto to_frame = params_.end_effector_frame_id;
-    const auto from_frame = params_.odom_frame_id;
+  auto * system_state = state_.readFromRT();
+  if (params_.lookup_transform) {
+    const auto to_frame = params_.child_frame_id;
+    const auto from_frame = params_.frame_id;
     try {
       const auto transform = tf_buffer_->lookupTransform(from_frame, to_frame, tf2::TimePointZero);
-      end_effector_state->position.x = transform.transform.translation.x;
-      end_effector_state->position.y = transform.transform.translation.y;
-      end_effector_state->position.z = transform.transform.translation.z;
-      end_effector_state->orientation = transform.transform.rotation;
+      system_state->position.x = transform.transform.translation.x;
+      system_state->position.y = transform.transform.translation.y;
+      system_state->position.z = transform.transform.translation.z;
+      system_state->orientation = transform.transform.rotation;
     }
     catch (const tf2::TransformException & ex) {
       const auto err = std::format("Failed to get transform from {} to {}: {}", from_frame, to_frame, ex.what());
@@ -300,26 +308,26 @@ auto EndEffectorTrajectoryController::update_end_effector_state() -> controller_
     auto get_value = [](const auto & interface) -> double {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
     };
-    end_effector_state->position.x = get_value(state_interfaces_[0]);
-    end_effector_state->position.y = get_value(state_interfaces_[1]);
-    end_effector_state->position.z = get_value(state_interfaces_[2]);
-    end_effector_state->orientation.x = get_value(state_interfaces_[3]);
-    end_effector_state->orientation.y = get_value(state_interfaces_[4]);
-    end_effector_state->orientation.z = get_value(state_interfaces_[5]);
-    end_effector_state->orientation.w = get_value(state_interfaces_[6]);
+    system_state->position.x = get_value(state_interfaces_[0]);
+    system_state->position.y = get_value(state_interfaces_[1]);
+    system_state->position.z = get_value(state_interfaces_[2]);
+    system_state->orientation.x = get_value(state_interfaces_[3]);
+    system_state->orientation.y = get_value(state_interfaces_[4]);
+    system_state->orientation.z = get_value(state_interfaces_[5]);
+    system_state->orientation.w = get_value(state_interfaces_[6]);
   }
 
-  if (common::math::has_nan(common::messages::to_vector(*end_effector_state))) {
-    RCLCPP_DEBUG(logger_, "Received end effector state with NaN value.");  // NOLINT
+  if (common::math::has_nan(common::messages::to_vector(*system_state))) {
+    RCLCPP_DEBUG(logger_, "Received state with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
   return controller_interface::return_type::OK;
 }
 
-auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
+auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
-  if (update_end_effector_state() != controller_interface::return_type::OK) {
+  if (update_system_state() != controller_interface::return_type::OK) {
     RCLCPP_DEBUG(logger_, "Skipping controller update. Failed to update and validate interfaces");  // NOLINT
     return controller_interface::return_type::OK;
   }
@@ -331,16 +339,16 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     return controller_interface::return_type::OK;
   }
 
-  const geometry_msgs::msg::Pose end_effector_state = *end_effector_state_.readFromRT();
+  const geometry_msgs::msg::Pose system_state = *state_.readFromRT();
   geometry_msgs::msg::Pose reference_state;
   common::messages::reset_message(&reference_state);
-  auto command_state = end_effector_state;
+  auto command_state = system_state;
   double error = std::numeric_limits<double>::quiet_NaN();
 
-  auto publish_controller_state = [this, &reference_state, &end_effector_state, &error, &command_state]() {
+  auto publish_controller_state = [this, &reference_state, &system_state, &error, &command_state]() {
     controller_state_.header.stamp = get_node()->now();
     controller_state_.reference = reference_state;
-    controller_state_.feedback = end_effector_state;
+    controller_state_.feedback = system_state;
     controller_state_.error = error;
     controller_state_.output = command_state;
     rt_controller_state_pub_->try_publish(controller_state_);
@@ -348,7 +356,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
 
   // hold position until a new trajectory is received
   if (*rt_holding_position_.readFromRT()) {
-    write_command(command_interfaces_, end_effector_state);
+    write_command(command_interfaces_, system_state);
     publish_controller_state();
     return controller_interface::return_type::OK;
   }
@@ -356,7 +364,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   // set the sample time
   rclcpp::Time sample_time = time;
   if (*rt_first_sample_.readFromRT()) {
-    rt_trajectory_.readFromRT()->reset_initial_state(end_effector_state);
+    rt_trajectory_.readFromRT()->reset_initial_state(system_state);
     rt_first_sample_.writeFromNonRT(false);
     sample_time += period;
   }
@@ -371,7 +379,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   // the scenarios where this will not have a value are when the reference time is before or after the trajectory
   if (sampled_reference.has_value()) {
     reference_state = sampled_reference.value();
-    error = geodesic_error(reference_state, end_effector_state);
+    error = geodesic_error(reference_state, system_state);
   }
 
   bool path_tolerance_exceeded = false;
@@ -385,7 +393,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
       if (path_tolerance > 0.0 && error > path_tolerance) {
         path_tolerance_exceeded = true;
         rt_holding_position_.writeFromNonRT(true);
-        command_state = end_effector_state;
+        command_state = system_state;
         RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error);  // NOLINT
         RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");                        // NOLINT
       }
@@ -393,21 +401,21 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   } else {
     switch (sampled_command.error()) {
       case SampleError::SAMPLE_TIME_BEFORE_START:
-        RCLCPP_INFO(logger_, "Trajectory sample time is before trajectory start time");  // NOLINT
-        RCLCPP_INFO(logger_, "Holding position until the trajectory starts");            // NOLINT
+        RCLCPP_INFO(logger_, "CartesianTrajectory sample time is before trajectory start time");  // NOLINT
+        RCLCPP_INFO(logger_, "Holding position until the trajectory starts");                     // NOLINT
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        const double goal_error = geodesic_error(trajectory->end_point().value(), end_effector_state);
-        RCLCPP_INFO(logger_, "Trajectory sample time is after trajectory end time.");  // NOLINT
+        const double goal_error = geodesic_error(trajectory->end_point().value(), system_state);
+        RCLCPP_INFO(logger_, "CartesianTrajectory sample time is after trajectory end time.");  // NOLINT
         if (goal_tolerance > 0.0) {
           if (goal_error > goal_tolerance) {
             goal_tolerance_exceeded = true;
             RCLCPP_WARN(logger_, "Aborting trajectory. Terminal error exceeded threshold: %f", goal_error);  // NOLINT
           } else {
             trajectory_suceeded = true;
-            RCLCPP_INFO(logger_, "Trajectory execution completed successfully");  // NOLINT
+            RCLCPP_INFO(logger_, "CartesianTrajectory execution completed successfully");  // NOLINT
           }
         }
         rt_holding_position_.writeFromNonRT(true);
@@ -426,7 +434,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     auto feedback = std::make_shared<FollowTrajectory::Feedback>();
     feedback->header.stamp = time;
     feedback->desired = reference_state;
-    feedback->actual = end_effector_state;
+    feedback->actual = system_state;
     feedback->error = error;
     active_goal->setFeedback(feedback);
 
@@ -434,19 +442,19 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
     if (goal_tolerance_exceeded) {
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
-      action_result->error_string = "Trajectory execution aborted. Goal tolerance exceeded.";
+      action_result->error_string = "CartesianTrajectory execution aborted. Goal tolerance exceeded.";
       active_goal->setAborted(action_result);
       rt_holding_position_.writeFromNonRT(true);
     } else if (trajectory_suceeded) {
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::SUCCESSFUL;
-      action_result->error_string = "Trajectory execution completed successfully!";
+      action_result->error_string = "CartesianTrajectory execution completed successfully!";
       active_goal->setSucceeded(action_result);
       rt_holding_position_.writeFromNonRT(true);
     } else if (path_tolerance_exceeded) {
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
-      action_result->error_string = "Trajectory execution aborted. Path tolerance exceeded.";
+      action_result->error_string = "CartesianTrajectory execution aborted. Path tolerance exceeded.";
       active_goal->setAborted(action_result);
       rt_holding_position_.writeFromNonRT(true);
     }
@@ -458,9 +466,7 @@ auto EndEffectorTrajectoryController::update(const rclcpp::Time & time, const rc
   return controller_interface::return_type::OK;
 }
 
-}  // namespace end_effector_trajectory_controller
+}  // namespace trajectory_controllers
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(
-  end_effector_trajectory_controller::EndEffectorTrajectoryController,
-  controller_interface::ControllerInterface)
+PLUGINLIB_EXPORT_CLASS(trajectory_controllers::CartesianTrajectoryController, controller_interface::ControllerInterface)

@@ -22,6 +22,7 @@
 
 #include <vector>
 
+#include "auv_control_msgs/msg/impedance_command.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
@@ -41,9 +42,13 @@ auto to_vector(const geometry_msgs::msg::Wrench & wrench) -> std::vector<double>
 
 auto to_vector(const nav_msgs::msg::Odometry & odom) -> std::vector<double>;
 
+auto to_vector(const auv_control_msgs::msg::ImpedanceCommand & command) -> std::vector<double>;
+
 auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Pose * msg) -> void;
 
 auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Twist * msg) -> void;
+
+auto to_msg(const std::vector<double> & data, geometry_msgs::msg::Wrench * msg) -> void;
 
 auto reset_message(geometry_msgs::msg::Pose * msg) -> void;
 
@@ -52,6 +57,8 @@ auto reset_message(geometry_msgs::msg::Twist * msg) -> void;
 auto reset_message(geometry_msgs::msg::Wrench * msg) -> void;
 
 auto reset_message(nav_msgs::msg::Odometry * msg) -> void;
+
+auto reset_message(auv_control_msgs::msg::ImpedanceCommand * msg) -> void;
 
 }  // namespace messages
 

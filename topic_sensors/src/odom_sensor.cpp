@@ -29,12 +29,14 @@
 namespace topic_sensors
 {
 
-auto OdomSensor::on_init(const hardware_interface::HardwareInfo & /*info*/) -> hardware_interface::CallbackReturn
+auto OdomSensor::on_init(const hardware_interface::HardwareComponentInterfaceParams & /*info*/)
+  -> hardware_interface::CallbackReturn
 {
   prefix_ = info_.hardware_parameters.at("prefix");
   rclcpp::NodeOptions options;
   options.arguments({std::format("--ros-args -r __ns:={} -r __node:=odom_sensor_{}", prefix_, info_.name)});
   node_ = rclcpp::Node::make_shared("_", options);
+  executor_.add_node(node_);
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -95,7 +97,7 @@ auto OdomSensor::read(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*
   -> hardware_interface::return_type
 {
   if (rclcpp::ok()) {
-    rclcpp::spin_some(node_);
+    executor_.spin_some();
     const auto * current_state = state_.readFromRT();
     std::ranges::copy(common::messages::to_vector(*current_state), state_values_.begin());
   }
