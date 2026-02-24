@@ -28,6 +28,7 @@
 #include "hardware_interface/sensor_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
@@ -40,7 +41,8 @@ class OdomSensor : public hardware_interface::SensorInterface
 public:
   OdomSensor() = default;
 
-  auto on_init(const hardware_interface::HardwareInfo & info) -> hardware_interface::CallbackReturn override;
+  auto on_init(const hardware_interface::HardwareComponentInterfaceParams & info)
+    -> hardware_interface::CallbackReturn override;
 
   auto on_configure(const rclcpp_lifecycle::State & previous_state) -> hardware_interface::CallbackReturn override;
 
@@ -57,6 +59,7 @@ private:
   std::array<double, 13> state_values_;  // we can't use an object with dynamic memory allocation for the state values
 
   std::shared_ptr<rclcpp::Node> node_;
+  rclcpp::executors::SingleThreadedExecutor executor_;
   rclcpp::Logger logger_{rclcpp::get_logger("odom_sensor")};
   std::string prefix_;
 };

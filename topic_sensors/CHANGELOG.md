@@ -1,5 +1,12 @@
 # Changelog for package topic_sensors
 
+## 0.4.1 (2026-02-23)
+
+- Addresses upstream deprecation of `hardware_interface::HardwareInfo` and
+  `rclcpp::spin_some`.
+
+## 0.4.0 (2025-08-01)
+
 ## 0.3.3 (2025-07-29)
 
 ## 0.3.2 (2025-07-22)
