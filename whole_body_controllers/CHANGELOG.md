@@ -1,5 +1,10 @@
 # Changelog for package whole_body_controllers
 
+## 0.4.1 (2026-02-23)
+
+- Addresses upstream deprecation of the `tf2_ros/buffer.h` and
+  `tf2_ros/transform_listener.h` headers.
+
 ## 0.4.0 (2025-08-01)
 
 ## 0.3.3 (2025-07-29)
