@@ -1,0 +1,9 @@
+<library path="trajectory_controllers">
+  <class name="trajectory_controllers/CartesianTrajectoryController"
+         type="trajectory_controllers::CartesianTrajectoryController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Trajectory controllers for AUVs and UVMS.
+    </description>
+  </class>
+</library>

@@ -1,0 +1,59 @@
+impedance_controller:
+  state_joints:
+    type: string_array
+    default_value: [x, y, z, qx, qy, qz, qw, x, y, z, rx, ry, rz]
+    read_only: true
+    description: >
+      The state joints. This should be provided in the same position,
+      orientation, and velocity order as the default.
+    validation:
+      fixed_size<>: 13
+
+  command_joints:
+    type: string_array
+    default_value: [x, y, z, rx, ry, rz]
+    read_only: true
+    description: The controlled force/torque joints.
+    validation:
+      fixed_size<>: 6
+
+  use_external_measured_states:
+    type: bool
+    read_only: true
+    default_value: false
+    description: >
+      Use state measurements obtained from a topic instead of state interfaces.
+
+  reference_controller:
+    type: string
+    default_value: ""
+    read_only: true
+    description: >
+      The prefix of the reference controller to send commands to. This can be
+      used to configure command interfaces in chained mode.
+
+  frame_id:
+    type: string
+    default_value: odom_ned
+    read_only: true
+    description: The name of the inertial frame.
+
+  child_frame_id:
+    type: string
+    default_value: base_link_fsd
+    read_only: true
+    description: The name of the body frame.
+
+  gains:
+    __map_command_joints:
+      kp:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: The proportional feedback gain.
+
+      kd:
+        type: double
+        default_value: 0.0
+        read_only: false
+        description: The derivative feedback gain.

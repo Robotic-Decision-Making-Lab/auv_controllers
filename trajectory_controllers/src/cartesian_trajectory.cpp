@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "end_effector_trajectory_controller/trajectory.hpp"
+#include "trajectory_controllers/cartesian_trajectory.hpp"
 
 #include <optional>
 #include <ranges>
@@ -27,7 +27,7 @@
 #include "tf2_eigen/tf2_eigen.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
-namespace end_effector_trajectory_controller
+namespace trajectory_controllers
 {
 
 namespace
@@ -93,8 +93,8 @@ auto interpolate(
 
 }  // namespace
 
-Trajectory::Trajectory(
-  const auv_control_msgs::msg::EndEffectorTrajectory & trajectory,
+CartesianTrajectory::CartesianTrajectory(
+  const auv_control_msgs::msg::CartesianTrajectory & trajectory,
   const geometry_msgs::msg::Pose & state)
 : points_(trajectory),
   initial_time_(static_cast<rclcpp::Time>(trajectory.header.stamp)),
@@ -102,19 +102,19 @@ Trajectory::Trajectory(
 {
 }
 
-auto Trajectory::empty() const -> bool { return points_.points.empty(); }
+auto CartesianTrajectory::empty() const -> bool { return points_.points.empty(); }
 
-auto Trajectory::start_time() const -> rclcpp::Time
+auto CartesianTrajectory::start_time() const -> rclcpp::Time
 {
   return empty() ? rclcpp::Time(0) : initial_time_ + points_.points.front().time_from_start;
 }
 
-auto Trajectory::end_time() const -> rclcpp::Time
+auto CartesianTrajectory::end_time() const -> rclcpp::Time
 {
   return empty() ? rclcpp::Time(0) : initial_time_ + points_.points.back().time_from_start;
 }
 
-auto Trajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
+auto CartesianTrajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
 {
   if (empty()) {
     return std::nullopt;
@@ -122,7 +122,7 @@ auto Trajectory::start_point() const -> std::optional<geometry_msgs::msg::Pose>
   return points_.points.front().point;
 }
 
-auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
+auto CartesianTrajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
 {
   if (empty()) {
     return std::nullopt;
@@ -130,7 +130,8 @@ auto Trajectory::end_point() const -> std::optional<geometry_msgs::msg::Pose>
   return points_.points.back().point;
 }
 
-auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected<geometry_msgs::msg::Pose, SampleError>
+auto CartesianTrajectory::sample(const rclcpp::Time & sample_time) const
+  -> std::expected<geometry_msgs::msg::Pose, SampleError>
 {
   if (empty()) {
     return std::unexpected(SampleError::EMPTY_TRAJECTORY);
@@ -160,6 +161,9 @@ auto Trajectory::sample(const rclcpp::Time & sample_time) const -> std::expected
   return std::unexpected(SampleError::SAMPLE_TIME_AFTER_END);
 }
 
-auto Trajectory::reset_initial_state(const geometry_msgs::msg::Pose & state) -> void { initial_state_ = state; }
+auto CartesianTrajectory::reset_initial_state(const geometry_msgs::msg::Pose & state) -> void
+{
+  initial_state_ = state;
+}
 
-}  // namespace end_effector_trajectory_controller
+}  // namespace trajectory_controllers
