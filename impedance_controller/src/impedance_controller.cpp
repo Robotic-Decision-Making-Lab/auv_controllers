@@ -186,8 +186,17 @@ auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardwa
   // add the pose & velocity interfaces
   // this uses the same position/velocity joint names as the state interfaces
   for (const auto [i, dof] : std::views::enumerate(state_dofs_)) {
-    interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
+    if (i < 7) {
+      interfaces.emplace_back(
+        get_node()->get_name(),
+        std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION),
+        &reference_interfaces_[i]);
+    } else {
+      interfaces.emplace_back(
+        get_node()->get_name(),
+        std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY),
+        &reference_interfaces_[i]);
+    }
   }
 
   // add the force/torque interfaces
