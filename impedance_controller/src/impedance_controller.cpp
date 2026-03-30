@@ -332,3 +332,6 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
 }
 
 }  // namespace impedance_controller
+
+#include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(impedance_controller::ImpedanceController, controller_interface::ChainableControllerInterface)
