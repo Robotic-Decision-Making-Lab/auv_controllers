@@ -44,7 +44,7 @@ auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::
   Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
   tf2::fromMsg(goal, goal_mat);
   tf2::fromMsg(state, state_mat);
-  const Eigen::Matrix4d error = (goal_mat.inverse() * state_mat).matrix().log();
+  const Eigen::Matrix4d error = (state_mat.inverse() * goal_mat).matrix().log();
   return vee(error);
 }
 
@@ -336,6 +336,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
     state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
   }
 
+  // TODO(evan-palmer): replace this with a custom message type
   // the feedback and reference values have different sizes than the command interfaces
   for (std::size_t i = 0; i < n_state_dofs_; ++i) {
     controller_state_.dof_states[i].feedback = system_state_values_[i];
