@@ -23,6 +23,7 @@
 #include <ranges>
 #include <unsupported/Eigen/MatrixFunctions>
 
+#include "auv_control_msgs/msg/impedance_command.hpp"
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
@@ -106,6 +107,14 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
   state_interfaces_.reserve(n_state_dofs_);
 
   system_state_values_.resize(n_state_dofs_, std::numeric_limits<double>::quiet_NaN());
+
+  // NOLINTNEXTLINE(performance-unnecessary-value-param)
+  reference_sub_ = get_node()->create_subscription<auv_control_msgs::msg::ImpedanceCommand>(
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<auv_control_msgs::msg::ImpedanceCommand> msg) {  // NOLINT
+      reference_.writeFromNonRT(*msg);
+    });
 
   if (params_.use_external_measured_states) {
     RCLCPP_INFO(logger_, "Using external measured states");  // NOLINT
