@@ -20,6 +20,7 @@
 
 #include "coordinator.hpp"
 
+#include <chrono>
 #include <ranges>
 
 #include "lifecycle_msgs/msg/state.hpp"
@@ -39,7 +40,7 @@ ControllerCoordinator::ControllerCoordinator()
 
   // helper function used to wait for services to come up
   // this will block indefinitely
-  auto wait_for_service = [this](const auto & client, const std::string & service_name) {
+  auto wait_for_service = [this](const auto & client, const std::string & service_name) -> void {
     while (!client->wait_for_service(std::chrono::seconds(1))) {
       RCLCPP_INFO(this->get_logger(), "Waiting for %s service to come up", service_name.c_str());  // NOLINT
     }
@@ -60,7 +61,9 @@ ControllerCoordinator::ControllerCoordinator()
   // pre-configure the hardware activation/deactivation requests
   activate_hardware_requests_.reserve(params_.hardware_interfaces.size());
   std::ranges::transform(
-    params_.hardware_interfaces, std::back_inserter(activate_hardware_requests_), [](const std::string & name) {
+    params_.hardware_interfaces,
+    std::back_inserter(activate_hardware_requests_),
+    [](const std::string & name) -> std::shared_ptr<HardwareRequest> {
       auto request = std::make_shared<HardwareRequest>();
       request->name = name;
       request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE;
@@ -69,7 +72,9 @@ ControllerCoordinator::ControllerCoordinator()
 
   deactivate_hardware_requests_.reserve(params_.hardware_interfaces.size());
   std::ranges::transform(
-    params_.hardware_interfaces, std::back_inserter(deactivate_hardware_requests_), [](const std::string & name) {
+    params_.hardware_interfaces,
+    std::back_inserter(deactivate_hardware_requests_),
+    [](const std::string & name) -> std::shared_ptr<HardwareRequest> {
       auto request = std::make_shared<HardwareRequest>();
       request->name = name;
       request->target_state.id = lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE;
@@ -92,18 +97,19 @@ ControllerCoordinator::ControllerCoordinator()
   activate_system_service_ = this->create_service<std_srvs::srv::SetBool>(
     "~/activate",
     [this](
-      const std::shared_ptr<rmw_request_id_t> /*request_header*/,          // NOLINT
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,      // NOLINT
-      const std::shared_ptr<std_srvs::srv::SetBool::Response> response) {  // NOLINT
+      const std::shared_ptr<rmw_request_id_t> /*request_header*/,                  // NOLINT
+      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,              // NOLINT
+      const std::shared_ptr<std_srvs::srv::SetBool::Response> response) -> void {  // NOLINT
       response->success = true;
       if (request->data) {
         RCLCPP_INFO(this->get_logger(), "Activating hardware interfaces and controllers");  // NOLINT
         for (const auto & activate_request : activate_hardware_requests_) {
-          hardware_client_->async_send_request(
+          auto future = hardware_client_->async_send_request(
             activate_request,
             [logger = this->get_logger(), response, activate_request](
               rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
-                result_response) {  // NOLINT
+                result_response)  // NOLINT
+            -> void {
               const auto & result = result_response.get();
               if (result->ok) {
                 RCLCPP_INFO(logger, "Successfully activated %s", activate_request->name.c_str());  // NOLINT
@@ -113,12 +119,28 @@ ControllerCoordinator::ControllerCoordinator()
                 response->message = "Failed to activate " + activate_request->name;
               }
             });
+
+          const std::future_status future_result = future.wait_for(std::chrono::duration<double>(params_.timeout));
+          if (future_result != std::future_status::ready) {
+            RCLCPP_ERROR(this->get_logger(), "Timeout while activating %s", activate_request->name.c_str());  // NOLINT
+            response->success = false;
+            response->message = "Timeout while activating " + activate_request->name;
+          }
+
+          if (!response->success) {
+            RCLCPP_ERROR(  // NOLINT
+              this->get_logger(),
+              "Aborting activation of remaining hardware interfaces and controllers");
+            return;
+          }
         }
+
         switch_controller_client_->async_send_request(
           activate_controllers_request_,
           [this,
            response](
-            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {  // NOLINT
+            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response)  // NOLINT
+          -> void {
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully activated controllers");  // NOLINT
@@ -131,18 +153,23 @@ ControllerCoordinator::ControllerCoordinator()
       } else {
         RCLCPP_INFO(this->get_logger(), "Deactivating controllers and hardware interfaces");  // NOLINT
         for (const auto & deactivate_request : deactivate_hardware_requests_) {
-          hardware_client_->async_send_request(
+          auto future = hardware_client_->async_send_request(
             deactivate_request,
             [this, response, deactivate_request](
               rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedFuture
-                result_response) {  // NOLINT
+                result_response)  // NOLINT
+            -> void {
               const auto & result = result_response.get();
               if (result->ok) {
-                RCLCPP_INFO(
-                  this->get_logger(), "Successfully deactivated %s", deactivate_request->name.c_str());  // NOLINT
+                RCLCPP_INFO(  // NOLINT
+                  this->get_logger(),
+                  "Successfully deactivated %s",
+                  deactivate_request->name.c_str());
               } else {
-                RCLCPP_ERROR(
-                  this->get_logger(), "Failed to deactivate %s", deactivate_request->name.c_str());  // NOLINT
+                RCLCPP_ERROR(  // NOLINT
+                  this->get_logger(),
+                  "Failed to deactivate %s",
+                  deactivate_request->name.c_str());
                 response->success = false;
                 response->message = "Failed to deactivate " + deactivate_request->name;
               }
@@ -150,9 +177,9 @@ ControllerCoordinator::ControllerCoordinator()
         }
         switch_controller_client_->async_send_request(
           deactivate_controllers_request_,
-          [this,
-           response](
-            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response) {  // NOLINT
+          [this, response](
+            rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedFuture result_response)  // NOLINT
+          -> void {
             const auto & result = result_response.get();
             if (result->ok) {
               RCLCPP_INFO(this->get_logger(), "Successfully deactivated controllers");  // NOLINT
