@@ -23,7 +23,7 @@
 #include <Eigen/Dense>
 
 #include "auv_control_msgs/msg/impedance_command.hpp"
-#include "control_msgs/msg/multi_dof_state_stamped.hpp"
+#include "auv_control_msgs/msg/impedance_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "hydrodynamics/hydrodynamics.hpp"
@@ -84,7 +84,7 @@ protected:
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> system_state_sub_;
   std::vector<double> system_state_values_;
 
-  using ControllerState = control_msgs::msg::MultiDOFStateStamped;
+  using ControllerState = auv_control_msgs::msg::ImpedanceStateStamped;
   std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
   std::unique_ptr<realtime_tools::RealtimePublisher<ControllerState>> rt_controller_state_pub_;
   ControllerState controller_state_;

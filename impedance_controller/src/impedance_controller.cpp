@@ -130,11 +130,6 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
 
-  controller_state_.dof_states.resize(n_command_dofs_);
-  for (auto && [state, dof] : std::views::zip(controller_state_.dof_states, command_dofs_)) {
-    state.name = dof;
-  }
-
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -327,23 +322,19 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
     }
   }
 
+  // update and publish the controller state
   controller_state_.header.stamp = time;
-  for (auto && [i, state] : std::views::enumerate(controller_state_.dof_states)) {
-    const auto out = command_interfaces_[i].get_optional();
-    state.error = pose_error_values[i];
-    state.error_dot = twist_error_values[i];
-    state.time_step = period.seconds();
-    state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
-  }
+  common::messages::to_msg(ref_pose_values, &controller_state_.reference_pose);
+  common::messages::to_msg(ref_twist_values, &controller_state_.reference_twist);
+  common::messages::to_msg(ref_wrench_values, &controller_state_.reference_wrench);
+  common::messages::to_msg(state_pose_values, &controller_state_.feedback_pose);
+  common::messages::to_msg(state_twist_values, &controller_state_.feedback_twist);
+  common::messages::to_msg(pose_error_values, &controller_state_.error_pose);
+  common::messages::to_msg(twist_error_values, &controller_state_.error_twist);
+  controller_state_.time_step = period.seconds();
 
-  // TODO(evan-palmer): replace this with a custom message type
-  // the feedback and reference values have different sizes than the command interfaces
-  for (std::size_t i = 0; i < n_state_dofs_; ++i) {
-    controller_state_.dof_states[i].feedback = system_state_values_[i];
-  }
-  for (std::size_t i = n_state_dofs_; i < n_reference_dofs_; ++i) {
-    controller_state_.dof_states[i].reference = reference_interfaces_[i];
-  }
+  std::vector<double> output_values(t.data(), t.data() + t.size());
+  common::messages::to_msg(output_values, &controller_state_.output);
 
   rt_controller_state_pub_->try_publish(controller_state_);
 
