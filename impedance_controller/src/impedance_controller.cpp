@@ -34,18 +34,39 @@ namespace impedance_controller
 namespace
 {
 
-auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
+// auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
+// {
+//   return {mat(0, 3), mat(1, 3), mat(2, 3), mat(2, 1), mat(0, 2), mat(1, 0)};
+// }
+
+auto quaternion_error(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & q2) -> Eigen::Vector3d
 {
-  return {mat(0, 3), mat(1, 3), mat(2, 3), mat(2, 1), mat(0, 2), mat(1, 0)};
+  const Eigen::Vector3d q1_vec = q1.vec();
+  const Eigen::Vector3d q2_vec = q2.vec();
+
+  const double q1_w = q1.w();
+  const double q2_w = q2.w();
+
+  const Eigen::Vector3d vec_error = (q2_w * q1_vec) - (q1_w * q2_vec) + q2_vec.cross(q1_vec);
+
+  // This is how we would compute the scalar error if we needed it
+  // const double scalar_error = q1_w * q2_w + q1_vec.dot(q2_vec);
+
+  return {vec_error.x(), vec_error.y(), vec_error.z()};
 }
 
 auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::msg::Pose & state) -> Eigen::Vector6d
 {
-  Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
-  tf2::fromMsg(goal, goal_mat);
-  tf2::fromMsg(state, state_mat);
-  const Eigen::Matrix4d error = (state_mat.inverse() * goal_mat).matrix().log();
-  return vee(error);
+  Eigen::Isometry3d _goal, _state;  // NOLINT
+  tf2::fromMsg(goal, _goal);
+  tf2::fromMsg(state, _state);
+  // const Eigen::Matrix4d error = (state_mat.inverse() * goal_mat).matrix().log();
+  // return vee(error);
+
+  Eigen::Vector6d error = Eigen::Vector6d::Zero(6);
+  error.head<3>() = (_goal.translation() - _state.translation()).eval();
+  error.tail<3>() = quaternion_error(Eigen::Quaterniond(_goal.rotation()), Eigen::Quaterniond(_state.rotation()));
+  return error;
 }
 
 }  // namespace
