@@ -20,7 +20,7 @@ geometry_msgs/Twist feedback_twist
 # The vector representation of the left-trivialized error.
 geometry_msgs/Twist error_pose
 
-# The velocity error.
+# The velocity error defined in the child frame ID.
 geometry_msgs/Twist error_twist
 
 # Time between two consecutive updates/execution of the control law.
