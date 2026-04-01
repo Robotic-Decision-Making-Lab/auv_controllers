@@ -323,7 +323,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   for (auto && [command_interface, tau] : std::views::zip(command_interfaces_, t)) {
     if (!command_interface.set_value(tau)) {
       RCLCPP_WARN(logger_, "Failed to set command for joint %s", command_interface.get_name().c_str());  // NOLINT
-    };
+    }
   }
 
   // update the adaptive gain
