@@ -23,6 +23,7 @@
 #include <ranges>
 #include <unsupported/Eigen/MatrixFunctions>
 
+#include "auv_control_msgs/msg/impedance_command.hpp"
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
@@ -40,10 +41,10 @@ auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
 
 auto geodesic_error(const geometry_msgs::msg::Pose & goal, const geometry_msgs::msg::Pose & state) -> Eigen::Vector6d
 {
-  Eigen::Isometry3d goal_mat, state_mat;  // NOLINT
-  tf2::fromMsg(goal, goal_mat);
-  tf2::fromMsg(state, state_mat);
-  const Eigen::Matrix4d error = (goal_mat.inverse() * state_mat).matrix().log();
+  Eigen::Isometry3d _goal, _state;  // NOLINT
+  tf2::fromMsg(goal, _goal);
+  tf2::fromMsg(state, _state);
+  const Eigen::Matrix4d error = (_state.inverse() * _goal).matrix().log();
   return vee(error);
 }
 
@@ -107,6 +108,14 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
 
   system_state_values_.resize(n_state_dofs_, std::numeric_limits<double>::quiet_NaN());
 
+  // NOLINTNEXTLINE(performance-unnecessary-value-param)
+  reference_sub_ = get_node()->create_subscription<auv_control_msgs::msg::ImpedanceCommand>(
+    "~/reference",
+    rclcpp::SystemDefaultsQoS(),
+    [this](const std::shared_ptr<auv_control_msgs::msg::ImpedanceCommand> msg) {  // NOLINT
+      reference_.writeFromNonRT(*msg);
+    });
+
   if (params_.use_external_measured_states) {
     RCLCPP_INFO(logger_, "Using external measured states");  // NOLINT
     system_state_sub_ = get_node()->create_subscription<nav_msgs::msg::Odometry>(
@@ -120,11 +129,6 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
   controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
   rt_controller_state_pub_ =
     std::make_unique<realtime_tools::RealtimePublisher<ControllerState>>(controller_state_pub_);
-
-  controller_state_.dof_states.resize(n_command_dofs_);
-  for (auto && [state, dof] : std::views::zip(controller_state_.dof_states, command_dofs_)) {
-    state.name = dof;
-  }
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -186,8 +190,17 @@ auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardwa
   // add the pose & velocity interfaces
   // this uses the same position/velocity joint names as the state interfaces
   for (const auto [i, dof] : std::views::enumerate(state_dofs_)) {
-    interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION), &reference_interfaces_[i]);
+    if (i < 7) {
+      interfaces.emplace_back(
+        get_node()->get_name(),
+        std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION),
+        &reference_interfaces_[i]);
+    } else {
+      interfaces.emplace_back(
+        get_node()->get_name(),
+        std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY),
+        &reference_interfaces_[i]);
+    }
   }
 
   // add the force/torque interfaces
@@ -309,22 +322,19 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
     }
   }
 
+  // update and publish the controller state
   controller_state_.header.stamp = time;
-  for (auto && [i, state] : std::views::enumerate(controller_state_.dof_states)) {
-    const auto out = command_interfaces_[i].get_optional();
-    state.error = pose_error_values[i];
-    state.error_dot = twist_error_values[i];
-    state.time_step = period.seconds();
-    state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
-  }
+  common::messages::to_msg(ref_pose_values, &controller_state_.reference_pose);
+  common::messages::to_msg(ref_twist_values, &controller_state_.reference_twist);
+  common::messages::to_msg(ref_wrench_values, &controller_state_.reference_wrench);
+  common::messages::to_msg(state_pose_values, &controller_state_.feedback_pose);
+  common::messages::to_msg(state_twist_values, &controller_state_.feedback_twist);
+  common::messages::to_msg(pose_error_values, &controller_state_.error_pose);
+  common::messages::to_msg(twist_error_values, &controller_state_.error_twist);
+  controller_state_.time_step = period.seconds();
 
-  // the feedback and reference values have different sizes than the command interfaces
-  for (std::size_t i = 0; i < n_state_dofs_; ++i) {
-    controller_state_.dof_states[i].feedback = system_state_values_[i];
-  }
-  for (std::size_t i = n_state_dofs_; i < n_reference_dofs_; ++i) {
-    controller_state_.dof_states[i].reference = reference_interfaces_[i];
-  }
+  std::vector<double> output_values(t.data(), t.data() + t.size());
+  common::messages::to_msg(output_values, &controller_state_.output);
 
   rt_controller_state_pub_->try_publish(controller_state_);
 
@@ -332,3 +342,6 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
 }
 
 }  // namespace impedance_controller
+
+#include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(impedance_controller::ImpedanceController, controller_interface::ChainableControllerInterface)

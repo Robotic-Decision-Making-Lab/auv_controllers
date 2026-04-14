@@ -1,5 +1,7 @@
 # Changelog for package velocity_controllers
 
+## 0.4.2 (2026-03-30)
+
 ## 0.4.1 (2026-02-23)
 
 - Addresses upstream deprecation of the `tf2_ros/buffer.h` and
