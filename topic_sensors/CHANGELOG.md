@@ -1,5 +1,7 @@
 # Changelog for package topic_sensors
 
+## 0.4.2 (2026-03-30)
+
 ## 0.4.1 (2026-02-23)
 
 - Addresses upstream deprecation of `hardware_interface::HardwareInfo` and

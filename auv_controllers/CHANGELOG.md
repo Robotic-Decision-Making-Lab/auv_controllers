@@ -1,5 +1,11 @@
 # Changelog for package auv_controllers
 
+## 0.4.2 (2026-03-30)
+
+- Implements the ImpedanceStateStamped message
+- Fixes controller coordinator hardware interface activation
+- Fixes impedance controller memory leak and miscellaneous bugs
+
 ## 0.4.1 (2026-02-23)
 
 ## 0.4.0 (2025-08-01)
