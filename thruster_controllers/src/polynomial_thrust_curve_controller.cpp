@@ -145,10 +145,11 @@ auto PolynomialThrustCurveController::update_and_write_commands(
   const rclcpp::Time & time,
   const rclcpp::Duration & period) -> controller_interface::return_type
 {
-  const auto reference = reference_interfaces_[0];
+  auto reference = reference_interfaces_[0];
   int pwm = params_.neutral_pwm;
 
   if (!std::isnan(reference)) {
+    reference = params_.reverse_spin_direction ? -reference : reference;
     const double clamped_reference = std::clamp(reference, params_.min_thrust, params_.max_thrust);
     pwm = calculate_pwm_from_thrust_curve(clamped_reference, params_.thrust_curve_coefficients);
     pwm = pwm > params_.min_deadband_pwm && pwm < params_.max_deadband_pwm ? params_.neutral_pwm : pwm;

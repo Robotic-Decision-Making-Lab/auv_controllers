@@ -1,5 +1,7 @@
 # Changelog for package impedance_controller
 
+## 0.4.3 (2026-04-25)
+
 ## 0.4.2 (2026-03-30)
 
 - Addresses various bugs in implementation
