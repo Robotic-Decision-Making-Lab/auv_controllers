@@ -3,10 +3,9 @@
 <package format="3">
 
   <name>auv_control_msgs</name>
-  <version>0.4.1</version>
+  <version>0.4.2</version>
   <description>Custom messages for AUV controllers</description>
 
-  <maintainer email="rakeshvivek97@gmail.com">Rakesh Vivekanandan</maintainer>
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 

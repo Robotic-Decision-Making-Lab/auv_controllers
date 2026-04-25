@@ -1,5 +1,10 @@
 # Changelog for package impedance_controller
 
+## 0.4.2 (2026-03-30)
+
+- Addresses various bugs in implementation
+- Replaces MultiDOFStateStamped message with ImpedanceStateStamped message
+
 ## 0.4.1 (2026-02-23)
 
 - Addresses upstream deprecation of the `tf2_ros/buffer.h` and

@@ -1,5 +1,9 @@
 # Changelog for package auv_control_msgs
 
+## 0.4.2 (2026-03-30)
+
+- Implements the ImpedanceStateStamped message.
+
 ## 0.4.1 (2026-02-23)
 
 ## 0.4.0 (2025-08-01)

@@ -3,12 +3,9 @@
 <package format="3">
 
   <name>auv_control_demos</name>
-  <version>0.4.1</version>
+  <version>0.4.2</version>
   <description>Example package that includes demos for using auv_controllers in individual and chained modes</description>
 
-  <maintainer email="mitchcol@oregonstate.edu">Colin Mitchell</maintainer>
-  <maintainer email="everardo.a.gonzalez@gmail.com">Everardo Gonzalez</maintainer>
-  <maintainer email="rakeshvivek97@gmail.com">Rakesh Vivekanandan</maintainer>
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
   <license>MIT</license>
 

@@ -16,6 +16,7 @@ rosidl_generate_interfaces(auv_control_msgs
   "msg/CartesianTrajectoryControllerStateStamped.msg"
   "msg/ImpedanceCommand.msg"
   "action/FollowCartesianTrajectory.action"
+  "msg/ImpedanceStateStamped.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs trajectory_msgs
 )
 
