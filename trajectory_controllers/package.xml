@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>trajectory_controllers</name>
-  <version>0.4.1</version>
+  <version>0.4.3</version>
   <description>Trajectory controllers for underwater vehicles and manipulator systems</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>

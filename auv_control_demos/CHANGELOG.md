@@ -1,5 +1,7 @@
 # Changelog for package auv_control_demos
 
+## 0.4.3 (2026-04-25)
+
 ## 0.4.2 (2026-03-30)
 
 ## 0.4.1 (2026-02-23)

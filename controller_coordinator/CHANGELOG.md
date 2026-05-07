@@ -1,5 +1,7 @@
 # Changelog for package controller_coordinator
 
+## 0.4.3 (2026-04-25)
+
 ## 0.4.2 (2026-03-30)
 
 - Fixes hardware activation bug
