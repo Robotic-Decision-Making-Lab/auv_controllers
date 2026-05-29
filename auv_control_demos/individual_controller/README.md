@@ -1,6 +1,6 @@
 # Example 1: Individual Controller
 
-This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers) to demonstrate how to launch a single controller.
+This example uses the [integral sliding mode controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/twist_controllers) to demonstrate how to launch a single controller.
 
 ## Tutorial Steps
 
@@ -21,7 +21,7 @@ This example uses the [integral sliding mode controller](https://github.com/Robo
    The output should resemble:
 
    ```bash
-   adaptive_integral_terminal_sliding_mode_controller velocity_controllers/AdaptiveIntegralTerminalSlidingModeController  active
+   adaptive_integral_terminal_sliding_mode_controller twist_controllers/AdaptiveIntegralTerminalSlidingModeController  active
    ```
 
 3. Check that the hardware interfaces have been properly loaded by opening
@@ -148,7 +148,7 @@ This example uses the [integral sliding mode controller](https://github.com/Robo
   - [individual.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/launch/individual.launch.py)
 
 - Controllers:
-  - [Adaptive Integral Terminal Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers)
+  - [Adaptive Integral Terminal Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/twist_controllers)
 
 - Controller Config:
   - [individual_controller.yaml](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/individual_controller/config/individual_controller.yaml)

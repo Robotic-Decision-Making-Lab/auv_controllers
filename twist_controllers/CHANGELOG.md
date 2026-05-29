@@ -1,4 +1,22 @@
-# Changelog for package velocity_controllers
+# Changelog for package twist_controllers
+
+## 0.5.0 (2026-05-29)
+
+- Rename `velocity_controllers` to `twist_controllers` to avoid name collision
+  with ros2_controllers.
+
+## 0.4.3 (2026-04-25)
+
+## 0.4.2 (2026-03-30)
+
+## 0.4.1 (2026-02-23)
+
+- Addresses upstream deprecation of the `tf2_ros/buffer.h` and
+  `tf2_ros/transform_listener.h` headers.
+
+## 0.4.0 (2025-08-01)
+
+## 0.3.3 (2025-07-29)
 
 ## 0.4.2 (2026-03-30)
 

@@ -21,6 +21,7 @@
 #include "thruster_allocation_matrix_controller/thruster_allocation_matrix_controller.hpp"
 
 #include <Eigen/Dense>
+#include <algorithm>
 #include <format>
 #include <ranges>
 #include <stdexcept>
@@ -182,9 +183,9 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
 {
   auto * current_reference = reference_.readFromNonRT();
   const std::vector<double> wrench = common::messages::to_vector(*current_reference);
-  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
-    if (!std::isnan(ref)) {
-      interface = ref;
+  if (!std::ranges::all_of(wrench, [](double x) -> bool { return std::isnan(x); })) {
+    for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
+      interface = std::isnan(ref) ? 0.0 : ref;
     }
   }
 

@@ -1,5 +1,11 @@
 # Changelog for package ik_solvers
 
+## 0.5.0 (2026-05-29)
+
+- Replace the quaternion error with the left-invariant error
+
+## 0.4.3 (2026-04-25)
+
 ## 0.4.2 (2026-03-30)
 
 ## 0.4.1 (2026-02-23)

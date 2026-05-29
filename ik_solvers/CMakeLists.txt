@@ -17,6 +17,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
 find_package(generate_parameter_library REQUIRED)
+find_package(hydrodynamics REQUIRED)
 
 generate_parameter_library(task_priority_solver_parameters
   src/task_priority_solver_parameters.yaml
@@ -68,6 +69,7 @@ target_link_libraries(
         Eigen3::Eigen
         pinocchio::pinocchio
         pluginlib::pluginlib
+        hydrodynamics::hydrodynamics
         ${trajectory_msgs_TARGETS}
 )
 
@@ -92,6 +94,7 @@ ament_export_dependencies(
     "pinocchio"
     "trajectory_msgs"
     "tf2_eigen"
+    "hydrodynamics"
 )
 
 ament_package()

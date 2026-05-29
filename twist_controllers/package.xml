@@ -2,8 +2,8 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
 
-  <name>velocity_controllers</name>
-  <version>0.4.2</version>
+  <name>twist_controllers</name>
+  <version>0.5.0</version>
   <description>A collection of velocity controllers for underwater vehicles</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
