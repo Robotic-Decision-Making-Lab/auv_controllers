@@ -1,5 +1,9 @@
 # Changelog for package thruster_allocation_matrix_controller
 
+## 0.5.0 (2026-05-29)
+
+- Set NaN reference force/torque to zero thrust.
+
 ## 0.4.3 (2026-04-25)
 
 ## 0.4.2 (2026-03-30)

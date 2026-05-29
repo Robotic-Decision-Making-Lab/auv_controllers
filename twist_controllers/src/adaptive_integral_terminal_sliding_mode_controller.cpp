@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp"
+#include "twist_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp"
 
 #include <ranges>
 
@@ -27,7 +27,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
-namespace velocity_controllers
+namespace twist_controllers
 {
 
 namespace
@@ -345,9 +345,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_and_write_commands(
   return controller_interface::return_type::OK;
 }
 
-}  // namespace velocity_controllers
+}  // namespace twist_controllers
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
-  velocity_controllers::AdaptiveIntegralTerminalSlidingModeController,
+  twist_controllers::AdaptiveIntegralTerminalSlidingModeController,
   controller_interface::ChainableControllerInterface)

@@ -11,6 +11,6 @@
 !thruster_allocation_matrix_controller
 !thruster_controllers
 !topic_sensors
-!velocity_controllers
+!twist_controllers
 !whole_body_controllers
 !ros2.repos

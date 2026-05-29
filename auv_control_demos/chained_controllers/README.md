@@ -23,7 +23,7 @@ applies a PWM command to the hardware interface.
    The output should resemble:
 
    ```bash
-   adaptive_integral_terminal_sliding_mode_controller velocity_controllers/AdaptiveIntegralTerminalSlidingModeController        active
+   adaptive_integral_terminal_sliding_mode_controller twist_controllers/AdaptiveIntegralTerminalSlidingModeController        active
    thruster_allocation_matrix_controller              thruster_allocation_matrix_controller/ThrusterAllocationMatrixController  active
    thruster_8_controller                              thruster_controllers/PolynomialThrustCurveController                      active
    thruster_7_controller                              thruster_controllers/PolynomialThrustCurveController                      active
@@ -130,7 +130,7 @@ applies a PWM command to the hardware interface.
   - [chaining.launch.py](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/blob/main/auv_control_demos/chained_controllers/launch/chaining.launch.py)
 
 - Controllers:
-  - [Adaptive Integral Terminal Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/velocity_controllers)
+  - [Adaptive Integral Terminal Sliding Mode Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/twist_controllers)
   - [Thruster Allocation Matrix Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/thruster_allocation_matrix_controller)
   - [Polynomial Thrust Curve Controller](https://github.com/Robotic-Decision-Making-Lab/auv_controllers/tree/main/thruster_controllers)
 

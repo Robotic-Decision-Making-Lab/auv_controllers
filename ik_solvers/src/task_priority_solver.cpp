@@ -23,8 +23,10 @@
 #include <algorithm>
 #include <memory>
 #include <ranges>
+#include <unsupported/Eigen/MatrixFunctions>
 #include <vector>
 
+#include "hydrodynamics/hydrodynamics.hpp"
 #include "pinocchio/algorithm/frames.hpp"
 #include "pinocchio/algorithm/jacobian.hpp"
 #include "pinocchio/algorithm/kinematics.hpp"
@@ -53,22 +55,17 @@ auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
   return result;
 }
 
-/// Compute the error between two quaternions using eq. 2.12 in Gianluca Antonelli's Underwater Robotics book.
-/// Note that we only need to minimize the vector part of the error.
-auto quaternion_error(const Eigen::Quaterniond & q1, const Eigen::Quaterniond & q2) -> Eigen::Vector3d
+/// Derepresent a tangent vector.
+auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
 {
-  const Eigen::Vector3d q1_vec = q1.vec();
-  const Eigen::Vector3d q2_vec = q2.vec();
+  return {mat(0, 3), mat(1, 3), mat(2, 3), mat(2, 1), mat(0, 2), mat(1, 0)};
+}
 
-  const double q1_w = q1.w();
-  const double q2_w = q2.w();
-
-  const Eigen::Vector3d vec_error = (q2_w * q1_vec) - (q1_w * q2_vec) + q2_vec.cross(q1_vec);
-
-  // This is how we would compute the scalar error if we needed it
-  // const double scalar_error = q1_w * q2_w + q1_vec.dot(q2_vec);
-
-  return {vec_error.x(), vec_error.y(), vec_error.z()};
+/// Calculate the left-invariant geodesic error between a goal pose and the current pose.
+auto geodesic_error(const Eigen::Isometry3d & goal, const Eigen::Isometry3d & state) -> Eigen::Vector6d
+{
+  const Eigen::Matrix4d error = (state.inverse() * goal).matrix().log();
+  return vee(error);
 }
 
 }  // namespace
@@ -139,11 +136,9 @@ PoseConstraint::PoseConstraint(
   int priority)
 : Constraint(primal.matrix(), constraint.matrix(), gain, priority)
 {
-  error_ = Eigen::VectorXd::Zero(6);
-  error_.head<3>() = (constraint.translation() - primal.translation()).eval();
-  error_.tail<3>() = quaternion_error(Eigen::Quaterniond(constraint.rotation()), Eigen::Quaterniond(primal.rotation()));
+  error_ = geodesic_error(constraint, primal);
   jacobian_ = Eigen::MatrixXd::Zero(6, model->nv);
-  pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED, jacobian_);
+  pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL, jacobian_);
 }
 
 JointConstraint::JointConstraint(

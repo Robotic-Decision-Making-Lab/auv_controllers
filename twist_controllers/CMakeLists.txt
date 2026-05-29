@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(velocity_controllers)
+project(twist_controllers)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -33,10 +33,10 @@ generate_parameter_library(adaptive_integral_terminal_sliding_mode_controller_pa
   src/adaptive_integral_terminal_sliding_mode_controller_parameters.yaml
 )
 
-add_library(velocity_controllers SHARED)
+add_library(twist_controllers SHARED)
 
 target_sources(
-    velocity_controllers
+    twist_controllers
     PRIVATE
         src/integral_sliding_mode_controller.cpp
         src/adaptive_integral_terminal_sliding_mode_controller.cpp
@@ -44,12 +44,12 @@ target_sources(
         FILE_SET HEADERS
             BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/integral_sliding_mode_controller.hpp
-                ${CMAKE_CURRENT_SOURCE_DIR}/include/velocity_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/twist_controllers/integral_sliding_mode_controller.hpp
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/twist_controllers/adaptive_integral_terminal_sliding_mode_controller.hpp
 )
-target_compile_features(velocity_controllers PUBLIC cxx_std_23)
+target_compile_features(twist_controllers PUBLIC cxx_std_23)
 target_link_libraries(
-    velocity_controllers
+    twist_controllers
     PRIVATE
         integral_sliding_mode_controller_parameters
         adaptive_integral_terminal_sliding_mode_controller_parameters
@@ -69,21 +69,21 @@ target_link_libraries(
         ${nav_msgs_TARGETS}
 )
 
-pluginlib_export_plugin_description_file(controller_interface velocity_controllers.xml)
+pluginlib_export_plugin_description_file(controller_interface twist_controllers.xml)
 
 install(
     TARGETS
-        velocity_controllers
+        twist_controllers
         integral_sliding_mode_controller_parameters
         adaptive_integral_terminal_sliding_mode_controller_parameters
-    EXPORT export_velocity_controllers
+    EXPORT export_twist_controllers
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     FILE_SET HEADERS
 )
 
-ament_export_targets(export_velocity_controllers HAS_LIBRARY_TARGET)
+ament_export_targets(export_twist_controllers HAS_LIBRARY_TARGET)
 ament_export_dependencies(
     "controller_interface"
     "hardware_interface"

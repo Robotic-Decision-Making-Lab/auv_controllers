@@ -3,7 +3,7 @@ controller_manager:
     update_rate: 30 # Hz
 
     adaptive_integral_terminal_sliding_mode_controller:
-      type: velocity_controllers/AdaptiveIntegralTerminalSlidingModeController
+      type: twist_controllers/AdaptiveIntegralTerminalSlidingModeController
 
 adaptive_integral_terminal_sliding_mode_controller:
   ros__parameters:
