@@ -138,7 +138,7 @@ PoseConstraint::PoseConstraint(
 {
   error_ = geodesic_error(constraint, primal);
   jacobian_ = Eigen::MatrixXd::Zero(6, model->nv);
-  pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL_WORLD_ALIGNED, jacobian_);
+  pinocchio::getFrameJacobian(*model, *data, model->getFrameId(frame), pinocchio::LOCAL, jacobian_);
 }
 
 JointConstraint::JointConstraint(
