@@ -1,5 +1,7 @@
 # Changelog for package thruster_controllers
 
+## 0.5.0 (2026-05-29)
+
 ## 0.4.3 (2026-04-25)
 
 - Implements a `reverse_spin_direction` parameter into the thrust curve
