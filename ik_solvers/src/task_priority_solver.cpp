@@ -64,10 +64,7 @@ auto vee(const Eigen::Matrix4d & mat) -> Eigen::Vector6d
 /// Calculate the left-invariant geodesic error between a goal pose and the current pose.
 auto geodesic_error(const Eigen::Isometry3d & goal, const Eigen::Isometry3d & state) -> Eigen::Vector6d
 {
-  Eigen::Isometry3d _goal, _state;  // NOLINT
-  tf2::fromMsg(goal, _goal);
-  tf2::fromMsg(state, _state);
-  const Eigen::Matrix4d error = (_state.inverse() * _goal).matrix().log();
+  const Eigen::Matrix4d error = (state.inverse() * goal).matrix().log();
   return vee(error);
 }
 
