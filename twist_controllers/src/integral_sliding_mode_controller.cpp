@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "velocity_controllers/integral_sliding_mode_controller.hpp"
+#include "twist_controllers/integral_sliding_mode_controller.hpp"
 
 #include <Eigen/Dense>
 #include <array>
@@ -36,7 +36,7 @@
 #include "pluginlib/class_list_macros.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
-namespace velocity_controllers
+namespace twist_controllers
 {
 
 auto IntegralSlidingModeController::on_init() -> controller_interface::CallbackReturn
@@ -329,8 +329,8 @@ auto IntegralSlidingModeController::update_and_write_commands(
   return controller_interface::return_type::OK;
 }
 
-}  // namespace velocity_controllers
+}  // namespace twist_controllers
 
 PLUGINLIB_EXPORT_CLASS(
-  velocity_controllers::IntegralSlidingModeController,
+  twist_controllers::IntegralSlidingModeController,
   controller_interface::ChainableControllerInterface)

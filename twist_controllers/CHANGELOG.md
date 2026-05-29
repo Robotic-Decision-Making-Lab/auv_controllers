@@ -1,4 +1,9 @@
-# Changelog for package velocity_controllers
+# Changelog for package twist_controllers
+
+## 0.4.4 (2026-05-28)
+
+- Rename `velocity_controllers` to `twist_controllers` to avoid name collision
+  with ros2_controllers.
 
 ## 0.4.3 (2026-04-25)
 

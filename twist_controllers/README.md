@@ -1,4 +1,4 @@
-# Velocity Controllers
+# Twist Controllers
 
 This package provides a collection of velocity controllers, which calculate
 control commands (e.g., a wrench) needed to track a velocity reference
@@ -22,7 +22,7 @@ Mode Control for an Unmanned Surface Vehicle Against External Disturbances", in
 
 ### Plugin Library
 
-velocity_controllers/adaptive_integral_terminal_sliding_mode_controller
+twist_controllers/adaptive_integral_terminal_sliding_mode_controller
 
 ### References
 
@@ -70,7 +70,7 @@ Intervention Tasks with Lightweight Underwater Vehicle Manipulator Systems," in
 
 ### Plugin Library
 
-velocity_controllers/integral_sliding_mode_controller
+twist_controllers/integral_sliding_mode_controller
 
 ### References
 
