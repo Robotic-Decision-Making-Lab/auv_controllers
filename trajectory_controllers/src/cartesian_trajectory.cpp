@@ -144,7 +144,11 @@ auto CartesianTrajectory::sample(const rclcpp::Time & sample_time) const
   // the sample time is before the first point in the trajectory, so we need to interpolate between the starting
   // state and the first point in the trajectory
   if (sample_time < start_time()) {
-    return interpolate(initial_state_, start_point().value(), initial_time_, start_time(), sample_time);
+    const auto point = start_point();
+    if (!point.has_value()) {
+      return std::unexpected(SampleError::EMPTY_TRAJECTORY);
+    }
+    return interpolate(initial_state_, point.value(), initial_time_, start_time(), sample_time);
   }
 
   for (const auto [p1, p2] : std::views::zip(points_.points, points_.points | std::views::drop(1))) {

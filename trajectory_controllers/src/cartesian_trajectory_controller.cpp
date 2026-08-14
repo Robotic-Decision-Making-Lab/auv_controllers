@@ -229,7 +229,7 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
     rt_gh->execute();
     rt_active_goal_.writeFromNonRT(rt_gh);
 
-    goal_handle_timer_.reset();
+    goal_handle_timer_ = nullptr;
     goal_handle_timer_ =
       get_node()->create_wall_timer(action_monitor_period_, [rt_gh]() -> void { rt_gh->runNonRealtime(); });
   };
@@ -407,8 +407,13 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
+        const auto end_point = trajectory->end_point();
+        if (!end_point.has_value()) {
+          break;
+        }
+
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        const double goal_error = geodesic_error(trajectory->end_point().value(), system_state);
+        const double goal_error = geodesic_error(end_point.value(), system_state);
         RCLCPP_INFO(logger_, "CartesianTrajectory sample time is after trajectory end time.");  // NOLINT
         if (goal_tolerance > 0.0) {
           if (goal_error > goal_tolerance) {
