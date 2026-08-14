@@ -126,7 +126,7 @@ auto GazeboPassthroughController::update_and_write_commands(const rclcpp::Time &
   const double reference = reference_interfaces_[0];
   std_msgs::msg::Float64 msg = std_msgs::msg::Float64();
   msg.data = reference;
-  passthrough_pub_->publish(msg);
+  passthrough_pub_->publish(msg);  // NOLINT(portability-template-virtual-member-function)
 
   controller_state_.header.stamp = time;
   controller_state_.dof_state.reference = reference_interfaces_[0];
