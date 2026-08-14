@@ -1,7 +1,5 @@
 #include "pseudoinverse.hpp"
 
-#include <cmath>
-
 namespace ik_solvers::pinv
 {
 

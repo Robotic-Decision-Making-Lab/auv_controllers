@@ -1,5 +1,10 @@
 # Changelog for package whole_body_controllers
 
+## 0.5.1 (2026-08-14)
+
+- Removes the mobile-to-maritime message transform from the IK controller
+- Declares dependencies that were previously pulled in transitively
+
 ## 0.5.0 (2026-05-29)
 
 ## 0.4.3 (2026-04-25)

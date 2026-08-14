@@ -3,5 +3,12 @@ build/
 install/
 log/
 
+# Python Cache
 .mypy_cache/
 .ruff_cache/
+
+# CMake Cache
+.cache
+
+# Zed settings
+.zed

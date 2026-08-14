@@ -54,7 +54,7 @@ auto IKSolver::solve(const rclcpp::Duration & period, const Eigen::Isometry3d & 
   if (!result.has_value()) {
     return std::unexpected(result.error());
   }
-  const Eigen::VectorXd solution = result.value();
+  const Eigen::VectorXd & solution = result.value();
 
   // Integrate the solution to get the new joint positions
   const Eigen::VectorXd q_next = pinocchio::integrate(*model_, q, period.seconds() * solution);

@@ -63,7 +63,7 @@ RUN sudo apt-get -q update \
     && sudo rm -rf /var/lib/apt/lists/*
 
 RUN . "/opt/ros/${ROS_DISTRO}/setup.sh" \
-    && colcon build \
+    && colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     && echo "source ${USER_WORKSPACE}/install/setup.bash" >> /home/$USERNAME/.bashrc \
     && echo "if [ -f /opt/ros/${ROS_DISTRO}/setup.bash ]; then source /opt/ros/${ROS_DISTRO}/setup.bash; fi" >> /home/$USERNAME/.bashrc
 
@@ -77,7 +77,7 @@ RUN pip install \
 RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
     && sudo apt-get install -y \
-    clang-format-18 \
+    clang-format-22 \
     clang-tidy \
     clang-tools \
     && sudo apt-get autoremove -y \

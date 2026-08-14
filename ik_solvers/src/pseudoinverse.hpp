@@ -20,8 +20,6 @@
 
 #include <Eigen/Dense>
 
-#include "rclcpp/rclcpp.hpp"
-
 namespace ik_solvers::pinv
 {
 

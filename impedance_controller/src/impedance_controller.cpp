@@ -78,9 +78,10 @@ auto ImpedanceController::configure_parameters() -> controller_interface::Callba
   n_state_dofs_ = state_dofs_.size();
   n_reference_dofs_ = n_command_dofs_ + n_state_dofs_;
 
-  auto get_gains = [this](auto field) {
-    auto gains = command_dofs_ |
-                 std::views::transform([&](const auto & dof) { return params_.gains.command_joints_map[dof].*field; });
+  auto get_gains = [this](auto field) -> auto {
+    auto gains = command_dofs_ | std::views::transform([&](const auto & dof) -> auto {
+                   return params_.gains.command_joints_map[dof].*field;
+                 });
     return std::vector<double>(gains.begin(), gains.end());
   };
 
@@ -236,7 +237,7 @@ auto ImpedanceController::update_system_state_values() -> controller_interface::
     auto * current_state = system_state_.readFromRT();
     std::ranges::copy(common::messages::to_vector(*current_state), system_state_values_.begin());
   } else {
-    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
+    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
     });
   }

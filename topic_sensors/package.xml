@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>topic_sensors</name>
-  <version>0.5.0</version>
+  <version>0.5.1</version>
   <description>Sensor plugins used to write ROS 2 messages to state interfaces</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -25,7 +25,8 @@
   <depend>geometry_msgs</depend>
   <depend>generate_parameter_library</depend>
   <depend>controller_common</depend>
-  <depend>message_transforms</depend>
+  <depend>realtime_tools</depend>
+  <depend>std_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

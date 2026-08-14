@@ -20,11 +20,6 @@
 
 #include "thruster_controllers/gz_passthrough_controller.hpp"
 
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <ranges>
-
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 
 namespace thruster_controllers

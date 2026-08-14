@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <expected>
 
-#include "pinocchio/algorithm/joint-configuration.hpp"
+#include "pinocchio/multibody/fwd.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "trajectory_msgs/msg/joint_trajectory_point.hpp"
 

@@ -21,9 +21,10 @@
 #include "coordinator.hpp"
 
 #include <chrono>
-#include <ranges>
 
 #include "lifecycle_msgs/msg/state.hpp"
+#include "rclcpp/executors/multi_threaded_executor.hpp"
+#include "rclcpp/utilities.hpp"
 
 namespace coordinator
 {

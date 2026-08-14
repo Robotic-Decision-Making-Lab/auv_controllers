@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>trajectory_controllers</name>
-  <version>0.5.0</version>
+  <version>0.5.1</version>
   <description>Trajectory controllers for underwater vehicles and manipulator systems</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -30,6 +30,12 @@
   <depend>auv_control_msgs</depend>
   <depend>rclcpp_action</depend>
   <depend>lifecycle_msgs</depend>
+  <depend>pluginlib</depend>
+  <depend>realtime_tools</depend>
+  <depend>tf2</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
