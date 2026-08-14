@@ -312,7 +312,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   }
 
   // convert the reference wrench values into an Eigen vector
-  Eigen::Vector6d reference_wrench(ref_wrench_values.data());
+  const Eigen::Vector6d reference_wrench(ref_wrench_values.data());
 
   // calculate the control command
   Eigen::Vector6d t = reference_wrench + kp_ * pose_error + kd_ * twist_error;
@@ -334,7 +334,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   common::messages::to_msg(twist_error_values, &controller_state_.error_twist);
   controller_state_.time_step = period.seconds();
 
-  std::vector<double> output_values(t.data(), t.data() + t.size());
+  const std::vector<double> output_values(t.data(), t.data() + t.size());
   common::messages::to_msg(output_values, &controller_state_.output);
 
   rt_controller_state_pub_->try_publish(controller_state_);
