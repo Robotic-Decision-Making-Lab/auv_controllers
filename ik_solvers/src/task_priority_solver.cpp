@@ -337,9 +337,8 @@ auto TaskPriorityIKSolver::solve_ik(const Eigen::Isometry3d & goal, const Eigen:
     const double joint_limit_gain = params_.joint_limit_task.constrained_joints_map[joint_name].gain;
 
     // insert the joint limit constraint
-    hierarchy_.insert(
-      std::make_shared<hierarchy::JointConstraint>(
-        model_, primal, ub, lb, tol, activation, joint_name, joint_limit_gain));
+    hierarchy_.insert(std::make_shared<hierarchy::JointConstraint>(
+      model_, primal, ub, lb, tol, activation, joint_name, joint_limit_gain));
   }
 
   // find the safe solutions and choose the one with the smallest norm

@@ -1,9 +1,9 @@
 {
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/ubuntu/ws_ros/src/auv_controllers,type=bind",
-  "workspaceFolder": "/home/ubuntu/ws_ros/src/auv_controllers",
-  "remoteUser": "ubuntu",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "../",
-  },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/ubuntu/ws_ros/src/auv_controllers,type=bind",
+    "workspaceFolder": "/home/ubuntu/ws_ros/src/auv_controllers",
+    "remoteUser": "ubuntu",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "../"
+    }
 }

@@ -47,6 +47,14 @@ def generate_launch_description():
     )
     robot_description = {"robot_description": robot_description_content}
 
+    controller_params = PathJoinSubstitution(
+        [
+            FindPackageShare("auv_control_demos"),
+            "config",
+            "chained_controllers.yaml",
+        ]
+    )
+
     velocity_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -54,6 +62,8 @@ def generate_launch_description():
             "adaptive_integral_terminal_sliding_mode_controller",
             "--controller-manager",
             ["", "controller_manager"],
+            "--param-file",
+            controller_params,
         ],
     )
 
@@ -65,6 +75,8 @@ def generate_launch_description():
                 f"thruster_{i + 1}_controller",
                 "--controller-manager",
                 ["", "controller_manager"],
+                "--param-file",
+                controller_params,
             ],
         )
         for i in range(8)
@@ -93,6 +105,8 @@ def generate_launch_description():
             "thruster_allocation_matrix_controller",
             "--controller-manager",
             ["", "controller_manager"],
+            "--param-file",
+            controller_params,
         ],
     )
     delay_tam_controller_spawner_after_thruster_controller_spawners = (
