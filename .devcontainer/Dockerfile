@@ -74,12 +74,16 @@ RUN pip install \
     pre-commit
 
 # Install debugging/linting C++ packages
+# libstdc++-16-dev completes the gcc-16 toolchain that gets pulled in transitively
+# without it, which otherwise leaves clang-tidy's GCC auto-detection unable to find
+# standard library headers.
 RUN sudo apt-get -q update \
     && sudo apt-get -q -y upgrade \
     && sudo apt-get install -y \
     clang-format-22 \
     clang-tidy \
     clang-tools \
+    libstdc++-16-dev \
     && sudo apt-get autoremove -y \
     && sudo apt-get clean -y \
     && sudo rm -rf /var/lib/apt/lists/*
