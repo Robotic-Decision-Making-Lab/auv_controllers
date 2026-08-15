@@ -27,7 +27,6 @@
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include "message_transforms/transforms.hpp"
 #include "pinocchio/algorithm/model.hpp"
 #include "pinocchio/parsers/urdf.hpp"
 
@@ -69,12 +68,13 @@ auto IKController::on_init() -> controller_interface::CallbackReturn
   std::ranges::copy(params_.controlled_joints, std::back_inserter(controlled_joints));
 
   std::vector<std::string> locked_joint_names;
-  std::ranges::copy_if(model_->names, std::back_inserter(locked_joint_names), [&controlled_joints](const auto & name) {
-    return std::ranges::find(controlled_joints, name) == controlled_joints.end();
-  });
+  std::ranges::copy_if(
+    model_->names, std::back_inserter(locked_joint_names), [&controlled_joints](const auto & name) -> auto {
+      return std::ranges::find(controlled_joints, name) == controlled_joints.end();
+    });
 
   std::vector<pinocchio::JointIndex> locked_joints;
-  std::ranges::transform(locked_joint_names, std::back_inserter(locked_joints), [this](const auto & name) {
+  std::ranges::transform(locked_joint_names, std::back_inserter(locked_joints), [this](const auto & name) -> auto {
     return model_->getJointId(name);
   });
 
@@ -162,7 +162,6 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
-      m2m::transform_message(*msg);
       reference_.writeFromNonRT(*msg);
     });
 
@@ -172,7 +171,6 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       "~/vehicle_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
-        m2m::transform_message(*msg, "map", "base_link");
         vehicle_state_.writeFromNonRT(*msg);
       });
   }
@@ -210,13 +208,16 @@ auto IKController::command_interface_configuration() const -> controller_interfa
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_command_interfaces_);
 
-  auto format_interface = [](const std::string & name, const std::string & type, const std::string & reference) {
+  auto format_interface =
+    [](const std::string & name, const std::string & type, const std::string & reference) -> std::string {
     return reference.empty() ? std::format("{}/{}", name, type) : std::format("{}/{}/{}", reference, name, type);
   };
 
   if (use_position_commands_) {
     std::ranges::transform(
-      position_interface_names_, std::back_inserter(config.names), [this, &format_interface](const auto & name) {
+      position_interface_names_,
+      std::back_inserter(config.names),
+      [this, &format_interface](const auto & name) -> auto {
         if (std::ranges::find(free_flyer_pos_dofs_, name) != free_flyer_pos_dofs_.end()) {
           return format_interface(name, hardware_interface::HW_IF_POSITION, params_.vehicle_reference_controller);
         }
@@ -226,7 +227,9 @@ auto IKController::command_interface_configuration() const -> controller_interfa
 
   if (use_velocity_commands_) {
     std::ranges::transform(
-      velocity_interface_names_, std::back_inserter(config.names), [this, &format_interface](const auto & name) {
+      velocity_interface_names_,
+      std::back_inserter(config.names),
+      [this, &format_interface](const auto & name) -> auto {
         if (std::ranges::find(free_flyer_vel_dofs_, name) != free_flyer_vel_dofs_.end()) {
           return format_interface(name, hardware_interface::HW_IF_VELOCITY, params_.vehicle_reference_controller);
         }
@@ -242,8 +245,9 @@ auto IKController::state_interface_configuration() const -> controller_interface
   controller_interface::InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  auto insert_interfaces = [&config](const std::vector<std::string> & interface_names, const std::string & type) {
-    std::ranges::transform(interface_names, std::back_inserter(config.names), [type](const auto & name) {
+  auto insert_interfaces = [&config](
+                             const std::vector<std::string> & interface_names, const std::string & type) -> void {
+    std::ranges::transform(interface_names, std::back_inserter(config.names), [type](const auto & name) -> auto {
       return std::format("{}/{}", name, type);
     });
   };
@@ -309,8 +313,8 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     std::ranges::copy(state.begin(), state.begin() + free_flyer_pos_dofs_.size(), position_state_values_.begin());
     std::ranges::copy(state.begin() + free_flyer_pos_dofs_.size(), state.end(), velocity_state_values_.begin());
   } else {
-    auto save_states = [](const auto & interfaces, auto out) {
-      std::ranges::transform(interfaces, out, [](const auto & interface) {
+    auto save_states = [](const auto & interfaces, auto out) -> auto {
+      std::ranges::transform(interfaces, out, [](const auto & interface) -> auto {
         return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
       });
     };
@@ -333,17 +337,15 @@ auto IKController::update_system_state_values() -> controller_interface::return_
     // transform the states into the appropriate frame and save them
     geometry_msgs::msg::Pose pose;
     common::messages::to_msg(position_states, &pose);
-    m2m::transform_message(pose);
     std::ranges::copy(common::messages::to_vector(pose), position_state_values_.begin());
 
     geometry_msgs::msg::Twist twist;
     common::messages::to_msg(velocity_states, &twist);
-    m2m::transform_message(twist);
     std::ranges::copy(common::messages::to_vector(twist), velocity_state_values_.begin());
   }
 
-  auto find_interface = [](const auto & interfaces, const std::string & name, const std::string & type) {
-    return std::ranges::find_if(interfaces, [&name, &type](const auto & interface) {
+  auto find_interface = [](const auto & interfaces, const std::string & name, const std::string & type) -> auto {
+    return std::ranges::find_if(interfaces, [&name, &type](const auto & interface) -> auto {
       return interface.get_name() == std::format("{}/{}", name, type);
     });
   };
@@ -390,7 +392,6 @@ auto IKController::update_chained_reference_values() -> controller_interface::re
   // this extra method to transform the values into a frame suitable for pinocchio
   geometry_msgs::msg::Pose reference_transformed;
   common::messages::to_msg(reference_interfaces_, &reference_transformed);
-  m2m::transform_message(reference_transformed);
   std::ranges::copy(common::messages::to_vector(reference_transformed), reference_interfaces_.begin());
   return controller_interface::return_type::OK;
 }
@@ -444,13 +445,11 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   // transform the solution into the appropriate frame
   geometry_msgs::msg::Twist twist;
   common::messages::to_msg({point.velocities.begin(), point.velocities.begin() + free_flyer_vel_dofs_.size()}, &twist);
-  m2m::transform_message(twist);
   std::ranges::copy(common::messages::to_vector(twist), point.velocities.begin());
 
   // transform the pose into the appropriate frame
   geometry_msgs::msg::Pose pose;
   common::messages::to_msg({point.positions.begin(), point.positions.begin() + free_flyer_pos_dofs_.size()}, &pose);
-  m2m::transform_message(pose);
   std::ranges::copy(common::messages::to_vector(pose), point.positions.begin());
 
   if (use_position_commands_) {

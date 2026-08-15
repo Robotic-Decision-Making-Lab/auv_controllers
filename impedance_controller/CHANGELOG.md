@@ -1,5 +1,9 @@
 # Changelog for package impedance_controller
 
+## 0.5.1 (2026-08-14)
+
+- Declares dependencies that were previously pulled in transitively
+
 ## 0.5.0 (2026-05-29)
 
 ## 0.4.3 (2026-04-25)

@@ -21,11 +21,7 @@
 #include "twist_controllers/integral_sliding_mode_controller.hpp"
 
 #include <Eigen/Dense>
-#include <array>
 #include <cmath>
-#include <cstddef>
-#include <cstdio>
-#include <iterator>
 #include <limits>
 #include <ranges>
 #include <string>
@@ -81,8 +77,9 @@ auto IntegralSlidingModeController::configure_parameters() -> controller_interfa
   n_dofs_ = dofs_.size();
   boundary_thickness_ = params_.gains.lambda;
 
-  auto get_gain = [this](auto field) {
-    auto gain = dofs_ | std::views::transform([&](const auto & dof) { return params_.gains.joints_map[dof].*field; });
+  auto get_gain = [this](auto field) -> auto {
+    auto gain =
+      dofs_ | std::views::transform([&](const auto & dof) -> auto { return params_.gains.joints_map[dof].*field; });
     return std::vector<double>(gain.begin(), gain.end());
   };
 
@@ -230,7 +227,7 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
     std::ranges::copy(common::messages::to_vector(current_state->twist.twist), system_state_values_.begin());
     tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
   } else {
-    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
+    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
     });
 
@@ -303,7 +300,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
 
   // calculate the disturbance rejection torque
   Eigen::Vector6d surface = error + kp_ * total_error_ - kp_ * init_error_;
-  surface = surface.unaryExpr([this](double x) { return std::tanh(x / boundary_thickness_); });
+  surface = surface.unaryExpr([this](double x) -> double { return std::tanh(x / boundary_thickness_); });
   const Eigen::Vector6d tau1 = rho_ * surface;
 
   // total control torque

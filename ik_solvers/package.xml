@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>ik_solvers</name>
-  <version>0.5.0</version>
+  <version>0.5.1</version>
   <description>Inverse kinematics solvers used for whole-body control</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -15,6 +15,7 @@
   <author>Evan Palmer</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
   <depend>eigen</depend>
@@ -24,6 +25,9 @@
   <depend>trajectory_msgs</depend>
   <depend>generate_parameter_library</depend>
   <depend>pinocchio</depend>
+  <depend>hydrodynamics</depend>
+  <build_depend>python3-numpy</build_depend>
+  <depend>tf2_eigen</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

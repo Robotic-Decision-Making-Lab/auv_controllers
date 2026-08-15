@@ -30,6 +30,10 @@ jobs:
           ROS_DISTRO: ${{ matrix.env.ROS_DISTRO }}
           CXXFLAGS: -Wall -Wextra -Wpedantic -std=c++20
           CLANG_TIDY: true
+          # Ubuntu's gcc-16 metapackage is pulled in transitively without a matching
+          # libstdc++-16-dev, which leaves clang-tidy's GCC auto-detection pointing at
+          # an incomplete toolchain and unable to find standard library headers.
+          ADDITIONAL_DEBS: libstdc++-16-dev
           UPSTREAM_WORKSPACE: ros2.repos
           AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
           AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src

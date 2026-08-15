@@ -9,6 +9,7 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  -portability-avoid-pragma-once,
   -google-readability-braces-around-statements,
   -google-readability-namespace-comments,
   -google-runtime-references,

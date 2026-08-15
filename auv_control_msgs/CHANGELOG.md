@@ -1,5 +1,9 @@
 # Changelog for package auv_control_msgs
 
+## 0.5.1 (2026-08-14)
+
+- Declares the missing `builtin_interfaces` dependency
+
 ## 0.5.0 (2026-05-29)
 
 ## 0.4.3 (2026-04-25)

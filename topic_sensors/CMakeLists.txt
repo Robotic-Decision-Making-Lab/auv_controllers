@@ -13,7 +13,6 @@ find_package(realtime_tools REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(controller_common REQUIRED)
-find_package(message_transforms REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -35,7 +34,6 @@ target_link_libraries(
         rclcpp::rclcpp
         realtime_tools::realtime_tools
         controller_common::controller_common
-        message_transforms::message_transforms
         ${std_msgs_TARGETS}
         ${nav_msgs_TARGETS}
 )
@@ -59,7 +57,6 @@ ament_export_dependencies(
     "std_msgs"
     "nav_msgs"
     "controller_common"
-    "message_transforms"
 )
 
 ament_package()

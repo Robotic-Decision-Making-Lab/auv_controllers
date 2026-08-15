@@ -28,10 +28,7 @@
 
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "pinocchio/algorithm/frames.hpp"
-#include "pinocchio/algorithm/jacobian.hpp"
-#include "pinocchio/algorithm/kinematics.hpp"
 #include "pseudoinverse.hpp"
-#include "tf2_eigen/tf2_eigen.hpp"
 
 namespace ik_solvers
 {
@@ -47,7 +44,7 @@ auto active_tasks(const ConstraintSet & tasks) -> ConstraintSet
 {
   ConstraintSet result;
   std::ranges::copy(
-    tasks | std::views::filter([](const auto & task) {
+    tasks | std::views::filter([](const auto & task) -> auto {
       auto set_task = std::dynamic_pointer_cast<SetConstraint>(task);
       return !std::dynamic_pointer_cast<SetConstraint>(set_task) || set_task->is_active();
     }),
@@ -79,8 +76,8 @@ auto TaskHierarchy::set_constraints() const -> ConstraintSet  // NOLINT
   const ConstraintSet tasks = active_tasks(constraints_);
   ConstraintSet result;
   std::ranges::copy(
-    tasks |
-      std::views::filter([](const auto & task) { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
+    tasks | std::views::filter(
+              [](const auto & task) -> auto { return std::dynamic_pointer_cast<SetConstraint>(task) != nullptr; }),
     std::inserter(result, result.end()));
   return result;
 }
@@ -90,7 +87,8 @@ auto TaskHierarchy::equality_constraints() const -> ConstraintSet  // NOLINT
   const ConstraintSet tasks = active_tasks(constraints_);
   ConstraintSet result;
   std::ranges::copy(
-    tasks | std::views::filter([](const auto & task) { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
+    tasks |
+      std::views::filter([](const auto & task) -> auto { return !std::dynamic_pointer_cast<SetConstraint>(task); }),
     std::inserter(result, result.end()));
   return result;
 }
@@ -180,8 +178,10 @@ auto construct_augmented_jacobian(const std::vector<Eigen::MatrixXd> & jacobians
   }
 
   const int n_cols = jacobians.front().cols();
-  const int n_rows = std::accumulate(
-    jacobians.begin(), jacobians.end(), 0, [](int sum, const Eigen::MatrixXd & jac) { return sum + jac.rows(); });
+  const int n_rows =
+    std::accumulate(jacobians.begin(), jacobians.end(), 0, [](int sum, const Eigen::MatrixXd & jac) -> int {
+      return sum + jac.rows();
+    });
 
   Eigen::MatrixXd augmented_jacobian(n_rows, n_cols);
   int current_row = 0;  // NOLINT(misc-const-correctness)
@@ -222,7 +222,7 @@ auto tpik(const hierarchy::ConstraintSet & tasks, size_t nv, double damping)
 /// Check if the solution is feasible.
 auto is_feasible(const hierarchy::ConstraintSet & constraints, const Eigen::VectorXd & solution) -> bool
 {
-  return std::ranges::all_of(constraints, [&solution](const auto & constraint) {
+  return std::ranges::all_of(constraints, [&solution](const auto & constraint) -> auto {
     auto set_task = std::dynamic_pointer_cast<hierarchy::SetConstraint>(constraint);
     const double pred = (constraint->jacobian() * solution).value();
     return (
@@ -267,7 +267,7 @@ auto search_solutions(
   }
 
   // Choose the solution with the smallest norm
-  return *std::ranges::min_element(solutions, {}, [](const auto & a) { return a.norm(); });
+  return *std::ranges::min_element(solutions, {}, [](const auto & a) -> auto { return a.norm(); });
 }
 
 auto pinocchio_to_eigen(const pinocchio::SE3 & pose) -> Eigen::Isometry3d

@@ -26,9 +26,6 @@
 
 #include "control_msgs/msg/single_dof_state_stamped.hpp"
 #include "controller_interface/chainable_controller_interface.hpp"
-#include "controller_interface/controller_interface.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"

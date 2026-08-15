@@ -3,7 +3,7 @@
 <package format="3">
 
   <name>thruster_allocation_matrix_controller</name>
-  <version>0.5.0</version>
+  <version>0.5.1</version>
   <description>Thruster allocation matrix controller used to convert wrench commands into thrust commands</description>
 
   <maintainer email="evanp922@gmail.com">Evan Palmer</maintainer>
@@ -31,6 +31,8 @@
   <depend>auv_control_msgs</depend>
   <depend>hydrodynamics</depend>
   <depend>controller_common</depend>
+  <depend>geometry_msgs</depend>
+  <depend>realtime_tools</depend>
 
   <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 

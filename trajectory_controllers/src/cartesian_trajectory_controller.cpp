@@ -21,12 +21,12 @@
 #include "trajectory_controllers/cartesian_trajectory_controller.hpp"
 
 #include <Eigen/Dense>
+#include <rclcpp_action/create_server.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_eigen/tf2_eigen.hpp"
 
 namespace trajectory_controllers
@@ -173,8 +173,8 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
 
   auto handle_goal = [this](
                        const rclcpp_action::GoalUUID & /*uuid*/,
-                       std::shared_ptr<const FollowTrajectory::Goal> goal) {  // NOLINT
-    RCLCPP_INFO(logger_, "Received new trajectory goal");                     // NOLINT
+                       std::shared_ptr<const FollowTrajectory::Goal> goal) -> rclcpp_action::GoalResponse {  // NOLINT
+    RCLCPP_INFO(logger_, "Received new trajectory goal");                                                    // NOLINT
     if (get_lifecycle_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
       RCLCPP_ERROR(logger_, "Can't accept new action goals. Controller is not running.");  // NOLINT
       return rclcpp_action::GoalResponse::REJECT;
@@ -229,8 +229,9 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
     rt_gh->execute();
     rt_active_goal_.writeFromNonRT(rt_gh);
 
-    goal_handle_timer_.reset();
-    goal_handle_timer_ = get_node()->create_wall_timer(action_monitor_period_, [rt_gh]() { rt_gh->runNonRealtime(); });
+    goal_handle_timer_ = nullptr;
+    goal_handle_timer_ =
+      get_node()->create_wall_timer(action_monitor_period_, [rt_gh]() -> void { rt_gh->runNonRealtime(); });
   };
 
   action_server_ = rclcpp_action::create_server<auv_control_msgs::action::FollowCartesianTrajectory>(
@@ -259,7 +260,7 @@ auto CartesianTrajectoryController::command_interface_configuration() const
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
-  std::ranges::transform(dofs_, std::back_inserter(config.names), [this](const auto & dof) {
+  std::ranges::transform(dofs_, std::back_inserter(config.names), [this](const auto & dof) -> auto {
     return params_.reference_controller.empty()
              ? std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)
              : std::format("{}/{}/{}", params_.reference_controller, dof, hardware_interface::HW_IF_POSITION);
@@ -279,7 +280,7 @@ auto CartesianTrajectoryController::state_interface_configuration() const
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   config.names.reserve(n_dofs_);
 
-  std::ranges::transform(dofs_, std::back_inserter(config.names), [](const auto & dof) {
+  std::ranges::transform(dofs_, std::back_inserter(config.names), [](const auto & dof) -> auto {
     return std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION);
   });
 
@@ -345,7 +346,7 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
   auto command_state = system_state;
   double error = std::numeric_limits<double>::quiet_NaN();
 
-  auto publish_controller_state = [this, &reference_state, &system_state, &error, &command_state]() {
+  auto publish_controller_state = [this, &reference_state, &system_state, &error, &command_state]() -> void {
     controller_state_.header.stamp = get_node()->now();
     controller_state_.reference = reference_state;
     controller_state_.feedback = system_state;
@@ -406,8 +407,13 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
         break;
 
       case SampleError::SAMPLE_TIME_AFTER_END: {
+        const auto end_point = trajectory->end_point();
+        if (!end_point.has_value()) {
+          break;
+        }
+
         const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
-        const double goal_error = geodesic_error(trajectory->end_point().value(), system_state);
+        const double goal_error = geodesic_error(end_point.value(), system_state);
         RCLCPP_INFO(logger_, "CartesianTrajectory sample time is after trajectory end time.");  // NOLINT
         if (goal_tolerance > 0.0) {
           if (goal_error > goal_tolerance) {

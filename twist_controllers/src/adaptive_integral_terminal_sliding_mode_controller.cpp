@@ -39,7 +39,7 @@ auto sign(double x, double thickness) -> double { return std::tanh(x / thickness
 /// Apply the element-wise sign function to a vector using tanh and a given boundary thickness.
 auto sign(const Eigen::Vector6d & x, double thickness) -> Eigen::Vector6d
 {
-  return x.unaryExpr([thickness](double val) { return sign(val, thickness); });
+  return x.unaryExpr([thickness](double val) -> double { return sign(val, thickness); });
 }
 
 }  // namespace
@@ -80,8 +80,9 @@ auto AdaptiveIntegralTerminalSlidingModeController::configure_parameters() -> co
   n_dofs_ = dofs_.size();
   lambda_ = params_.gains.lambda;
 
-  auto get_gain = [this](auto field) {
-    auto gain = dofs_ | std::views::transform([&](const auto & dof) { return params_.gains.joints_map[dof].*field; });
+  auto get_gain = [this](auto field) -> auto {
+    auto gain =
+      dofs_ | std::views::transform([&](const auto & dof) -> auto { return params_.gains.joints_map[dof].*field; });
     return std::vector<double>(gain.begin(), gain.end());
   };
 
@@ -237,7 +238,7 @@ auto AdaptiveIntegralTerminalSlidingModeController::update_system_state_values()
     std::ranges::copy(common::messages::to_vector(current_state->twist.twist), system_state_values_.begin());
     tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
   } else {
-    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
+    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
     });
 

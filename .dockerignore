@@ -13,4 +13,7 @@
 !topic_sensors
 !twist_controllers
 !whole_body_controllers
+!trajectory_controllers
+!controller_coordinator
+!impedance_controller
 !ros2.repos

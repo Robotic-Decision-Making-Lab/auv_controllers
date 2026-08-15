@@ -45,6 +45,14 @@ def generate_launch_description():
     )
     robot_description = {"robot_description": robot_description_content}
 
+    controller_params = PathJoinSubstitution(
+        [
+            FindPackageShare("auv_control_demos"),
+            "config",
+            "individual_controller.yaml",
+        ]
+    )
+
     return LaunchDescription(
         [
             Node(
@@ -57,15 +65,7 @@ def generate_launch_description():
                 package="controller_manager",
                 executable="ros2_control_node",
                 output="both",
-                parameters=[
-                    PathJoinSubstitution(
-                        [
-                            FindPackageShare("auv_control_demos"),
-                            "config",
-                            "individual_controller.yaml",
-                        ]
-                    ),
-                ],
+                parameters=[controller_params],
                 remappings=[
                     ("/controller_manager/robot_description", "/robot_description"),
                 ],
@@ -77,6 +77,8 @@ def generate_launch_description():
                     "adaptive_integral_terminal_sliding_mode_controller",
                     "--controller-manager",
                     ["", "controller_manager"],
+                    "--param-file",
+                    controller_params,
                 ],
             ),
         ]

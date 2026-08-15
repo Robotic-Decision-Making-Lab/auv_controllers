@@ -24,10 +24,10 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
-#include <stdexcept>
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "hydrodynamics/hydrodynamics.hpp"
 
 namespace thruster_allocation_matrix_controller
 {
@@ -62,6 +62,7 @@ auto ThrusterAllocationMatrixController::configure_parameters() -> controller_in
   if (!params_.reference_controllers.empty() && params_.reference_controllers.size() != n_thrusters_) {
     RCLCPP_ERROR(
       get_node()->get_logger(),
+      "%s",
       std::format(
         "Mismatched number of command interface prefixes and thrusters. Expected {}, got {}.",
         n_thrusters_,
@@ -75,9 +76,10 @@ auto ThrusterAllocationMatrixController::configure_parameters() -> controller_in
     params_.tam.x, params_.tam.y, params_.tam.z, params_.tam.rx, params_.tam.ry, params_.tam.rz};
 
   // Make sure that all of the rows are the same size
-  if (std::ranges::any_of(vecs, [this](const auto & vec) { return vec.size() != n_thrusters_; })) {
+  if (std::ranges::any_of(vecs, [this](const auto & vec) -> auto { return vec.size() != n_thrusters_; })) {
     RCLCPP_ERROR(
       get_node()->get_logger(),
+      "%s",
       std::format("Mismatched TAM row sizes. Expected {}, got {}.", n_thrusters_, vecs[0].size()).c_str());
 
     return controller_interface::CallbackReturn::ERROR;
@@ -202,7 +204,9 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
   for (auto && [interface, value] : std::views::zip(command_interfaces_, thrust)) {
     if (!interface.set_value(value)) {
       RCLCPP_INFO(
-        get_node()->get_logger(), std::format("Failed to set command for thruster {}", interface.get_name()).c_str());
+        get_node()->get_logger(),
+        "%s",
+        std::format("Failed to set command for thruster {}", interface.get_name()).c_str());
       return controller_interface::return_type::ERROR;
     }
   }

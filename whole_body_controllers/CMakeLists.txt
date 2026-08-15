@@ -19,7 +19,6 @@ find_package(pinocchio REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
-find_package(message_transforms REQUIRED)
 find_package(controller_common REQUIRED)
 find_package(ik_solvers REQUIRED)
 find_package(auv_control_msgs REQUIRED)
@@ -55,7 +54,6 @@ target_link_libraries(
         tf2_ros::tf2_ros
         ik_solvers::ik_solvers
         tf2_eigen::tf2_eigen
-        message_transforms::message_transforms
         controller_common::controller_common
         Eigen3::Eigen
         ${geometry_msgs_TARGETS}
@@ -89,7 +87,6 @@ ament_export_dependencies(
     "geometry_msgs"
     "tf2_ros"
     "tf2_eigen"
-    "message_transforms"
     "controller_common"
     "ik_solvers"
     "auv_control_msgs"

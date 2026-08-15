@@ -78,9 +78,10 @@ auto ImpedanceController::configure_parameters() -> controller_interface::Callba
   n_state_dofs_ = state_dofs_.size();
   n_reference_dofs_ = n_command_dofs_ + n_state_dofs_;
 
-  auto get_gains = [this](auto field) {
-    auto gains = command_dofs_ |
-                 std::views::transform([&](const auto & dof) { return params_.gains.command_joints_map[dof].*field; });
+  auto get_gains = [this](auto field) -> auto {
+    auto gains = command_dofs_ | std::views::transform([&](const auto & dof) -> auto {
+                   return params_.gains.command_joints_map[dof].*field;
+                 });
     return std::vector<double>(gains.begin(), gains.end());
   };
 
@@ -236,7 +237,7 @@ auto ImpedanceController::update_system_state_values() -> controller_interface::
     auto * current_state = system_state_.readFromRT();
     std::ranges::copy(common::messages::to_vector(*current_state), system_state_values_.begin());
   } else {
-    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) {
+    std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
     });
   }
@@ -311,7 +312,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   }
 
   // convert the reference wrench values into an Eigen vector
-  Eigen::Vector6d reference_wrench(ref_wrench_values.data());
+  const Eigen::Vector6d reference_wrench(ref_wrench_values.data());
 
   // calculate the control command
   Eigen::Vector6d t = reference_wrench + kp_ * pose_error + kd_ * twist_error;
@@ -333,7 +334,7 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   common::messages::to_msg(twist_error_values, &controller_state_.error_twist);
   controller_state_.time_step = period.seconds();
 
-  std::vector<double> output_values(t.data(), t.data() + t.size());
+  const std::vector<double> output_values(t.data(), t.data() + t.size());
   common::messages::to_msg(output_values, &controller_state_.output);
 
   rt_controller_state_pub_->try_publish(controller_state_);

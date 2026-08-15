@@ -26,11 +26,8 @@
 #include <vector>
 
 #include "hardware_interface/sensor_interface.hpp"
-#include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/executors/single_threaded_executor.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 
 namespace topic_sensors

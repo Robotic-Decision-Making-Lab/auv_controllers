@@ -1,5 +1,9 @@
 # Changelog for package ik_solvers
 
+## 0.5.1 (2026-08-14)
+
+- Declares the `python3-numpy` build dependency required by Pinocchio's Python bindings
+
 ## 0.5.0 (2026-05-29)
 
 - Replace the quaternion error with the left-invariant error
