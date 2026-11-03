@@ -1,5 +1,10 @@
 # Changelog for package topic_sensors
 
+## 0.5.2 (2026-11-03)
+
+- Exports the odom sensor state interfaces through `export_unlisted_state_interface_descriptions`, replacing the `export_state_interfaces` API removed upstream
+- Replaces the deprecated `RealtimeBuffer` with `RealtimeThreadSafeBox`
+
 ## 0.5.1 (2026-08-14)
 
 - Removes the mobile-to-maritime message transform option from the odom sensor

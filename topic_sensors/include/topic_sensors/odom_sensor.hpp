@@ -28,7 +28,7 @@
 #include "hardware_interface/sensor_interface.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/executors/single_threaded_executor.hpp"
-#include "realtime_tools/realtime_buffer.hpp"
+#include "realtime_tools/realtime_thread_safe_box.hpp"
 
 namespace topic_sensors
 {
@@ -43,17 +43,19 @@ public:
 
   auto on_configure(const rclcpp_lifecycle::State & previous_state) -> hardware_interface::CallbackReturn override;
 
-  auto export_state_interfaces() -> std::vector<hardware_interface::StateInterface> override;
+  auto export_unlisted_state_interface_descriptions() -> std::vector<hardware_interface::InterfaceDescription> override;
 
   auto read(const rclcpp::Time & time, const rclcpp::Duration & period) -> hardware_interface::return_type override;
 
 private:
-  realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> state_;
+  realtime_tools::RealtimeThreadSafeBox<nav_msgs::msg::Odometry> state_;
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> state_sub_;
 
   std::array<std::string, 7> pose_dofs_{"x", "y", "z", "qx", "qy", "qz", "qw"};
   std::array<std::string, 6> twist_dofs_{"x", "y", "z", "rx", "ry", "rz"};
-  std::array<double, 13> state_values_;  // we can't use an object with dynamic memory allocation for the state values
+
+  // handles to the exported state interfaces, ordered as [pose_dofs_..., twist_dofs_...]
+  std::array<hardware_interface::StateInterface::SharedPtr, 13> state_handles_;
 
   std::shared_ptr<rclcpp::Node> node_;
   rclcpp::executors::SingleThreadedExecutor executor_;

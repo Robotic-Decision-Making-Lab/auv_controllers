@@ -1,5 +1,10 @@
 # Changelog for package twist_controllers
 
+## 0.5.2 (2026-11-03)
+
+- Exports reference interfaces with `on_export_reference_interfaces_list`, replacing the `on_export_reference_interfaces` API removed upstream
+- Replaces the deprecated `RealtimeBuffer` with `RealtimeThreadSafeBox`
+
 ## 0.5.1 (2026-08-14)
 
 - Declares dependencies that were previously pulled in transitively

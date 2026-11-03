@@ -30,7 +30,17 @@ target_link_libraries(
 
 install(
     TARGETS controller_coordinator controller_coordinator_parameters
-    DESTINATION lib/controller_coordinator
+    EXPORT export_controller_coordinator
+    RUNTIME DESTINATION lib/controller_coordinator
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+ament_export_targets(export_controller_coordinator HAS_LIBRARY_TARGET)
+ament_export_dependencies(
+    "rclcpp"
+    "controller_manager_msgs"
+    "std_srvs"
 )
 
 ament_package()

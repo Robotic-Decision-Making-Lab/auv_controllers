@@ -14,6 +14,7 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(control_msgs REQUIRED)
+find_package(controller_common REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -57,6 +58,7 @@ target_link_libraries(
         realtime_tools::realtime_tools
         ${std_msgs_TARGETS}
         ${control_msgs_TARGETS}
+        controller_common::controller_common
 )
 
 pluginlib_export_plugin_description_file(controller_interface thruster_controllers.xml)
@@ -83,6 +85,7 @@ ament_export_dependencies(
     "realtime_tools"
     "std_msgs"
     "control_msgs"
+    "controller_common"
 )
 
 ament_package()

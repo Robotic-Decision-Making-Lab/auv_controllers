@@ -20,7 +20,9 @@
 
 #include "impedance_controller/impedance_controller.hpp"
 
+#include <limits>
 #include <ranges>
+#include <tuple>
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "auv_control_msgs/msg/impedance_command.hpp"
@@ -101,8 +103,8 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
 {
   configure_parameters();
 
-  reference_.writeFromNonRT(auv_control_msgs::msg::ImpedanceCommand());
-  system_state_.writeFromNonRT(nav_msgs::msg::Odometry());
+  reference_.set(auv_control_msgs::msg::ImpedanceCommand());
+  system_state_.set(nav_msgs::msg::Odometry());
 
   command_interfaces_.reserve(n_command_dofs_);
   state_interfaces_.reserve(n_state_dofs_);
@@ -114,7 +116,7 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
     "~/reference",
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<auv_control_msgs::msg::ImpedanceCommand> msg) {  // NOLINT
-      reference_.writeFromNonRT(*msg);
+      reference_.set(*msg);
     });
 
   if (params_.use_external_measured_states) {
@@ -123,7 +125,7 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
       "~/system_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
-        system_state_.writeFromNonRT(*msg);
+        system_state_.set(*msg);
       });
   }
 
@@ -137,10 +139,16 @@ auto ImpedanceController::on_configure(const rclcpp_lifecycle::State & /*previou
 auto ImpedanceController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  common::messages::reset_message(reference_.readFromNonRT());
-  common::messages::reset_message(system_state_.readFromNonRT());
+  auv_control_msgs::msg::ImpedanceCommand reference;
+  common::messages::reset_message(&reference);
+  reference_.set(reference);
 
-  reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
+  nav_msgs::msg::Odometry system_state;
+  common::messages::reset_message(&system_state);
+  system_state_.set(system_state);
+
+  common::interfaces::fill(ordered_exported_reference_interfaces_, std::numeric_limits<double>::quiet_NaN());
+  reference_values_.assign(reference_values_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -181,36 +189,28 @@ auto ImpedanceController::state_interface_configuration() const -> controller_in
   return config;
 }
 
-auto ImpedanceController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
+auto ImpedanceController::on_export_reference_interfaces_list()
+  -> std::vector<hardware_interface::CommandInterface::SharedPtr>
 {
   // the reference command includes the desired pose, velocity, and force/torque
-  reference_interfaces_.resize(n_reference_dofs_, std::numeric_limits<double>::quiet_NaN());
-  std::vector<hardware_interface::CommandInterface> interfaces;
-  interfaces.reserve(reference_interfaces_.size());
+  reference_values_.resize(n_reference_dofs_, std::numeric_limits<double>::quiet_NaN());
+  std::vector<hardware_interface::CommandInterface::SharedPtr> interfaces;
+  interfaces.reserve(n_reference_dofs_);
 
   // add the pose & velocity interfaces
   // this uses the same position/velocity joint names as the state interfaces
   for (const auto [i, dof] : std::views::enumerate(state_dofs_)) {
-    if (i < 7) {
-      interfaces.emplace_back(
-        get_node()->get_name(),
-        std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION),
-        &reference_interfaces_[i]);
-    } else {
-      interfaces.emplace_back(
-        get_node()->get_name(),
-        std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY),
-        &reference_interfaces_[i]);
-    }
+    const auto * type = i < 7 ? hardware_interface::HW_IF_POSITION : hardware_interface::HW_IF_VELOCITY;
+    interfaces.push_back(
+      common::interfaces::make_reference_interface(get_node()->get_name(), std::format("{}/{}", dof, type)));
   }
 
   // add the force/torque interfaces
   // this uses the same effort joint names as the command interfaces
-  for (const auto [i, dof] : std::views::enumerate(command_dofs_)) {
-    interfaces.emplace_back(
-      get_node()->get_name(),
-      std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT),
-      &reference_interfaces_[i + n_state_dofs_]);
+  for (const auto & dof : command_dofs_) {
+    interfaces.push_back(
+      common::interfaces::make_reference_interface(
+        get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT)));
   }
 
   return interfaces;
@@ -220,22 +220,25 @@ auto ImpedanceController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromNonRT();
-  const std::vector<double> reference = common::messages::to_vector(*current_reference);
-  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
-    if (!std::isnan(ref)) {
-      interface = ref;
+  // consume the latest reference so that it is only applied once
+  reference_.try_set([this](auv_control_msgs::msg::ImpedanceCommand & reference) -> void {
+    const std::vector<double> values = common::messages::to_vector(reference);
+    for (const auto & [interface, ref] : std::views::zip(ordered_exported_reference_interfaces_, values)) {
+      if (!std::isnan(ref)) {
+        std::ignore = interface->set_value(ref);
+      }
     }
-  }
-  common::messages::reset_message(current_reference);
+    common::messages::reset_message(&reference);
+  });
   return controller_interface::return_type::OK;
 }
 
 auto ImpedanceController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
-    auto * current_state = system_state_.readFromRT();
-    std::ranges::copy(common::messages::to_vector(*current_state), system_state_values_.begin());
+    system_state_.try_get([this](const nav_msgs::msg::Odometry & state) -> void {
+      std::ranges::copy(common::messages::to_vector(state), system_state_values_.begin());
+    });
   } else {
     std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
@@ -256,7 +259,8 @@ auto ImpedanceController::update_and_validate_interfaces() -> controller_interfa
     RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
-  if (common::math::has_nan(reference_interfaces_)) {
+  common::interfaces::read_values(ordered_exported_reference_interfaces_, reference_values_);
+  if (common::math::has_nan(reference_values_)) {
     RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
@@ -274,11 +278,11 @@ auto ImpedanceController::update_and_write_commands(const rclcpp::Time & time, c
   configure_parameters();
 
   // get the reference pose, twist, and wrench values
-  const auto pose_end = reference_interfaces_.begin() + 7;
+  const auto pose_end = reference_values_.begin() + 7;
   const auto twist_end = pose_end + 6;
   const auto wrench_end = twist_end + 6;
 
-  const std::vector<double> ref_pose_values(reference_interfaces_.begin(), pose_end);
+  const std::vector<double> ref_pose_values(reference_values_.begin(), pose_end);
   const std::vector<double> ref_twist_values(pose_end, twist_end);
   const std::vector<double> ref_wrench_values(twist_end, wrench_end);
 

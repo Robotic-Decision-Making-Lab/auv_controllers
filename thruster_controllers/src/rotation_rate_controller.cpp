@@ -22,7 +22,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <tuple>
 
+#include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 
 namespace thruster_controllers
@@ -72,12 +75,12 @@ auto RotationRateController::on_configure(const rclcpp_lifecycle::State & /*prev
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
-  reference_.writeFromNonRT(std_msgs::msg::Float64());
+  reference_.set(std_msgs::msg::Float64());
   command_interfaces_.reserve(1);
 
   reference_sub_ = get_node()->create_subscription<std_msgs::msg::Float64>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<std_msgs::msg::Float64> msg) {  // NOLINT
-      reference_.writeFromNonRT(*msg);
+      reference_.set(*msg);
     });
 
   controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
@@ -92,8 +95,10 @@ auto RotationRateController::on_configure(const rclcpp_lifecycle::State & /*prev
 auto RotationRateController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  reference_.readFromNonRT()->data = std::numeric_limits<double>::quiet_NaN();
-  reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
+  std_msgs::msg::Float64 reference;
+  reference.data = std::numeric_limits<double>::quiet_NaN();
+  reference_.set(reference);
+  common::interfaces::fill(ordered_exported_reference_interfaces_, std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -113,34 +118,31 @@ auto RotationRateController::state_interface_configuration() const -> controller
   return state_interface_config;
 }
 
-auto RotationRateController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
+auto RotationRateController::on_export_reference_interfaces_list()
+  -> std::vector<hardware_interface::CommandInterface::SharedPtr>
 {
-  reference_interfaces_.resize(1, std::numeric_limits<double>::quiet_NaN());
-  std::vector<hardware_interface::CommandInterface> interfaces;
-  interfaces.reserve(reference_interfaces_.size());
-
-  interfaces.emplace_back(
-    get_node()->get_name(),
-    std::format("{}/{}", thruster_name_, hardware_interface::HW_IF_EFFORT),
-    &reference_interfaces_[0]);  // NOLINT(readability-container-data-pointer)
-
-  return interfaces;
+  return {common::interfaces::make_reference_interface(
+    get_node()->get_name(), std::format("{}/{}", thruster_name_, hardware_interface::HW_IF_EFFORT))};
 }
 
 auto RotationRateController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromNonRT();
-  reference_interfaces_[0] = current_reference->data;
-  current_reference->data = std::numeric_limits<double>::quiet_NaN();
+  // consume the latest reference so that it is only applied once
+  reference_.try_set([this](std_msgs::msg::Float64 & reference) -> void {
+    std::ignore = ordered_exported_reference_interfaces_[0]->set_value(reference.data);
+    reference.data = std::numeric_limits<double>::quiet_NaN();
+  });
   return controller_interface::return_type::OK;
 }
 
 auto RotationRateController::update_and_write_commands(const rclcpp::Time & time, const rclcpp::Duration & period)
   -> controller_interface::return_type
 {
-  double reference = reference_interfaces_[0];
+  const double reference_value =
+    ordered_exported_reference_interfaces_[0]->get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+  double reference = reference_value;
   double ang_vel = 0.0;
 
   if (!std::isnan(reference)) {
@@ -157,7 +159,7 @@ auto RotationRateController::update_and_write_commands(const rclcpp::Time & time
 
   const auto out = command_interfaces_[0].get_optional();
   controller_state_.header.stamp = time;
-  controller_state_.dof_state.reference = reference_interfaces_[0];
+  controller_state_.dof_state.reference = reference_value;
   controller_state_.dof_state.time_step = period.seconds();
   controller_state_.dof_state.output = out.value_or(std::numeric_limits<double>::quiet_NaN());
   rt_controller_state_pub_->try_publish(controller_state_);

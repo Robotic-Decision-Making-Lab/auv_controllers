@@ -22,8 +22,10 @@
 
 #include <Eigen/Dense>
 #include <format>
+#include <limits>
 #include <ranges>
 #include <string>
+#include <tuple>
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -153,8 +155,8 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 {
   configure_parameters();
 
-  reference_.writeFromNonRT(geometry_msgs::msg::Pose());
-  vehicle_state_.writeFromNonRT(nav_msgs::msg::Odometry());
+  reference_.set(geometry_msgs::msg::Pose());
+  vehicle_state_.set(nav_msgs::msg::Odometry());
 
   command_interfaces_.reserve(n_command_interfaces_);
   position_state_values_.resize(position_interface_names_.size(), std::numeric_limits<double>::quiet_NaN());
@@ -162,7 +164,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Pose>(
     "~/reference", rclcpp::SystemDefaultsQoS(), [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
-      reference_.writeFromNonRT(*msg);
+      reference_.set(*msg);
     });
 
   if (params_.use_external_measured_vehicle_states) {
@@ -171,7 +173,7 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
       "~/vehicle_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
-        vehicle_state_.writeFromNonRT(*msg);
+        vehicle_state_.set(*msg);
       });
   }
 
@@ -194,9 +196,16 @@ auto IKController::on_configure(const rclcpp_lifecycle::State & /*previous_state
 auto IKController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  common::messages::reset_message(reference_.readFromNonRT());
-  common::messages::reset_message(vehicle_state_.readFromNonRT());
-  reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
+  geometry_msgs::msg::Pose reference;
+  common::messages::reset_message(&reference);
+  reference_.set(reference);
+
+  nav_msgs::msg::Odometry vehicle_state;
+  common::messages::reset_message(&vehicle_state);
+  vehicle_state_.set(vehicle_state);
+
+  common::interfaces::fill(ordered_exported_reference_interfaces_, std::numeric_limits<double>::quiet_NaN());
+  reference_values_.assign(reference_values_.size(), std::numeric_limits<double>::quiet_NaN());
   position_state_values_.assign(position_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
   velocity_state_values_.assign(velocity_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
@@ -274,15 +283,16 @@ auto IKController::state_interface_configuration() const -> controller_interface
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IKController::on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface>
+auto IKController::on_export_reference_interfaces_list() -> std::vector<hardware_interface::CommandInterface::SharedPtr>
 {
-  reference_interfaces_.resize(free_flyer_pos_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
-  std::vector<hardware_interface::CommandInterface> interfaces;
+  reference_values_.resize(free_flyer_pos_dofs_.size(), std::numeric_limits<double>::quiet_NaN());
+  std::vector<hardware_interface::CommandInterface::SharedPtr> interfaces;
   interfaces.reserve(free_flyer_pos_dofs_.size());
 
-  for (const auto & [i, dof] : std::views::enumerate(free_flyer_pos_dofs_)) {
-    const std::string interface = std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION);
-    interfaces.emplace_back(get_node()->get_name(), interface, &reference_interfaces_[i]);
+  for (const auto & dof : free_flyer_pos_dofs_) {
+    interfaces.push_back(
+      common::interfaces::make_reference_interface(
+        get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_POSITION)));
   }
 
   return interfaces;
@@ -292,12 +302,14 @@ auto IKController::on_export_reference_interfaces() -> std::vector<hardware_inte
 auto IKController::update_reference_from_subscribers(const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
   -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromRT();
-  std::vector<double> reference = common::messages::to_vector(*current_reference);
-  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
-    interface = ref;
-  }
-  common::messages::reset_message(current_reference);
+  // consume the latest reference so that it is only applied once
+  reference_.try_set([this](geometry_msgs::msg::Pose & reference) -> void {
+    const std::vector<double> values = common::messages::to_vector(reference);
+    for (const auto & [interface, ref] : std::views::zip(ordered_exported_reference_interfaces_, values)) {
+      std::ignore = interface->set_value(ref);
+    }
+    common::messages::reset_message(&reference);
+  });
   return controller_interface::return_type::OK;
 }
 
@@ -308,10 +320,11 @@ auto IKController::update_system_state_values() -> controller_interface::return_
   // appropriate frame, so we can just copy the values into the system state values. otherwise, we need to transform
   // the states first, then save them.
   if (params_.use_external_measured_vehicle_states) {
-    const auto * state_msg = vehicle_state_.readFromRT();
-    const std::vector<double> state = common::messages::to_vector(*state_msg);
-    std::ranges::copy(state.begin(), state.begin() + free_flyer_pos_dofs_.size(), position_state_values_.begin());
-    std::ranges::copy(state.begin() + free_flyer_pos_dofs_.size(), state.end(), velocity_state_values_.begin());
+    vehicle_state_.try_get([this](const nav_msgs::msg::Odometry & state_msg) -> void {
+      const std::vector<double> state = common::messages::to_vector(state_msg);
+      std::ranges::copy(state.begin(), state.begin() + free_flyer_pos_dofs_.size(), position_state_values_.begin());
+      std::ranges::copy(state.begin() + free_flyer_pos_dofs_.size(), state.end(), velocity_state_values_.begin());
+    });
   } else {
     auto save_states = [](const auto & interfaces, auto out) -> auto {
       std::ranges::transform(interfaces, out, [](const auto & interface) -> auto {
@@ -391,8 +404,8 @@ auto IKController::update_chained_reference_values() -> controller_interface::re
   // because the command interfaces expect the commands to be in the maritime coordinate frame standard, we need
   // this extra method to transform the values into a frame suitable for pinocchio
   geometry_msgs::msg::Pose reference_transformed;
-  common::messages::to_msg(reference_interfaces_, &reference_transformed);
-  std::ranges::copy(common::messages::to_vector(reference_transformed), reference_interfaces_.begin());
+  common::messages::to_msg(reference_values_, &reference_transformed);
+  std::ranges::copy(common::messages::to_vector(reference_transformed), reference_values_.begin());
   return controller_interface::return_type::OK;
 }
 
@@ -402,10 +415,11 @@ auto IKController::update_and_validate_interfaces() -> controller_interface::ret
     RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
+  common::interfaces::read_values(ordered_exported_reference_interfaces_, reference_values_);
   if (is_in_chained_mode()) {
     update_chained_reference_values();
   }
-  if (common::math::has_nan(reference_interfaces_)) {
+  if (common::math::has_nan(reference_values_)) {
     RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
@@ -424,7 +438,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
   configure_parameters();
 
   const Eigen::VectorXd q = Eigen::VectorXd::Map(position_state_values_.data(), position_state_values_.size());
-  const Eigen::Isometry3d goal = to_eigen(reference_interfaces_);
+  const Eigen::Isometry3d goal = to_eigen(reference_values_);
 
   // TODO(anyone): add solver support for velocity states
   // right now we only use the positions for the solver
@@ -471,7 +485,7 @@ auto IKController::update_and_write_commands(const rclcpp::Time & /*time*/, cons
 
   controller_state_.header.stamp = get_node()->now();
   controller_state_.time_step = period.seconds();
-  common::messages::to_msg(reference_interfaces_, &controller_state_.reference);
+  common::messages::to_msg(reference_values_, &controller_state_.reference);
   controller_state_.solution = point;
   rt_controller_state_pub_->try_publish(controller_state_);
 

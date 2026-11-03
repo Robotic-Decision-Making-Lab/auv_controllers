@@ -21,8 +21,11 @@
 #include "trajectory_controllers/cartesian_trajectory_controller.hpp"
 
 #include <Eigen/Dense>
+#include <memory>
 #include <rclcpp_action/create_server.hpp>
+#include <tuple>
 #include <unsupported/Eigen/MatrixFunctions>
+#include <utility>
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -81,8 +84,8 @@ auto CartesianTrajectoryController::configure_parameters() -> controller_interfa
   default_path_tolerance_ = params_.path_tolerance;
   default_goal_tolerance_ = params_.goal_tolerance;
 
-  rt_path_tolerance_.writeFromNonRT(params_.path_tolerance);
-  rt_goal_tolerance_.writeFromNonRT(params_.goal_tolerance);
+  rt_path_tolerance_ = params_.path_tolerance;
+  rt_goal_tolerance_ = params_.goal_tolerance;
 
   auto period = std::chrono::duration<double>(1.0 / params_.action_monitor_rate);
   action_monitor_period_ = std::chrono::duration_cast<std::chrono::nanoseconds>(period);
@@ -127,12 +130,22 @@ auto CartesianTrajectoryController::validate_trajectory(
   return true;
 }
 
+auto CartesianTrajectoryController::set_trajectory(const auv_control_msgs::msg::CartesianTrajectory & trajectory)
+  -> void
+{
+  // construct the trajectory outside of the lock to minimize the time that the control loop can't access it
+  auto new_trajectory = std::make_shared<CartesianTrajectory>(trajectory, state_.get());
+  rt_trajectory_.set(
+    [&new_trajectory](std::shared_ptr<CartesianTrajectory> & current) -> void { current = std::move(new_trajectory); });
+  rt_holding_position_ = false;
+}
+
 auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
   configure_parameters();
 
-  state_.writeFromNonRT(geometry_msgs::msg::Pose());
+  state_.set(geometry_msgs::msg::Pose());
   command_interfaces_.reserve(n_dofs_);
   update_period_ = rclcpp::Duration(0.0, static_cast<uint32_t>(1.0e9 / static_cast<double>(get_update_rate())));
 
@@ -141,7 +154,7 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
       "~/state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<geometry_msgs::msg::Pose> msg) {  // NOLINT
-        state_.writeFromNonRT(*msg);
+        state_.set(*msg);
       });
   } else {
     if (params_.lookup_transform) {
@@ -164,11 +177,9 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
         updated_msg.header.stamp = get_node()->now();
       }
       RCLCPP_INFO(logger_, "Received new trajectory message");  // NOLINT
-      rt_trajectory_.writeFromNonRT(CartesianTrajectory(updated_msg, *state_.readFromNonRT()));
-      rt_goal_tolerance_.writeFromNonRT(default_goal_tolerance_);
-      rt_path_tolerance_.writeFromNonRT(default_path_tolerance_);
-      rt_first_sample_.writeFromNonRT(true);
-      rt_holding_position_.writeFromNonRT(false);
+      rt_goal_tolerance_ = default_goal_tolerance_;
+      rt_path_tolerance_ = default_path_tolerance_;
+      set_trajectory(updated_msg);
     });
 
   auto handle_goal = [this](
@@ -188,46 +199,45 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
     if (common::math::isclose(start_time.seconds(), 0.0)) {
       updated_msg.header.stamp = get_node()->now();
     }
-    rt_trajectory_.writeFromNonRT(CartesianTrajectory(updated_msg, *state_.readFromNonRT()));
-    rt_first_sample_.writeFromNonRT(true);
-    rt_holding_position_.writeFromNonRT(false);
+    set_trajectory(updated_msg);
     RCLCPP_INFO(logger_, "Accepted new trajectory goal");  // NOLINT
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
   };
 
   auto handle_cancel = [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectory>> gh) {  // NOLINT
     RCLCPP_INFO(logger_, "Received cancel action goal");                                                      // NOLINT
-    const auto active_goal = *rt_active_goal_.readFromNonRT();
+    RealtimeGoalHandlePtr active_goal;
+    rt_active_goal_.get([&active_goal](const RealtimeGoalHandlePtr & goal) -> void { active_goal = goal; });
     if (active_goal && active_goal->gh_ == gh) {
       RCLCPP_INFO(logger_, "Canceling active goal");  // NOLINT
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       active_goal->setCanceled(action_result);
-      rt_holding_position_.writeFromNonRT(true);
-      rt_first_sample_.writeFromNonRT(true);
-      rt_goal_in_progress_.writeFromNonRT(false);
+      rt_holding_position_ = true;
+      rt_goal_in_progress_ = false;
     }
     return rclcpp_action::CancelResponse::ACCEPT;
   };
 
   auto handle_accepted = [this](std::shared_ptr<rclcpp_action::ServerGoalHandle<FollowTrajectory>> gh) {  // NOLINT
     RCLCPP_INFO(logger_, "Received accepted action goal");                                                // NOLINT
-    rt_goal_in_progress_.writeFromNonRT(true);
-    const auto active_goal = *rt_active_goal_.readFromNonRT();
+    rt_goal_in_progress_ = true;
+    RealtimeGoalHandlePtr active_goal;
+    rt_active_goal_.get([&active_goal](const RealtimeGoalHandlePtr & goal) -> void { active_goal = goal; });
     if (active_goal) {
       RCLCPP_INFO(logger_, "Canceling active goal");  // NOLINT
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::INVALID_GOAL;
       action_result->error_string = "Current goal cancelled by a new incoming action.";
       active_goal->setCanceled(action_result);
-      rt_active_goal_.writeFromNonRT(RealtimeGoalHandlePtr());
+      rt_active_goal_.set(nullptr);
     }
 
-    rt_goal_tolerance_.writeFromNonRT(gh->get_goal()->goal_tolerance);
-    rt_path_tolerance_.writeFromNonRT(gh->get_goal()->path_tolerance);
+    rt_goal_tolerance_ = gh->get_goal()->goal_tolerance;
+    rt_path_tolerance_ = gh->get_goal()->path_tolerance;
 
     const RealtimeGoalHandlePtr rt_gh = std::make_shared<RealtimeGoalHandle>(gh);
     rt_gh->execute();
-    rt_active_goal_.writeFromNonRT(rt_gh);
+    rt_active_goal_.set([&rt_gh](RealtimeGoalHandlePtr & goal) -> void { goal = rt_gh; });
 
     goal_handle_timer_ = nullptr;
     goal_handle_timer_ =
@@ -247,9 +257,9 @@ auto CartesianTrajectoryController::on_configure(const rclcpp_lifecycle::State &
 auto CartesianTrajectoryController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  rt_first_sample_.writeFromNonRT(true);
-  rt_holding_position_.writeFromNonRT(true);  // hold position until a trajectory is received
-  common::messages::reset_message(state_.readFromNonRT());
+  rt_holding_position_ = true;  // hold position until a trajectory is received
+  common::messages::reset_message(&system_state_);
+  state_.set(system_state_);
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -289,7 +299,7 @@ auto CartesianTrajectoryController::state_interface_configuration() const
 
 auto CartesianTrajectoryController::update_system_state() -> controller_interface::return_type
 {
-  auto * system_state = state_.readFromRT();
+  auto * system_state = &system_state_;
   if (params_.lookup_transform) {
     const auto to_frame = params_.child_frame_id;
     const auto from_frame = params_.frame_id;
@@ -316,11 +326,21 @@ auto CartesianTrajectoryController::update_system_state() -> controller_interfac
     system_state->orientation.y = get_value(state_interfaces_[4]);
     system_state->orientation.z = get_value(state_interfaces_[5]);
     system_state->orientation.w = get_value(state_interfaces_[6]);
+  } else {
+    // keep the previous state if the latest message can't be accessed without blocking
+    if (const auto state = state_.try_get(); state.has_value()) {
+      *system_state = state.value();
+    }
   }
 
   if (common::math::has_nan(common::messages::to_vector(*system_state))) {
     RCLCPP_DEBUG(logger_, "Received state with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
+  }
+
+  // share the latest state with the trajectory callbacks
+  if (!params_.use_external_measured_states) {
+    std::ignore = state_.try_set(*system_state);
   }
   return controller_interface::return_type::OK;
 }
@@ -333,14 +353,16 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
     return controller_interface::return_type::OK;
   }
 
-  const auto active_goal = *rt_active_goal_.readFromRT();
-  const bool goal_in_progress = *rt_goal_in_progress_.readFromRT();
+  // keep the previous goal handle if the latest one can't be accessed without blocking
+  rt_active_goal_.try_get([this](const RealtimeGoalHandlePtr & goal) -> void { active_goal_ = goal; });
+  const auto active_goal = active_goal_;
+  const bool goal_in_progress = rt_goal_in_progress_;
   if (goal_in_progress && active_goal == nullptr) {
     RCLCPP_DEBUG(logger_, "Goal in progress but no active goal. Ignoring update");  // NOLINT
     return controller_interface::return_type::OK;
   }
 
-  const geometry_msgs::msg::Pose system_state = *state_.readFromRT();
+  const geometry_msgs::msg::Pose system_state = system_state_;
   geometry_msgs::msg::Pose reference_state;
   common::messages::reset_message(&reference_state);
   auto command_state = system_state;
@@ -356,7 +378,21 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
   };
 
   // hold position until a new trajectory is received
-  if (*rt_holding_position_.readFromRT()) {
+  if (rt_holding_position_) {
+    write_command(command_interfaces_, system_state);
+    publish_controller_state();
+    return controller_interface::return_type::OK;
+  }
+
+  // get the latest trajectory. if it can't be accessed without blocking, a new trajectory is being written, so hold the
+  // current pose for this update and try again on the next one
+  bool first_sample = false;
+  const bool trajectory_updated =
+    rt_trajectory_.try_get([this, &first_sample](const std::shared_ptr<CartesianTrajectory> & trajectory) -> void {
+      first_sample = trajectory != trajectory_;
+      trajectory_ = trajectory;
+    });
+  if (!trajectory_updated || trajectory_ == nullptr) {
     write_command(command_interfaces_, system_state);
     publish_controller_state();
     return controller_interface::return_type::OK;
@@ -364,15 +400,14 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
 
   // set the sample time
   rclcpp::Time sample_time = time;
-  if (*rt_first_sample_.readFromRT()) {
-    rt_trajectory_.readFromRT()->reset_initial_state(system_state);
-    rt_first_sample_.writeFromNonRT(false);
+  if (first_sample) {
+    trajectory_->reset_initial_state(system_state);
     sample_time += period;
   }
 
   // we use the current sample to measure errors and the future sample as the command
   // the future sample should be used in order to prevent the controller from lagging
-  const auto * trajectory = rt_trajectory_.readFromRT();
+  const auto & trajectory = trajectory_;
   const auto sampled_reference = trajectory->sample(sample_time);
   const auto sampled_command = trajectory->sample(sample_time + update_period_);
 
@@ -390,10 +425,10 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
   if (sampled_command.has_value()) {
     command_state = sampled_command.value();
     if (!std::isnan(error)) {
-      const double path_tolerance = *rt_path_tolerance_.readFromRT();
+      const double path_tolerance = rt_path_tolerance_;
       if (path_tolerance > 0.0 && error > path_tolerance) {
         path_tolerance_exceeded = true;
-        rt_holding_position_.writeFromNonRT(true);
+        rt_holding_position_ = true;
         command_state = system_state;
         RCLCPP_WARN(logger_, "Aborting trajectory. Error threshold exceeded during execution: %f", error);  // NOLINT
         RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");                        // NOLINT
@@ -412,7 +447,7 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
           break;
         }
 
-        const double goal_tolerance = *rt_goal_tolerance_.readFromRT();
+        const double goal_tolerance = rt_goal_tolerance_;
         const double goal_error = geodesic_error(end_point.value(), system_state);
         RCLCPP_INFO(logger_, "CartesianTrajectory sample time is after trajectory end time.");  // NOLINT
         if (goal_tolerance > 0.0) {
@@ -424,13 +459,13 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
             RCLCPP_INFO(logger_, "CartesianTrajectory execution completed successfully");  // NOLINT
           }
         }
-        rt_holding_position_.writeFromNonRT(true);
+        rt_holding_position_ = true;
         RCLCPP_INFO(logger_, "Holding position until a new trajectory is received");  // NOLINT
       } break;
 
       default:
         // default to position hold
-        rt_holding_position_.writeFromNonRT(true);
+        rt_holding_position_ = true;
         break;
     }
   }
@@ -450,19 +485,19 @@ auto CartesianTrajectoryController::update(const rclcpp::Time & time, const rclc
       action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
       action_result->error_string = "CartesianTrajectory execution aborted. Goal tolerance exceeded.";
       active_goal->setAborted(action_result);
-      rt_holding_position_.writeFromNonRT(true);
+      rt_holding_position_ = true;
     } else if (trajectory_suceeded) {
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::SUCCESSFUL;
       action_result->error_string = "CartesianTrajectory execution completed successfully!";
       active_goal->setSucceeded(action_result);
-      rt_holding_position_.writeFromNonRT(true);
+      rt_holding_position_ = true;
     } else if (path_tolerance_exceeded) {
       auto action_result = std::make_shared<FollowTrajectory::Result>();
       action_result->error_code = FollowTrajectory::Result::PATH_TOLERANCE_VIOLATED;
       action_result->error_string = "CartesianTrajectory execution aborted. Path tolerance exceeded.";
       active_goal->setAborted(action_result);
-      rt_holding_position_.writeFromNonRT(true);
+      rt_holding_position_ = true;
     }
   }
 
