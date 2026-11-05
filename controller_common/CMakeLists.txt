@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(auv_control_msgs REQUIRED)
+find_package(hardware_interface REQUIRED)
 
 add_library(controller_common SHARED)
 target_sources(
@@ -31,6 +32,7 @@ target_link_libraries(
         ${geometry_msgs_TARGETS}
         ${nav_msgs_TARGETS}
         ${auv_control_msgs_TARGETS}
+        hardware_interface::hardware_interface
 )
 
 install(
@@ -43,6 +45,6 @@ install(
 )
 
 ament_export_targets(export_controller_common HAS_LIBRARY_TARGET)
-ament_export_dependencies("rclcpp" "geometry_msgs" "nav_msgs" "auv_control_msgs")
+ament_export_dependencies("rclcpp" "geometry_msgs" "nav_msgs" "auv_control_msgs" "hardware_interface")
 
 ament_package()

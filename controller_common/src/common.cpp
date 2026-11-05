@@ -22,6 +22,9 @@
 
 #include <cmath>
 #include <limits>
+#include <memory>
+#include <ranges>
+#include <tuple>
 
 namespace common
 {
@@ -206,5 +209,39 @@ auto isclose(double a, double b, double rtol, double atol) -> bool
 }
 
 }  // namespace math
+
+namespace interfaces
+{
+
+auto make_reference_interface(const std::string & prefix, const std::string & name)
+  -> hardware_interface::CommandInterface::SharedPtr
+{
+  hardware_interface::InterfaceInfo info;
+  info.name = name;
+  auto interface =
+    std::make_shared<hardware_interface::CommandInterface>(hardware_interface::InterfaceDescription(prefix, info));
+  std::ignore = interface->set_value(nan);
+  return interface;
+}
+
+auto read_values(
+  const std::vector<hardware_interface::CommandInterface::SharedPtr> & interfaces,
+  std::vector<double> & values) -> void
+{
+  for (auto && [interface, value] : std::views::zip(interfaces, values)) {
+    if (const auto v = interface->get_optional(); v.has_value()) {
+      value = v.value();
+    }
+  }
+}
+
+auto fill(const std::vector<hardware_interface::CommandInterface::SharedPtr> & interfaces, double value) -> void
+{
+  for (const auto & interface : interfaces) {
+    std::ignore = interface->set_value(value);
+  }
+}
+
+}  // namespace interfaces
 
 }  // namespace common

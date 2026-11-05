@@ -25,6 +25,7 @@
 #include <limits>
 #include <ranges>
 #include <string>
+#include <tuple>
 
 #include "controller_common/common.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -97,8 +98,8 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
 {
   configure_parameters();
 
-  reference_.writeFromNonRT(geometry_msgs::msg::Twist());
-  system_state_.writeFromNonRT(nav_msgs::msg::Odometry());
+  reference_.set(geometry_msgs::msg::Twist());
+  system_state_.set(nav_msgs::msg::Odometry());
 
   command_interfaces_.reserve(n_dofs_);
   system_state_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
@@ -109,7 +110,7 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
     "~/reference",
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) {  // NOLINT
-      reference_.writeFromNonRT(*msg);
+      reference_.set(*msg);
     });
 
   // use the tf interface when we aren't getting the state from a topic
@@ -119,7 +120,7 @@ auto IntegralSlidingModeController::on_configure(const rclcpp_lifecycle::State &
       "~/system_state",
       rclcpp::SystemDefaultsQoS(),
       [this](const std::shared_ptr<nav_msgs::msg::Odometry> msg) {  // NOLINT
-        system_state_.writeFromNonRT(*msg);
+        system_state_.set(*msg);
       });
   } else {
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_node()->get_clock());
@@ -145,11 +146,18 @@ auto IntegralSlidingModeController::on_activate(const rclcpp_lifecycle::State & 
   total_error_ = Eigen::Vector6d::Zero();
   init_error_ = Eigen::Vector6d::Zero();
 
-  system_rotation_.writeFromNonRT(Eigen::Quaterniond::Identity());
-  common::messages::reset_message(reference_.readFromNonRT());
-  common::messages::reset_message(system_state_.readFromNonRT());
+  system_rotation_ = Eigen::Quaterniond::Identity();
 
-  reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
+  geometry_msgs::msg::Twist reference;
+  common::messages::reset_message(&reference);
+  reference_.set(reference);
+
+  nav_msgs::msg::Odometry system_state;
+  common::messages::reset_message(&system_state);
+  system_state_.set(system_state);
+
+  common::interfaces::fill(ordered_exported_reference_interfaces_, std::numeric_limits<double>::quiet_NaN());
+  reference_values_.assign(reference_values_.size(), std::numeric_limits<double>::quiet_NaN());
   system_state_values_.assign(system_state_values_.size(), std::numeric_limits<double>::quiet_NaN());
 
   return controller_interface::CallbackReturn::SUCCESS;
@@ -189,16 +197,17 @@ auto IntegralSlidingModeController::state_interface_configuration() const
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IntegralSlidingModeController::on_export_reference_interfaces()
-  -> std::vector<hardware_interface::CommandInterface>
+auto IntegralSlidingModeController::on_export_reference_interfaces_list()
+  -> std::vector<hardware_interface::CommandInterface::SharedPtr>
 {
-  reference_interfaces_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
-  std::vector<hardware_interface::CommandInterface> interfaces;
-  interfaces.reserve(reference_interfaces_.size());
+  reference_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
+  std::vector<hardware_interface::CommandInterface::SharedPtr> interfaces;
+  interfaces.reserve(n_dofs_);
 
-  for (const auto [i, dof] : std::views::enumerate(dofs_)) {
-    interfaces.emplace_back(
-      get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY), &reference_interfaces_[i]);
+  for (const auto & dof : dofs_) {
+    interfaces.push_back(
+      common::interfaces::make_reference_interface(
+        get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_VELOCITY)));
   }
 
   return interfaces;
@@ -208,14 +217,16 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromNonRT();
-  const std::vector<double> reference = common::messages::to_vector(*current_reference);
-  for (auto && [interface, ref] : std::views::zip(reference_interfaces_, reference)) {
-    if (!std::isnan(ref)) {
-      interface = ref;
+  // consume the latest reference so that it is only applied once
+  reference_.try_set([this](geometry_msgs::msg::Twist & reference) -> void {
+    const std::vector<double> values = common::messages::to_vector(reference);
+    for (const auto & [interface, ref] : std::views::zip(ordered_exported_reference_interfaces_, values)) {
+      if (!std::isnan(ref)) {
+        std::ignore = interface->set_value(ref);
+      }
     }
-  }
-  common::messages::reset_message(current_reference);
+    common::messages::reset_message(&reference);
+  });
   return controller_interface::return_type::OK;
 }
 
@@ -223,9 +234,10 @@ auto IntegralSlidingModeController::update_reference_from_subscribers(
 auto IntegralSlidingModeController::update_system_state_values() -> controller_interface::return_type
 {
   if (params_.use_external_measured_states) {
-    auto * current_state = system_state_.readFromNonRT();
-    std::ranges::copy(common::messages::to_vector(current_state->twist.twist), system_state_values_.begin());
-    tf2::fromMsg(current_state->pose.pose.orientation, *system_rotation_.readFromRT());
+    system_state_.try_get([this](const nav_msgs::msg::Odometry & state) -> void {
+      std::ranges::copy(common::messages::to_vector(state.twist.twist), system_state_values_.begin());
+      tf2::fromMsg(state.pose.pose.orientation, system_rotation_);
+    });
   } else {
     std::ranges::transform(state_interfaces_, system_state_values_.begin(), [](const auto & interface) -> auto {
       return interface.get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
@@ -233,7 +245,7 @@ auto IntegralSlidingModeController::update_system_state_values() -> controller_i
 
     try {
       const auto t = tf_buffer_->lookupTransform(params_.odom_frame_id, params_.vehicle_frame_id, tf2::TimePointZero);
-      tf2::fromMsg(t.transform.rotation, *system_rotation_.readFromRT());
+      tf2::fromMsg(t.transform.rotation, system_rotation_);
     }
     catch (const tf2::TransformException & e) {
       RCLCPP_DEBUG(  // NOLINT
@@ -257,7 +269,8 @@ auto IntegralSlidingModeController::update_and_validate_interfaces() -> controll
     RCLCPP_DEBUG(logger_, "Failed to update system state values");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
-  if (common::math::has_nan(reference_interfaces_)) {
+  common::interfaces::read_values(ordered_exported_reference_interfaces_, reference_values_);
+  if (common::math::has_nan(reference_values_)) {
     RCLCPP_DEBUG(logger_, "Received reference with NaN value.");  // NOLINT
     return controller_interface::return_type::ERROR;
   }
@@ -276,7 +289,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
   configure_parameters();
 
   // Calculate the velocity error
-  const std::vector<double> error_values = common::math::calculate_error(reference_interfaces_, system_state_values_);
+  const std::vector<double> error_values = common::math::calculate_error(reference_values_, system_state_values_);
   if (common::math::all_nan(error_values)) {
     RCLCPP_DEBUG(logger_, "All velocity error values are NaN. Skipping control update.");  // NOLINT
     return controller_interface::return_type::OK;
@@ -295,7 +308,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
   // calculate the computed torque control
   // assume that the feedforward acceleration is zero
   const Eigen::Vector6d u = kp_ * error;
-  const auto & rot = system_rotation_.readFromRT()->toRotationMatrix();
+  const auto rot = system_rotation_.toRotationMatrix();
   const Eigen::Vector6d tau0 = hydrodynamics::inverse_dynamics(*model_, u, vel, rot);
 
   // calculate the disturbance rejection torque
@@ -315,7 +328,7 @@ auto IntegralSlidingModeController::update_and_write_commands(
   controller_state_.header.stamp = time;
   for (auto && [i, state] : std::views::enumerate(controller_state_.dof_states)) {
     const auto out = command_interfaces_[i].get_optional();
-    state.reference = reference_interfaces_[i];
+    state.reference = reference_values_[i];
     state.feedback = system_state_values_[i];
     state.error = error_values[i];
     state.time_step = period.seconds();

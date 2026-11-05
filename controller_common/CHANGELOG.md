@@ -1,5 +1,9 @@
 # Changelog for package controller_common
 
+## 0.5.2 (2026-11-03)
+
+- Adds `common::interfaces` helpers for creating, reading, and resetting reference interfaces
+
 ## 0.5.1 (2026-08-14)
 
 ## 0.5.0 (2026-05-29)

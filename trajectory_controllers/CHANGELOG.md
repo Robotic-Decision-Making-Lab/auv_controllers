@@ -1,5 +1,10 @@
 # Changelog for package trajectory_controllers
 
+## 0.5.2 (2026-11-03)
+
+- Replaces the deprecated `RealtimeBuffer` with `RealtimeThreadSafeBox` and atomics
+- Detects new trajectories in the control loop, fixing a race where a trajectory received shortly after another could skip re-anchoring to the current state
+
 ## 0.5.1 (2026-08-14)
 
 - Declares dependencies that were previously pulled in transitively

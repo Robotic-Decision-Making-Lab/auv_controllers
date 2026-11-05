@@ -27,8 +27,8 @@
 #include "hydrodynamics/hydrodynamics.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp_lifecycle/state.hpp"
-#include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
+#include "realtime_tools/realtime_thread_safe_box.hpp"
 #include "tf2_ros/buffer.hpp"
 #include "tf2_ros/transform_listener.hpp"
 
@@ -57,7 +57,7 @@ public:
     -> controller_interface::return_type override;
 
 protected:
-  auto on_export_reference_interfaces() -> std::vector<hardware_interface::CommandInterface> override;
+  auto on_export_reference_interfaces_list() -> std::vector<hardware_interface::CommandInterface::SharedPtr> override;
 
   auto update_reference_from_subscribers(const rclcpp::Time & time, const rclcpp::Duration & period)
     -> controller_interface::return_type override;
@@ -72,12 +72,15 @@ protected:
 
   // provide an interface for setting reference commands from a topic
   // this allows us to use tools like the keyboard teleop node
-  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Twist> reference_;
+  realtime_tools::RealtimeThreadSafeBox<geometry_msgs::msg::Twist> reference_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> reference_sub_;
+
+  // local copy of the reference interface values used to compute the control command
+  std::vector<double> reference_values_;
 
   // provide an interface for setting state values from a topic
   // this is mostly useful when we don't want to or can't use a topic sensor
-  realtime_tools::RealtimeBuffer<nav_msgs::msg::Odometry> system_state_;
+  realtime_tools::RealtimeThreadSafeBox<nav_msgs::msg::Odometry> system_state_;
   std::shared_ptr<rclcpp::Subscription<nav_msgs::msg::Odometry>> system_state_sub_;
   std::vector<double> system_state_values_;
 
@@ -88,7 +91,7 @@ protected:
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   std::string vehicle_frame_id_, inertial_frame_id_;
-  realtime_tools::RealtimeBuffer<Eigen::Quaterniond> system_rotation_;
+  Eigen::Quaterniond system_rotation_{Eigen::Quaterniond::Identity()};  // only accessed from the control loop
 
   using ControllerState = control_msgs::msg::MultiDOFStateStamped;
   std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;

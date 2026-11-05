@@ -20,12 +20,14 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "auv_control_msgs/msg/impedance_command.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/wrench.hpp"
+#include "hardware_interface/handle.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
 namespace common
@@ -74,5 +76,23 @@ auto all_nan(const std::vector<double> & vec) -> bool;
 auto isclose(double a, double b, double rtol = 1e-05, double atol = 1e-08) -> bool;
 
 }  // namespace math
+
+namespace interfaces
+{
+
+/// Create a reference interface `<prefix>/<name>` for a chainable controller, initialized to NaN.
+auto make_reference_interface(const std::string & prefix, const std::string & name)
+  -> hardware_interface::CommandInterface::SharedPtr;
+
+/// Read the values of the interfaces into `values` without blocking.
+/// Values that cannot be read (e.g., because the interface is locked) are left unchanged.
+auto read_values(
+  const std::vector<hardware_interface::CommandInterface::SharedPtr> & interfaces,
+  std::vector<double> & values) -> void;
+
+/// Write `value` to all interfaces without blocking.
+auto fill(const std::vector<hardware_interface::CommandInterface::SharedPtr> & interfaces, double value) -> void;
+
+}  // namespace interfaces
 
 }  // namespace common

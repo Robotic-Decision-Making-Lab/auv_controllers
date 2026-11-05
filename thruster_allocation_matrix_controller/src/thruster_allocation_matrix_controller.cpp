@@ -23,7 +23,9 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <format>
+#include <limits>
 #include <ranges>
+#include <tuple>
 
 #include "controller_common/common.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -104,14 +106,14 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
     return ret;
   }
 
-  reference_.writeFromNonRT(geometry_msgs::msg::Wrench());
+  reference_.set(geometry_msgs::msg::Wrench());
   command_interfaces_.reserve(n_thrusters_);
 
   reference_sub_ = get_node()->create_subscription<geometry_msgs::msg::Wrench>(
     "~/reference",
     rclcpp::SystemDefaultsQoS(),
     [this](const std::shared_ptr<geometry_msgs::msg::Wrench> msg) {  // NOLINT
-      reference_.writeFromNonRT(*msg);
+      reference_.set(*msg);
     });
 
   controller_state_pub_ = get_node()->create_publisher<ControllerState>("~/status", rclcpp::SystemDefaultsQoS());
@@ -130,8 +132,11 @@ auto ThrusterAllocationMatrixController::on_configure(const rclcpp_lifecycle::St
 auto ThrusterAllocationMatrixController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
   -> controller_interface::CallbackReturn
 {
-  common::messages::reset_message(reference_.readFromNonRT());
-  reference_interfaces_.assign(reference_interfaces_.size(), std::numeric_limits<double>::quiet_NaN());
+  geometry_msgs::msg::Wrench reference;
+  common::messages::reset_message(&reference);
+  reference_.set(reference);
+  common::interfaces::fill(ordered_exported_reference_interfaces_, std::numeric_limits<double>::quiet_NaN());
+  reference_values_.assign(reference_values_.size(), std::numeric_limits<double>::quiet_NaN());
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -162,18 +167,17 @@ auto ThrusterAllocationMatrixController::state_interface_configuration() const
 }
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto ThrusterAllocationMatrixController::on_export_reference_interfaces()
-  -> std::vector<hardware_interface::CommandInterface>
+auto ThrusterAllocationMatrixController::on_export_reference_interfaces_list()
+  -> std::vector<hardware_interface::CommandInterface::SharedPtr>
 {
-  reference_interfaces_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
-  std::vector<hardware_interface::CommandInterface> interfaces;
-  interfaces.reserve(reference_interfaces_.size());
+  reference_values_.resize(n_dofs_, std::numeric_limits<double>::quiet_NaN());
+  std::vector<hardware_interface::CommandInterface::SharedPtr> interfaces;
+  interfaces.reserve(n_dofs_);
 
   for (const auto & dof : dofs_) {
-    interfaces.emplace_back(
-      get_node()->get_name(),
-      std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT),
-      &reference_interfaces_[interfaces.size()]);
+    interfaces.push_back(
+      common::interfaces::make_reference_interface(
+        get_node()->get_name(), std::format("{}/{}", dof, hardware_interface::HW_IF_EFFORT)));
   }
 
   return interfaces;
@@ -183,14 +187,16 @@ auto ThrusterAllocationMatrixController::update_reference_from_subscribers(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/) -> controller_interface::return_type
 {
-  auto * current_reference = reference_.readFromNonRT();
-  const std::vector<double> wrench = common::messages::to_vector(*current_reference);
-  if (!std::ranges::all_of(wrench, [](double x) -> bool { return std::isnan(x); })) {
-    for (auto && [interface, ref] : std::views::zip(reference_interfaces_, wrench)) {
-      interface = std::isnan(ref) ? 0.0 : ref;
+  // consume the latest reference so that it is only applied once
+  reference_.try_set([this](geometry_msgs::msg::Wrench & reference) -> void {
+    const std::vector<double> wrench = common::messages::to_vector(reference);
+    if (!common::math::all_nan(wrench)) {
+      for (const auto & [interface, ref] : std::views::zip(ordered_exported_reference_interfaces_, wrench)) {
+        std::ignore = interface->set_value(std::isnan(ref) ? 0.0 : ref);
+      }
     }
-  }
-  common::messages::reset_message(current_reference);
+    common::messages::reset_message(&reference);
+  });
   return controller_interface::return_type::OK;
 }
 
@@ -198,7 +204,8 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
   const rclcpp::Time & time,
   const rclcpp::Duration & period) -> controller_interface::return_type
 {
-  const Eigen::Vector6d reference_wrench(reference_interfaces_.data());
+  common::interfaces::read_values(ordered_exported_reference_interfaces_, reference_values_);
+  const Eigen::Vector6d reference_wrench(reference_values_.data());
   const Eigen::VectorXd thrust(tam_.completeOrthogonalDecomposition().pseudoInverse() * reference_wrench);
 
   for (auto && [interface, value] : std::views::zip(command_interfaces_, thrust)) {
@@ -213,7 +220,7 @@ auto ThrusterAllocationMatrixController::update_and_write_commands(
 
   controller_state_.header.stamp = time;
   controller_state_.time_step = period.seconds();
-  controller_state_.reference = reference_interfaces_;
+  controller_state_.reference = reference_values_;
 
   for (std::size_t i = 0; i < n_thrusters_; i++) {
     const auto out = command_interfaces_[i].get_optional();

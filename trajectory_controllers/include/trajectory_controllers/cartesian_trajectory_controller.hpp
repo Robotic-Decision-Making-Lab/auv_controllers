@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include <ranges>
 
 #include "auv_control_msgs/action/follow_cartesian_trajectory.hpp"
@@ -27,9 +29,9 @@
 #include "controller_common/common.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "rclcpp_action/server.hpp"
-#include "realtime_tools/realtime_buffer.hpp"
 #include "realtime_tools/realtime_publisher.hpp"
 #include "realtime_tools/realtime_server_goal_handle.hpp"
+#include "realtime_tools/realtime_thread_safe_box.hpp"
 #include "tf2_ros/buffer.hpp"
 #include "tf2_ros/transform_listener.hpp"
 #include "trajectory_controllers/cartesian_trajectory.hpp"
@@ -68,6 +70,9 @@ protected:
 
   [[nodiscard]] auto validate_trajectory(const auv_control_msgs::msg::CartesianTrajectory & trajectory) const -> bool;
 
+  // hand a new trajectory off to the control loop and stop holding position
+  auto set_trajectory(const auv_control_msgs::msg::CartesianTrajectory & trajectory) -> void;
+
   // controller state
   using ControllerState = auv_control_msgs::msg::CartesianTrajectoryControllerStateStamped;
   std::shared_ptr<rclcpp::Publisher<ControllerState>> controller_state_pub_;
@@ -78,7 +83,10 @@ protected:
   // 1. using the topic interface - when available, this is preferred over the tf2 interface
   // 2. using the state interfaces - this is the default, but often not available
   // 3. using tf2 - this is the most common interface, but requires a transform to be published and is not as robust
-  realtime_tools::RealtimeBuffer<geometry_msgs::msg::Pose> state_;
+  // the latest state is written to state_ by the state subscriber (option 1) or by the control loop (options 2 & 3)
+  // the control loop operates on its local copy, system_state_
+  realtime_tools::RealtimeThreadSafeBox<geometry_msgs::msg::Pose> state_;
+  geometry_msgs::msg::Pose system_state_;
   std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Pose>> state_sub_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -88,22 +96,25 @@ protected:
   // the action server is preferred and easier to integrate into state-machines/behavior trees, but can be a bit
   // cumbersome to interface with. on the other hand, the topic interface is easier to use, but doesn't integrate
   // well with high-level coordinators
-  realtime_tools::RealtimeBuffer<CartesianTrajectory> rt_trajectory_;
+  // a new trajectory is detected in the control loop by a change in the pointer, at which point it is re-sampled from
+  // the current state
+  realtime_tools::RealtimeThreadSafeBox<std::shared_ptr<CartesianTrajectory>> rt_trajectory_;
+  std::shared_ptr<CartesianTrajectory> trajectory_;  // control loop copy
   std::shared_ptr<rclcpp::Subscription<auv_control_msgs::msg::CartesianTrajectory>> trajectory_sub_;
 
   using FollowTrajectory = auv_control_msgs::action::FollowCartesianTrajectory;
   using RealtimeGoalHandle = realtime_tools::RealtimeServerGoalHandle<FollowTrajectory>;
   using RealtimeGoalHandlePtr = std::shared_ptr<RealtimeGoalHandle>;
-  using RealtimeGoalHandleBuffer = realtime_tools::RealtimeBuffer<RealtimeGoalHandlePtr>;
+  using RealtimeGoalHandleBox = realtime_tools::RealtimeThreadSafeBox<RealtimeGoalHandlePtr>;
 
   std::shared_ptr<rclcpp_action::Server<FollowTrajectory>> action_server_;
-  RealtimeGoalHandleBuffer rt_active_goal_;
-  realtime_tools::RealtimeBuffer<bool> rt_goal_in_progress_;
+  RealtimeGoalHandleBox rt_active_goal_;
+  RealtimeGoalHandlePtr active_goal_;  // control loop copy
+  std::atomic<bool> rt_goal_in_progress_{false};
   std::shared_ptr<rclcpp::TimerBase> goal_handle_timer_;
   std::chrono::nanoseconds action_monitor_period_ = std::chrono::nanoseconds(50000000);  // 50ms
 
-  realtime_tools::RealtimeBuffer<bool> rt_first_sample_;      // used to sample the trajectory for the first time
-  realtime_tools::RealtimeBuffer<bool> rt_holding_position_;  // used to maintain the current pose
+  std::atomic<bool> rt_holding_position_{true};  // used to maintain the current pose
 
   // the update period is used to sample the "next" trajectory point
   rclcpp::Duration update_period_{0, 0};
@@ -115,7 +126,7 @@ protected:
   // the default tolerances are extracted from the parameters and applied when the action interface is not used
   // if the action interface is being used, then the tolerances set in the goal are applied
   double default_path_tolerance_, default_goal_tolerance_;
-  realtime_tools::RealtimeBuffer<double> rt_goal_tolerance_, rt_path_tolerance_;
+  std::atomic<double> rt_goal_tolerance_{0.0}, rt_path_tolerance_{0.0};
 
   std::vector<std::string> dofs_;
   std::size_t n_dofs_;

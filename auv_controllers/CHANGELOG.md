@@ -1,5 +1,9 @@
 # Changelog for package auv_controllers
 
+## 0.5.2 (2026-11-03)
+
+- Adds the missing `controller_coordinator`, `impedance_controller`, and `trajectory_controllers` dependencies
+
 ## 0.5.1 (2026-08-14)
 
 ## 0.5.0 (2026-05-29)

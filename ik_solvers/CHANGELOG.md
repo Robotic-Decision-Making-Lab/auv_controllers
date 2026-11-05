@@ -1,5 +1,7 @@
 # Changelog for package ik_solvers
 
+## 0.5.2 (2026-11-03)
+
 ## 0.5.1 (2026-08-14)
 
 - Declares the `python3-numpy` build dependency required by Pinocchio's Python bindings
